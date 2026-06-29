@@ -48,3 +48,4 @@ Thumbs.db
 # Local server logs
 _server*.log
 _server*.err
+webapp/data/_pdf_yp_chunks/

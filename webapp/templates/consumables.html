@@ -14,7 +14,7 @@
 
 <section class="cat-list">
   {% for g in groups %}
-  <a class="cat-card" href="{{ url_for('consumables_browse', l1=g.l1, l2=g.l2, l3=g.l3) }}">
+  {% if g.l3 %}<a class="cat-card" href="{{ url_for('consumables_l3', l1=g.l1, l2=g.l2, l3=g.l3) }}">{% else %}<a class="cat-card" href="{{ url_for('consumables_browse', l1=g.l1, l2=g.l2) }}">{% endif %}
     <div class="cat-main">
       <div class="cat-code">{% if g.l3 %}{{ g.l3 }}{% elif g.l2 %}{{ g.l2 }}{% else %}{{ g.l1 }}{% endif %}</div>
       <div class="cat-name">{% if g.l3 %}{{ g.l3_name }}{% elif g.l2 %}{{ g.l2_name }}{% else %}{{ g.l1_name }}{% endif %}</div>

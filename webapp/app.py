@@ -693,8 +693,8 @@ def api_consumable_categories():
     return jsonify({"groups": [dict(zip(["key", "name", "code_count"], r)) for r in groups]})
 
 
-@app.get("/consumables")
-@app.get("/consumables/")
+@app.get("/consumables", strict_slashes=False)
+@app.get("/consumables/", strict_slashes=False)
 def consumables_index():
     """Browse consumable codes by 一级 classification."""
     with db.connect() as conn:
@@ -712,8 +712,42 @@ def consumables_index():
     )
 
 
-@app.get("/consumables/cat/<l1>")
-@app.get("/consumables/cat/<l1>/<l2>")
+
+@app.get("/consumables/cat/<l1>/<l2>/<l3>", strict_slashes=False)
+def consumables_l3(l1, l2, l3):
+    """Show all codes under (cat_l1, cat_l2, cat_l3). Sample-first-200 of N rows."""
+    l1 = l1.upper(); l2 = l2.upper(); l3 = l3.upper()
+    with db.connect() as conn:
+        names = conn.execute("""
+            SELECT cat_l1_name, cat_l2_name, cat_l3_name
+            FROM consumable_codes
+            WHERE cat_l1=? AND cat_l2=? AND cat_l3=?
+            LIMIT 1
+        """, (l1, l2, l3)).fetchone()
+        if not names:
+            return render_template("consumables_l3.html",
+                                   sample=[], total=0,
+                                   l1=l1, l2=l2, l3=l3,
+                                   l1_name=None, l2_name=None, l3_name=None), 404
+        l1_name, l2_name, l3_name = names
+        sample_rows = conn.execute("""
+            SELECT code, generic_name, spec, manufacturer, material
+            FROM consumable_codes
+            WHERE cat_l1=? AND cat_l2=? AND cat_l3=? AND code IS NOT NULL
+            ORDER BY code LIMIT 200
+        """, (l1, l2, l3)).fetchall()
+        total = conn.execute("""
+            SELECT COUNT(*) FROM consumable_codes
+            WHERE cat_l1=? AND cat_l2=? AND cat_l3=? AND code IS NOT NULL
+        """, (l1, l2, l3)).fetchone()[0]
+        keys = ["code","generic_name","spec","manufacturer","material"]
+        sample = [dict(zip(keys, r)) for r in sample_rows]
+    return render_template("consumables_l3.html",
+                           sample=sample, total=total,
+                           l1=l1, l2=l2, l3=l3,
+                           l1_name=l1_name, l2_name=l2_name, l3_name=l3_name)
+@app.get("/consumables/cat/<l1>", strict_slashes=False)
+@app.get("/consumables/cat/<l1>/<l2>", strict_slashes=False)
 def consumables_browse(l1, l2=None):
     """Drill into 二级 (with l1) or 三级 (with l1+l2)."""
     with db.connect() as conn:
@@ -761,7 +795,7 @@ def consumables_browse(l1, l2=None):
             )
 
 
-@app.get("/consumables/code/<code>")
+@app.get("/consumables/code/<code>", strict_slashes=False)
 def consumable_detail(code):
     """Show detail for a specific consumable code."""
     code = code.upper()
