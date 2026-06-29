@@ -1,0 +1,6 @@
+﻿pdfplumber==0.11.9
+PyMuPDF==1.27.2.3
+openpyxl==3.1.5
+jieba==0.42.1
+pypinyin>=0.55.0
+flask>=3.0

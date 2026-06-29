@@ -1,0 +1,93 @@
+﻿{% extends "base.html" %}
+{% block title %}体外诊断试剂 · 医保标准库 · 医保智审{% endblock %}
+{% block content %}
+<section class="page-head">
+  <h1 class="page-title">体外诊断试剂 (IVD)</h1>
+  <p class="page-sub">国家医保局体外诊断试剂分类与代码 · 截至 2026-06-11 · {{ total_codes }} 条</p>
+</section>
+
+<nav class="bread">
+  <a href="{{ url_for('nhsa_index') }}">标准数据库</a> <span class="bread-sep">›</span>
+  <span class="bread-cur">体外诊断试剂</span>
+  {% if testing_category %}<span class="bread-sep">›</span> <span class="bread-cur">{{ testing_category }}</span>{% endif %}
+</nav>
+
+<form action="{{ url_for('ivd_browse') }}" method="get" class="hero-search" style="margin-bottom: var(--s-4);">
+  <span class="hero-search-icon">⌕</span>
+  <input name="q" type="search" value="{{ query|default('',true) }}" placeholder="输入编码 / 试剂名 / 检测项目 / 企业" enterkeyhint="search">
+  <button class="hero-search-btn" type="submit">搜索</button>
+</form>
+
+{% if testing_category %}
+<section class="list-card">
+  {% for r in rows %}
+  <a class="list-row" href="{{ url_for('ivd_detail', code=r.code) }}">
+    <div class="list-main">
+      <div class="list-code">{{ r.code }}</div>
+      <div class="list-name">{{ r.catalog_full_name or r.testing_index or r.cat_l3_name }}</div>
+      <div class="list-meta">
+        {% if r.testing_index %}检测项目: {{ r.testing_index }}{% endif %}
+        {% if r.company_name %} · {{ r.company_name }}{% endif %}
+      </div>
+    </div>
+    <div class="list-arrow">›</div>
+  </a>
+  {% else %}
+  <div class="empty">
+    <div class="empty-ico">∅</div>
+    <div class="empty-title">无匹配</div>
+    <div class="empty-tip">此分类下暂无试剂</div>
+  </div>
+  {% endfor %}
+</section>
+<div class="pager">
+  <span class="pager-info">共 {{ total }} 条 · 显示 {{ rows|length }}</span>
+</div>
+{% elif query %}
+<section class="list-card">
+  {% for r in rows %}
+  <a class="list-row" href="{{ url_for('ivd_detail', code=r.code) }}">
+    <div class="list-main">
+      <div class="list-code">{{ r.code }}</div>
+      <div class="list-name">{{ r.catalog_full_name or r.testing_index or r.cat_l3_name }}</div>
+      <div class="list-meta">
+        {% if r.testing_category %}{{ r.testing_category }}{% endif %}
+        {% if r.testing_index %} · {{ r.testing_index }}{% endif %}
+        {% if r.company_name %} · {{ r.company_name }}{% endif %}
+      </div>
+    </div>
+    <div class="list-arrow">›</div>
+  </a>
+  {% else %}
+  <div class="empty">
+    <div class="empty-ico">∅</div>
+    <div class="empty-title">无匹配</div>
+    <div class="empty-tip">没有找到与「{{ query }}」相关的试剂</div>
+  </div>
+  {% endfor %}
+</section>
+<div class="pager">
+  <span class="pager-info">共 {{ total }} 条 · 显示 {{ rows|length }}</span>
+</div>
+{% else %}
+<section class="cat-list">
+  {% for g in groups %}
+  <a class="cat-card" href="{{ url_for('ivd_browse', testing_category=g.testing_category) }}">
+    <div class="cat-main">
+      <div class="cat-code">{{ g.testing_category }}</div>
+      <div class="cat-name">检测类别</div>
+    </div>
+    <div class="cat-count">{{ "{:,}".format(g.code_count) }} 条</div>
+    <div class="cat-arrow">›</div>
+  </a>
+  {% endfor %}
+</section>
+<section class="tip">
+  <div class="tip-icon">i</div>
+  <div class="tip-body">
+    <div class="tip-title">关于体外诊断试剂</div>
+    <div class="tip-text">来源：国家医保局 2026-06-11 版体外诊断试剂分类与代码。CJ 开头 19 位代码，按检测类别 / 检测项目 / 方法 / 企业组织。</div>
+  </div>
+</section>
+{% endif %}
+{% endblock %}

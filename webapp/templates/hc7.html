@@ -1,0 +1,55 @@
+﻿{% extends "base.html" %}
+{% block title %}7 类医用耗材 · 医保标准库 · 医保智审{% endblock %}
+{% block content %}
+<section class="page-head">
+  <h1 class="page-title">7 类医用耗材 (血管介入类)</h1>
+  <p class="page-sub">国家医保局 · 2025-09-01 版 · {{ total_codes }} 条</p>
+</section>
+
+<nav class="bread">
+  <a href="{{ url_for('nhsa_index') }}">标准数据库</a> <span class="bread-sep">›</span>
+  <span class="bread-cur">7 类医用耗材</span>
+</nav>
+
+<form action="{{ url_for('hc7_index') }}" method="get" class="hero-search" style="margin-bottom: var(--s-4);">
+  <span class="hero-search-icon">⌕</span>
+  <input name="q" type="search" value="{{ query|default('',true) }}" placeholder="输入编码 / 通用名 / 企业" enterkeyhint="search">
+  <button class="hero-search-btn" type="submit">搜索</button>
+</form>
+
+{% if rows %}
+<section class="list-card">
+  {% for r in rows %}
+  <a class="list-row" href="{{ url_for('hc7_detail', code=r.code) }}">
+    <div class="list-main">
+      <div class="list-code">{{ r.code }}</div>
+      <div class="list-name">{{ r.generic_name or r.cat_l3_name or r.cat_l2_name }}</div>
+      <div class="list-meta">
+        {{ r.cat_l1_name }}{% if r.cat_l3_name %} › {{ r.cat_l3_name }}{% endif %}
+        {% if r.material %} · {{ r.material }}{% endif %}
+        {% if r.manufacturer %} · {{ r.manufacturer }}{% endif %}
+      </div>
+    </div>
+    <div class="list-arrow">›</div>
+  </a>
+  {% endfor %}
+</section>
+<div class="pager">
+  <span class="pager-info">共 {{ total }} 条 · 显示 {{ rows|length }}</span>
+</div>
+{% else %}
+<div class="empty">
+  <div class="empty-ico">∅</div>
+  <div class="empty-title">无匹配</div>
+  <div class="empty-tip">没有找到{% if query %}与「{{ query }}」相关的{% endif %}耗材</div>
+</div>
+{% endif %}
+
+<section class="tip">
+  <div class="tip-icon">i</div>
+  <div class="tip-body">
+    <div class="tip-title">关于 7 类医用耗材</div>
+    <div class="tip-text">国家医保局 2025-09-01 版血管介入类等 7 类医用耗材（与普通 HC 分类并列）。19 位 C-code 编码。</div>
+  </div>
+</section>
+{% endblock %}

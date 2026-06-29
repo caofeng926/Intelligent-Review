@@ -1,0 +1,50 @@
+﻿# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Temp / debug / private scratch
+_*.py
+_*.txt
+_*.log
+_*.err
+_*.md
+_*.html
+*.bak
+*.bak.*
+/0
+
+# Big data + caches NOT committed
+webapp/kp.db
+webapp/*.db
+webapp/*.db-*
+**/*.db
+**/*.db-*
+webapp/consumables_db_*.pdf
+原始数据/
+01-06\批/
+07-15\批/
+16\批/
+医疗保障基金智能监管规则库、知识库（2025年版）.pdf
+deploy_artifacts/
+_shots/
+_shots_nhsa/
+_pdf_text/
+_pdf_text_v25/
+_designs/
+
+# Build / virtualenv
+.venv/
+venv/
+.env
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Local server logs
+_server*.log
+_server*.err

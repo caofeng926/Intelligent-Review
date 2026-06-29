@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block title %}医保智审知识库 · 首页{% endblock %}
+{% block content %}
+<section class="hero">
+  <div class="hero-bg" aria-hidden="true"></div>
+  <div class="hero-inner">
+    <h1 class="hero-title">医保智审规则与知识库</h1>
+    <form class="hero-search" action="{{ url_for('search_view') }}" method="get" role="search">
+      <span class="hero-search-icon" aria-hidden="true">⌕</span>
+      <input name="q" type="search" inputmode="search" autocomplete="off" autofocus
+             placeholder="搜药品 / 耗材 / 服务项目" enterkeyhint="search">
+      <button class="hero-search-btn" type="submit" aria-label="搜索">搜索</button>
+    </form>
+    <div class="hero-recent" id="hero-recent" aria-live="polite">
+      <div class="hero-recent-head">
+        <span class="hero-recent-label">最近搜索</span>
+        <button class="hero-recent-clear" type="button" id="hero-recent-clear" hidden>清空</button>
+      </div>
+      <div class="hero-chips" id="hero-recent-chips" role="list"></div>
+    </div>
+  </div>
+</section>
+
+<section class="stats">
+  <a class="stat-card" href="{{ url_for('rules_index') }}">
+    <div class="stat-num">{{ "{:,}".format(stats['kp']) }}</div>
+    <div class="stat-label">知识点</div>
+  </a>
+  <a class="stat-card stat-card-rich" href="{{ url_for('search_view') }}">
+    <div class="stat-num">{{ "{:,}".format(stats['codes']) }}</div>
+    <div class="stat-label">医保编码 · {{ "{:,}".format(unique_subjects) }} 个品种</div>
+    <div class="stat-samples">
+      {% for code, _name, _id in code_samples[:3] %}
+      <span class="stat-sample">{{ code[:6] }}…</span>
+      {% endfor %}
+    </div>
+  </a>
+  <a class="stat-card" href="{{ url_for('rules_index') }}">
+    <div class="stat-num">{{ stats['rules'] }}</div>
+    <div class="stat-label">规则 ({{ stats['nhsa'] }}+{{ stats['pdf'] }})</div>
+  </a>
+  <a class="stat-card" href="{{ url_for('rules_index') }}">
+    <div class="stat-num">{{ stats['batches'] }}</div>
+    <div class="stat-label">批次</div>
+  </a>
+  <a class="stat-card" href="{{ url_for('consumables_index') }}">
+    <div class="stat-num">{{ "{:,}".format(stats['consumables']) }}</div>
+    <div class="stat-label">耗材代码</div>
+  </a>
+</section>
+
+<section class="entry-grid">
+  <a class="entry-card" href="{{ url_for('search_view') }}">
+    <div class="entry-ico" style="--ico-bg:#fff1e8;--ico-fg:#ff7d00">⌕</div>
+    <div class="entry-text">
+      <div class="entry-title">关键字 / 首字母 / 编码</div>
+      <div class="entry-sub">支持 艾附暖宫丸 / afngw / ZD03...</div>
+    </div>
+    <div class="entry-arrow">›</div>
+  </a>
+  <a class="entry-card" href="{{ url_for('rules_index') }}">
+    <div class="entry-ico" style="--ico-bg:#e8f3ff;--ico-fg:#1677ff">≡</div>
+    <div class="entry-text">
+      <div class="entry-title">按批次浏览</div>
+      <div class="entry-sub">{{ stats['batches'] }} 个批次 · 15 个 NHSA + 2025 版</div>
+    </div>
+    <div class="entry-arrow">›</div>
+  </a>
+  <a class="entry-card" href="{{ url_for('consumables_index') }}">
+    <div class="entry-ico" style="--ico-bg:#fff8e6;--ico-fg:#fa8c16">⊞</div>
+    <div class="entry-text">
+      <div class="entry-title">耗材代码库</div>
+      <div class="entry-sub">{{ "{:,}".format(stats['consumables']) }} 条 · 2026-05 版</div>
+    </div>
+    <div class="entry-arrow">›</div>
+  </a>
+  <a class="entry-card" href="{{ url_for('nhsa_index') }}">
+    <div class="entry-ico" style="--ico-bg:#e8fff3;--ico-fg:#13a362">⊞</div>
+    <div class="entry-text">
+      <div class="entry-title">标准数据库</div>
+      <div class="entry-sub">HC / IVD / YP / ICD / MS / TCM 共 8 类</div>
+    </div>
+    <div class="entry-arrow">›</div>
+  </a>
+  
+  <a class="entry-card" href="#recent">
+    <div class="entry-ico" style="--ico-bg:#f3e8ff;--ico-fg:#722ed1">⏱</div>
+    <div class="entry-text">
+      <div class="entry-title">最近更新</div>
+      <div class="entry-sub">最新发布的规则与知识点</div>
+    </div>
+    <div class="entry-arrow">›</div>
+  </a>
+</section>
+
+<section class="code-samples">
+  <div class="sec-head">
+    <h2 class="sec-title">编码示例</h2>
+    <a class="sec-more" href="{{ url_for('search_view') }}">查询更多 →</a>
+  </div>
+  <ul class="code-sample-list">
+    {% for code, name, kp_id in code_samples %}
+    <li>
+      <a class="code-sample-item" href="{{ url_for('kp_detail', kp_id=kp_id) }}">
+        <span class="code-sample-code">{{ code }}</span>
+        <span class="code-sample-name">{{ name|h }}</span>
+        <span class="code-sample-arrow" aria-hidden="true">›</span>
+      </a>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+
+<section id="recent" class="recent">
+  <h2 class="sec-title">最近更新</h2>
+  {% if recent %}
+  <ul class="recent-list">
+    {% for kp_id, subject, rule_subject, batch_label, pub_date in recent %}
+    <li>
+      <a class="recent-item" href="{{ url_for('kp_detail', kp_id=kp_id) }}">
+        <div class="recent-main">
+          <div class="recent-name">{{ subject|h }}</div>
+          <div class="recent-meta">{{ rule_subject|h }} · {{ batch_label|h }}{% if pub_date %} · {{ pub_date }}{% endif %}</div>
+        </div>
+        <div class="recent-arrow">›</div>
+      </a>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <div class="empty">暂无最近更新</div>
+  {% endif %}
+</section>
+
+<section class="tip">
+  <div class="tip-icon" aria-hidden="true">i</div>
+  <div class="tip-body">
+    <div class="tip-title">查询小贴士</div>
+    <div class="tip-text">中文 → 全文搜索；纯字母 → 拼音首字母；大写字母+数字 → 医保编码精确匹配。系统自动识别。</div>
+  </div>
+</section>
+{% endblock %}

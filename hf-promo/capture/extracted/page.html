@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+
+
+</head>
+<body>
+﻿
+
+
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#1677ff">
+  <title>医保智审知识库 · 首页</title>
+  <link rel="stylesheet" href="/static/mobile.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231677ff'/%3E%3Cpath d='M20 22h6v8h12v-8h6v20h-6v-8H26v8h-6z' fill='white'/%3E%3C/svg%3E">
+
+
+  <header class="topbar">
+    <a class="brand" href="/">
+      <span class="brand-mark">医</span>
+      <span class="brand-text">医保智审</span>
+    </a>
+    <form class="topbar-search" action="/search" method="get" role="search">
+      <span class="topbar-search-icon" aria-hidden="true">⌕</span>
+      <input name="q" type="search" inputmode="search" autocomplete="off" placeholder="搜药品/项目/编码/首字母" value="" enterkeyhint="search">
+      
+    </form>
+  </header>
+
+  <main class="page">
+    
+<section class="hero">
+  <div class="hero-bg" aria-hidden="true"></div>
+  <div class="hero-inner">
+    <h1 class="hero-title">医保智审规则与知识库</h1>
+    <form class="hero-search" action="/search" method="get" role="search">
+      <span class="hero-search-icon" aria-hidden="true">⌕</span>
+      <input name="q" type="search" inputmode="search" autocomplete="off" autofocus="" placeholder="搜药品 / 耗材 / 服务项目" enterkeyhint="search">
+      <button class="hero-search-btn" type="submit" aria-label="搜索">搜索</button>
+    </form>
+    <div class="hero-recent" id="hero-recent" aria-live="polite">
+      <div class="hero-recent-head">
+        <span class="hero-recent-label">最近搜索</span>
+        <button class="hero-recent-clear" type="button" id="hero-recent-clear" hidden="">清空</button>
+      </div>
+      <div class="hero-chips" id="hero-recent-chips" role="list"><a class="chip chip-ghost chip-hint" href="/search?q=%E8%89%BE%E9%99%84%E6%9A%96%E5%AE%AB%E4%B8%B8">艾附暖宫丸</a><a class="chip chip-ghost chip-hint" href="/search?q=afngw">afngw</a><a class="chip chip-ghost chip-hint" href="/search?q=ZD03AAA0043010100166">ZD03AAA0043010100166</a><a class="chip chip-ghost chip-hint" href="/search?q=%E9%98%BF%E8%8E%AB%E8%A5%BF%E6%9E%97">阿莫西林</a></div>
+    </div>
+</div>
+</section>
+
+<section class="stats">
+  <a class="stat-card" href="/rules">
+    <div class="stat-num">21,576</div>
+    <div class="stat-label">知识点</div>
+  </a>
+  <a class="stat-card" href="/rules">
+    <div class="stat-num">28,214</div>
+    <div class="stat-label">医保编码</div>
+  </a>
+  <a class="stat-card" href="/rules">
+    <div class="stat-num">76</div>
+    <div class="stat-label">规则 (31+45)</div>
+  </a>
+  <a class="stat-card" href="/rules">
+    <div class="stat-num">16</div>
+    <div class="stat-label">批次</div>
+  </a>
+</section>
+
+<section class="entry-grid">
+  <a class="entry-card" href="/rules">
+    <div class="entry-ico" style="--ico-bg:#e8f3ff;--ico-fg:#1677ff">≡</div>
+    <div class="entry-text">
+      <div class="entry-title">按批次浏览</div>
+      <div class="entry-sub">16 个批次 · 15 个 NHSA + 2025 版</div>
+    </div>
+    <div class="entry-arrow">›</div>
+  </a>
+  <a class="entry-card" href="/search">
+    <div class="entry-ico" style="--ico-bg:#fff1e8;--ico-fg:#ff7d00">⌕</div>
+    <div class="entry-text">
+      <div class="entry-title">关键字 / 首字母 / 编码</div>
+      <div class="entry-sub">支持 艾附暖宫丸 / afngw / ZD03...</div>
+    </div>
+    <div class="entry-arrow">›</div>
+  </a>
+  <a class="entry-card" href="/rules">
+    <div class="entry-ico" style="--ico-bg:#e8ffe8;--ico-fg:#00b42a">⚕</div>
+    <div class="entry-text">
+      <div class="entry-title">按对象类型</div>
+      <div class="entry-sub">药品 / 耗材 / 服务项目 / 中药饮片</div>
+    </div>
+    <div class="entry-arrow">›</div>
+  </a>
+  <a class="entry-card" href="#recent">
+    <div class="entry-ico" style="--ico-bg:#f3e8ff;--ico-fg:#722ed1">⏱</div>
+    <div class="entry-text">
+      <div class="entry-title">最近更新</div>
+      <div class="entry-sub">最新发布的规则与知识点</div>
+    </div>
+    <div class="entry-arrow">›</div>
+  </a>
+</section>
+
+<section id="recent" class="recent">
+  <h2 class="sec-title">最近更新</h2>
+  
+  <ul class="recent-list">
+    
+    <li>
+      <a class="recent-item" href="/kp/2799">
+        <div class="recent-main">
+          <div class="recent-name">注射用重组人生长激素</div>
+          <div class="recent-meta">药品限适应症 · 第十五批 · 2026-06-16</div>
+        </div>
+        <div class="recent-arrow">›</div>
+      </a>
+    </li>
+    
+    <li>
+      <a class="recent-item" href="/kp/2798">
+        <div class="recent-main">
+          <div class="recent-name">注射用人生长激素</div>
+          <div class="recent-meta">药品限适应症 · 第十五批 · 2026-06-16</div>
+        </div>
+        <div class="recent-arrow">›</div>
+      </a>
+    </li>
+    
+    <li>
+      <a class="recent-item" href="/kp/2797">
+        <div class="recent-main">
+          <div class="recent-name">注射用醋酸奥曲肽微球</div>
+          <div class="recent-meta">药品限适应症 · 第十五批 · 2026-06-16</div>
+        </div>
+        <div class="recent-arrow">›</div>
+      </a>
+    </li>
+    
+    <li>
+      <a class="recent-item" href="/kp/2796">
+        <div class="recent-main">
+          <div class="recent-name">重组人生长激素注射液</div>
+          <div class="recent-meta">药品限适应症 · 第十五批 · 2026-06-16</div>
+        </div>
+        <div class="recent-arrow">›</div>
+      </a>
+    </li>
+    
+    <li>
+      <a class="recent-item" href="/kp/2795">
+        <div class="recent-main">
+          <div class="recent-name">重组人碱性成纤维细胞生长因子凝胶</div>
+          <div class="recent-meta">药品限适应症 · 第十五批 · 2026-06-16</div>
+        </div>
+        <div class="recent-arrow">›</div>
+      </a>
+    </li>
+    
+    <li>
+      <a class="recent-item" href="/kp/2794">
+        <div class="recent-main">
+          <div class="recent-name">重组牛碱性成纤维细胞生长因子凝胶</div>
+          <div class="recent-meta">药品限适应症 · 第十五批 · 2026-06-16</div>
+        </div>
+        <div class="recent-arrow">›</div>
+      </a>
+    </li>
+    
+    <li>
+      <a class="recent-item" href="/kp/2793">
+        <div class="recent-main">
+          <div class="recent-name">怡培生长激素注射液</div>
+          <div class="recent-meta">药品限适应症 · 第十五批 · 2026-06-16</div>
+        </div>
+        <div class="recent-arrow">›</div>
+      </a>
+    </li>
+    
+    <li>
+      <a class="recent-item" href="/kp/2792">
+        <div class="recent-main">
+          <div class="recent-name">依伏卡塞片</div>
+          <div class="recent-meta">药品限适应症 · 第十五批 · 2026-06-16</div>
+        </div>
+        <div class="recent-arrow">›</div>
+      </a>
+    </li>
+    
+  </ul>
+  
+</section>
+
+<section class="tip">
+  <div class="tip-icon" aria-hidden="true">i</div>
+  <div class="tip-body">
+    <div class="tip-title">查询小贴士</div>
+    <div class="tip-text">中文 → 全文搜索；纯字母 → 拼音首字母；大写字母+数字 → 医保编码精确匹配。系统自动识别。</div>
+  </div>
+</section>
+
+  </main>
+
+  <nav class="bottombar" aria-label="主导航">
+    <a class="bb-item is-active" href="/">
+      <span class="bb-ico">⌂</span><span class="bb-label">首页</span>
+    </a>
+    <a class="bb-item " href="/search">
+      <span class="bb-ico">⌕</span><span class="bb-label">搜索</span>
+    </a>
+    <a class="bb-item " href="/rules">
+      <span class="bb-ico">≡</span><span class="bb-label">规则</span>
+    </a>
+    <a class="bb-item" href="javascript:void(0)" onclick="alert('v1 · 只读查询工具')">
+      <span class="bb-ico">ⓘ</span><span class="bb-label">关于</span>
+    </a>
+  </nav>
+
+  <script src="/static/app.js"></script>
+
+
+</body>
+</html>

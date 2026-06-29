@@ -1,0 +1,45 @@
+﻿{% extends "base.html" %}
+{% block title %}{{ code }} · {{ title }} · 医保智审{% endblock %}
+{% block content %}
+<nav class="bread">
+  <a href="{{ url_for('nhsa_index') }}">标准数据库</a> <span class="bread-sep">›</span>
+  <a href="{{ index_url }}">{{ title }}</a>
+</nav>
+
+{% if data %}
+<section class="kp-detail">
+  <div class="kp-code">{{ code }}</div>
+  <h1 class="kp-name">{{ name }}</h1>
+  <dl>
+    {% for k, v in data.items() %}
+      {% if v and k != code_field and k != name_field %}
+      <dt>{{ labels[k] or k }}</dt>
+      <dd>{{ v }}</dd>
+      {% endif %}
+    {% endfor %}
+  </dl>
+</section>
+
+{% if rules %}
+<h2 class="sec-title">涉及审核规则</h2>
+<ul class="rule-refs">
+  {% for r in rules %}
+  <li>
+    <a class="rule-ref" href="{{ url_for('rule_detail', rid=r.rule_id) }}">
+      <span class="rule-ref-name">{{ r.rule_subject }}</span>
+      <span class="rule-ref-meta">{{ r.batch_label }}{% if r.pub_date %} · {{ r.pub_date }}{% endif %}</span>
+    </a>
+  </li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+{% else %}
+<section class="empty">
+  <div class="empty-ico">∅</div>
+  <div class="empty-title">未找到 {{ code }}</div>
+  <div class="empty-tip">该编码不在当前版本的 {{ title }} 数据库中。</div>
+  <a class="empty-link" href="{{ index_url }}">返回</a>
+</section>
+{% endif %}
+{% endblock %}

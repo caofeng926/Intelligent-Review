@@ -1,0 +1,122 @@
+﻿{% extends "base.html" %}
+{% block title %}{{ kp.subject_name|h }} · 医保智审{% endblock %}
+{% block content %}
+<nav class="crumb">
+  <a href="{{ url_for('home') }}">首页</a>
+  <span class="crumb-sep">›</span>
+  <a href="{{ url_for('rule_detail', rid=kp.rule_id) }}">{{ kp.rule_subject|h }}</a>
+  <span class="crumb-sep">›</span>
+  <span class="crumb-cur">{{ kp.subject_name|h }}</span>
+</nav>
+
+<article class="kp">
+  <header class="kp-head">
+    <div class="kp-tag">
+      <span class="tag tag-source">{{ source_label[kp.source] }}</span>
+      <span class="tag tag-batch">{{ kp.batch_label|h }}</span>
+      {% if kp.category %}<span class="tag tag-cat">{{ kp.category|h }}</span>{% endif %}
+    </div>
+    <h1 class="kp-title">{{ kp.subject_name|h }}</h1>
+    {% if kp.pinyin_initials %}<div class="kp-py">拼音 · {{ kp.pinyin_initials }}</div>{% endif %}
+    {% if kp.pub_date %}<div class="kp-meta">发布 · {{ kp.pub_date }}</div>{% endif %}
+  </header>
+
+  {% if partner %}
+  <section class="kp-section kp-partner">
+    <h2 class="sec-title">
+      <span class="partner-label">{{ partner.label|h }}</span>
+      {% if kp.object_type == "service" %}<span class="partner-hint">诊断 ↔ 手术</span>{% endif %}
+    </h2>
+    <div class="partner-card">
+      {% if partner.code %}<span class="partner-code">{{ partner.code|h }}</span>{% endif %}
+      {% if partner.name %}<span class="partner-name">{{ partner.name|h }}</span>{% endif %}
+      <button class="code-copy partner-copy" data-code="{{ partner.code|h }}" type="button" aria-label="复制编码">复制</button>
+    </div>
+  </section>
+  {% endif %}
+
+  <section class="kp-section">
+    <h2 class="sec-title">所属规则</h2>
+    <a class="rule-card" href="{{ url_for('rule_detail', rid=kp.rule_id) }}">
+      <div class="rule-name">{{ kp.rule_subject|h }}</div>
+      {% if kp.category or kp.object_type %}<div class="rule-cat">{{ kp.category or '' }}{% if kp.object_type %} · {{ kp.object_type }}{% endif %}</div>{% endif %}
+      <div class="rule-arrow">›</div>
+    </a>
+  </section>
+
+  {% if kp.detection_logic %}
+  <section class="kp-section">
+    <h2 class="sec-title">检出逻辑</h2>
+    <p class="kp-text">{{ kp.detection_logic|h }}</p>
+  </section>
+  {% endif %}
+
+  {% if kp.logic_basis %}
+  <section class="kp-section">
+    <h2 class="sec-title">逻辑依据</h2>
+    <p class="kp-text">{{ kp.logic_basis|h }}</p>
+  </section>
+  {% endif %}
+
+  {% if kp.remark %}
+  <section class="kp-section">
+    <h2 class="sec-title">备注</h2>
+    <p class="kp-text">{{ kp.remark|h }}</p>
+  </section>
+  {% endif %}
+
+  {% if codes and drug_details %}
+  <section class="kp-section">
+    <h2 class="sec-title">
+      药品详情
+      <span class="sec-aux">{{ drug_details|length }} 条有厂家信息</span>
+    </h2>
+    <ul class="drug-list">
+      {% for c in codes %}
+        {% set d = drug_details.get(c) %}
+        {% if d %}
+        <li class="drug-item">
+          <div class="drug-code">{{ c|h }}</div>
+          <div class="drug-meta">
+            {% if d[8] %}<div class="drug-name">{{ d[8]|h }}</div>{% endif %}
+            <div class="drug-line">
+              <span class="drug-mfg{% if d[2] %} warn{% endif %}">
+                {{ d[1]|h }}{% if d[2] %} <span class="drug-flag">{{ d[2]|h }}</span>{% endif %}
+              </span>
+            </div>
+            {% if d[3] %}<div class="drug-line drug-approval">批准文号 · {{ d[3]|h }}</div>{% endif %}
+            {% if d[5] or d[6] %}
+            <div class="drug-line drug-spec">
+              {% if d[5] %}<span>{{ d[5]|h }}</span>{% endif %}
+              {% if d[6] %} <span class="drug-sep">·</span> <span>{{ d[6]|h }}</span>{% endif %}
+            </div>
+            {% endif %}
+            {% if d[4] %}<div class="drug-line drug-base">本位码 · {{ d[4]|h }}</div>{% endif %}
+          </div>
+        </li>
+        {% endif %}
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+  <section class="kp-section">
+    <h2 class="sec-title">
+      医保编码
+      {% if kp.code_count %}<span class="sec-aux">{{ codes|length }} / {{ kp.code_count }}</span>{% endif %}
+    </h2>
+    {% if codes %}
+    <ul class="code-list" id="codeList">
+      {% for c in codes %}
+      <li class="code-item">
+        <span class="code-text">{{ c|h }}</span>
+        <button class="code-copy" data-code="{{ c|h }}" type="button" aria-label="复制编码">复制</button>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <div class="empty">该知识点在源文件中未提供具体编码（仅声明 code_count）。</div>
+    {% endif %}
+  </section>
+</article>
+{% endblock %}

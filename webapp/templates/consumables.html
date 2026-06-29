@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}耗材代码库 · 医保智审{% endblock %}
+{% block content %}
+<section class="page-head">
+  <h1 class="page-title">耗材代码库</h1>
+  <p class="page-sub">国家医保局医用耗材分类与代码 · 截至 2026 年 5 月 · {{ total_codes }} 条</p>
+</section>
+
+<nav class="bread">
+  {% if l1 %}<a href="{{ url_for('consumables_index') }}">耗材代码库</a> <span class="bread-sep">›</span>{% endif %}
+  {% if l1 %}<span class="bread-cur">{{ l1 }}-{{ l1_name }}</span>{% endif %}
+  {% if l2 %} <span class="bread-sep">›</span> <span class="bread-cur">{{ l2 }}-{{ l2_name }}</span>{% endif %}
+</nav>
+
+<section class="cat-list">
+  {% for g in groups %}
+  <a class="cat-card" href="{{ url_for('consumables_browse', l1=g.l1, l2=g.l2, l3=g.l3) }}">
+    <div class="cat-main">
+      <div class="cat-code">{% if g.l3 %}{{ g.l3 }}{% elif g.l2 %}{{ g.l2 }}{% else %}{{ g.l1 }}{% endif %}</div>
+      <div class="cat-name">{% if g.l3 %}{{ g.l3_name }}{% elif g.l2 %}{{ g.l2_name }}{% else %}{{ g.l1_name }}{% endif %}</div>
+    </div>
+    <div class="cat-count">{{ "{:,}".format(g.code_count) }} 条</div>
+    <div class="cat-arrow">›</div>
+  </a>
+  {% else %}
+  <div class="empty">没有子类</div>
+  {% endfor %}
+</section>
+
+{% if not l1 %}
+<section class="tip">
+  <div class="tip-icon" aria-hidden="true">i</div>
+  <div class="tip-body">
+    <div class="tip-title">关于耗材代码库</div>
+    <div class="tip-text">来源：国家医保局 2026 年 5 月维护版。19 位 C-code 包含分类、材质、规格、通用名、生产企业信息。在搜索框输入 C-code 可直接反查，或点击上方分类逐级浏览。</div>
+  </div>
+</section>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}{{ code }} · 耗材代码库 · 医保智审{% endblock %}
+{% block content %}
+<nav class="bread">
+  <a href="{{ url_for('consumables_index') }}">耗材代码库</a>
+  {% if c %}<span class="bread-sep">›</span> <a href="{{ url_for('consumables_browse', l1=c.cat_l1) }}">{{ c.cat_l1_name }}</a>{% endif %}
+  {% if c and c.cat_l2 %}<span class="bread-sep">›</span> <a href="{{ url_for('consumables_browse', l1=c.cat_l1, l2=c.cat_l2) }}">{{ c.cat_l2_name }}</a>{% endif %}
+  {% if c and c.cat_l3 %}<span class="bread-sep">›</span> <span class="bread-cur">{{ c.cat_l3_name }}</span>{% endif %}
+</nav>
+
+{% if c %}
+<section class="kp-detail">
+  <div class="kp-head">
+    <div class="kp-code">{{ c.code }}</div>
+    <h1 class="kp-name">{{ c.generic_name or c.cat_l3_name or c.cat_l2_name or c.cat_l1_name }}</h1>
+  </div>
+  <dl class="kp-meta">
+    <dt>分类</dt>
+    <dd>{{ c.cat_l1 }}-{{ c.cat_l1_name }} › {{ c.cat_l2 }}-{{ c.cat_l2_name }} › {{ c.cat_l3 }}-{{ c.cat_l3_name }}</dd>
+    {% if c.generic_category %}<dt>医保通用名分类</dt><dd>{{ c.generic_category }}</dd>{% endif %}
+    {% if c.material %}<dt>耗材材质</dt><dd>{{ c.material }}</dd>{% endif %}
+    {% if c.spec %}<dt>规格</dt><dd>{{ c.spec }}</dd>{% endif %}
+    {% if c.generic_no %}<dt>医保通用名编号</dt><dd>{{ c.generic_no }}</dd>{% endif %}
+    {% if c.manufacturer %}<dt>耗材企业</dt><dd>{{ c.manufacturer }}</dd>{% endif %}
+  </dl>
+
+  {% if rules %}
+  <h2 class="sec-title">涉及规则</h2>
+  <ul class="rule-refs">
+    {% for rid, rsub, rcat, batch_label, pub_date in rules %}
+    <li>
+      <a class="rule-ref" href="{{ url_for('rule_detail', rid=rid) }}">
+        <span class="rule-ref-name">{{ rsub|h }}</span>
+        <span class="rule-ref-meta">{{ rcat|h }} · {{ batch_label|h }}{% if pub_date %} · {{ pub_date }}{% endif %}</span>
+      </a>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</section>
+{% else %}
+<section class="empty">
+  <div class="empty-ico">∅</div>
+  <div class="empty-title">未找到 {{ code }}</div>
+  <div class="empty-tip">该代码不在 2026 年 5 月版耗材代码库中。请检查编码或使用搜索。</div>
+  <a class="empty-link" href="{{ url_for('consumables_index') }}">返回耗材库</a>
+</section>
+{% endif %}
+{% endblock %}

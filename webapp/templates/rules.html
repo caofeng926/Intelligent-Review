@@ -1,0 +1,30 @@
+﻿{% extends "base.html" %}
+{% block title %}按批次浏览 · 医保智审{% endblock %}
+{% block content %}
+<section class="page-head">
+  <h1 class="page-title">按批次浏览</h1>
+  <p class="page-sub">{{ groups|length }} 个批次 · 共 {{ groups|sum(attribute=4) }} 条规则</p>
+</section>
+
+{% set ns = namespace(curr_source='') %}
+{% for g in groups %}
+  {% if g[1] != ns.curr_source %}
+    {% if ns.curr_source != '' %}</section>{% endif %}
+    {% set ns.curr_source = g[1] %}
+    <h2 class="source-head">
+      <span class="source-dot source-{{ g[1] }}"></span>
+      {{ source_label[g[1]] }}
+      <span class="source-count">{{ groups|selectattr('1','equalto',g[1])|list|length }} 批</span>
+    </h2>
+    <section class="batch-list">
+  {% endif %}
+  <a class="batch-card" href="{{ url_for('rule_detail', rid=g[0]) }}">
+    <div class="batch-main">
+      <div class="batch-name">{{ g[2]|h }}</div>
+      <div class="batch-meta">{{ g[4] }} 条规则 · {{ "{:,}".format(g[5] or 0) }} 知识点{% if g[3] %} · {{ g[3] }}{% endif %}</div>
+    </div>
+    <div class="batch-arrow">›</div>
+  </a>
+  {% if loop.last %}</section>{% endif %}
+{% endfor %}
+{% endblock %}

@@ -1,0 +1,55 @@
+﻿{% extends "base.html" %}
+{% block title %}中药饮片 · 医保标准库 · 医保智审{% endblock %}
+{% block content %}
+<section class="page-head">
+  <h1 class="page-title">中药饮片</h1>
+  <p class="page-sub">国家医保中药饮片分类与代码 · {{ total_codes }} 条</p>
+</section>
+
+<nav class="bread">
+  <a href="{{ url_for('nhsa_index') }}">标准数据库</a> <span class="bread-sep">›</span>
+  <span class="bread-cur">中药饮片</span>
+  {% if query %}<span class="bread-sep">›</span> <span class="bread-cur">搜索：{{ query }}</span>{% endif %}
+</nav>
+
+<form action="{{ url_for('tcm_browse') }}" method="get" class="hero-search" style="margin-bottom: var(--s-4);">
+  <span class="hero-search-icon">⌕</span>
+  <input name="q" type="search" value="{{ query|default('',true) }}" placeholder="输入饮片名称 / 编码" enterkeyhint="search">
+  <button class="hero-search-btn" type="submit">搜索</button>
+</form>
+
+{% if query %}
+<section class="list-card">
+  {% for r in rows %}
+  <a class="list-row" href="{{ url_for('tcm_detail', code=r.code) }}">
+    <div class="list-main">
+      <div class="list-code">{{ r.code }}{% if r.p_code %} · 父 {{ r.p_code }}{% endif %}{% if r.level %} · L{{ r.level }}{% endif %}</div>
+      <div class="list-name">{{ r.name }}</div>
+      <div class="list-meta">
+        {% if r.class_name %}{{ r.class_name }}{% endif %}
+        {% if r.apply_explain %} · {{ r.apply_explain|truncate2(60) }}{% endif %}
+      </div>
+    </div>
+    <div class="list-arrow">›</div>
+  </a>
+  {% else %}
+  <div class="empty">
+    <div class="empty-ico">∅</div>
+    <div class="empty-title">无匹配</div>
+    <div class="empty-tip">没有找到与「{{ query }}」相关的中药饮片</div>
+  </div>
+  {% endfor %}
+</section>
+<div class="pager">
+  <span class="pager-info">共 {{ total }} 条 · 显示 {{ rows|length }}</span>
+</div>
+{% else %}
+<section class="tip">
+  <div class="tip-icon">i</div>
+  <div class="tip-body">
+    <div class="tip-title">关于中药饮片</div>
+    <div class="tip-text">国家医保局发布的中药饮片分类与代码。按部位 / 功效分类树状组织。使用上方搜索框按名称或编码查找。</div>
+  </div>
+</section>
+{% endif %}
+{% endblock %}

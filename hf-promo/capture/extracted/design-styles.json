@@ -1,0 +1,106 @@
+{
+  "typography": [
+    {
+      "role": "display",
+      "fontFamily": "-apple-system",
+      "fontSize": "28px",
+      "fontWeight": "700",
+      "lineHeight": "36.4px",
+      "letterSpacing": "normal",
+      "color": "#FFFFFF",
+      "sampleText": "医保智审规则与知识库"
+    },
+    {
+      "role": "link",
+      "fontFamily": "-apple-system",
+      "fontSize": "15px",
+      "fontWeight": "400",
+      "lineHeight": "24px",
+      "letterSpacing": "normal",
+      "color": "#1D2129",
+      "sampleText": "医 医保智审"
+    },
+    {
+      "role": "heading",
+      "fontFamily": "-apple-system",
+      "fontSize": "14px",
+      "fontWeight": "600",
+      "lineHeight": "22.4px",
+      "letterSpacing": "0.3px",
+      "color": "#4E5969",
+      "sampleText": "最近更新"
+    },
+    {
+      "role": "label",
+      "fontFamily": "-apple-system",
+      "fontSize": "12px",
+      "fontWeight": "400",
+      "lineHeight": "19.2px",
+      "letterSpacing": "0.48px",
+      "color": "#FFFFFF",
+      "sampleText": "最近搜索"
+    }
+  ],
+  "spacing": {
+    "observed": [
+      2,
+      8,
+      10,
+      12,
+      16,
+      20,
+      24
+    ],
+    "baseUnit": 4
+  },
+  "radius": [
+    "12px",
+    "999px"
+  ],
+  "shadows": [
+    {
+      "value": "rgba(0, 0, 0, 0.04) 0px 1px 2px 0px",
+      "count": 8
+    }
+  ],
+  "buttons": [
+    {
+      "label": "搜索",
+      "background": "#1677FF",
+      "color": "#FFFFFF",
+      "padding": "0px 16px",
+      "borderRadius": "999px",
+      "border": "0px none rgb(255, 255, 255)",
+      "boxShadow": "none",
+      "fontSize": "14px",
+      "fontWeight": "500",
+      "height": "36px"
+    }
+  ],
+  "cards": [
+    {
+      "label": "card",
+      "background": "#FFFFFF",
+      "color": "#1D2129",
+      "padding": "12px 8px",
+      "borderRadius": "12px",
+      "border": "0px none rgb(29, 33, 41)",
+      "boxShadow": "rgba(0, 0, 0, 0.04) 0px 1px 2px 0px",
+      "fontSize": "15px",
+      "fontWeight": "400",
+      "height": "88.3906px"
+    }
+  ],
+  "nav": {
+    "label": "navigation",
+    "background": "#FFFFFF",
+    "color": "#1D2129",
+    "padding": "0px 24px",
+    "borderRadius": "0px",
+    "border": "",
+    "boxShadow": "none",
+    "fontSize": "15px",
+    "fontWeight": "400",
+    "height": "56px"
+  }
+}

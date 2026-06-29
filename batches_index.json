@@ -1,0 +1,57 @@
+{
+  "fetched_at": "2026-06-17",
+  "note": "第16批当前未发布；2026-01-28公告为\"更新发布\"已纳入参考",
+  "batches": [
+    {
+      "batch": "第七批",
+      "url": "https://www.nhsa.gov.cn/art/2025/12/12/art_109_19013.html",
+      "pub_date": "2025-12-12"
+    },
+    {
+      "batch": "第八批",
+      "url": "https://www.nhsa.gov.cn/art/2026/1/6/art_109_19250.html",
+      "pub_date": "2026-01-06"
+    },
+    {
+      "batch": "更新发布",
+      "url": "https://www.nhsa.gov.cn/art/2026/1/28/art_109_19496.html",
+      "pub_date": "2026-01-28",
+      "note": "对历史批次的更新"
+    },
+    {
+      "batch": "第九批",
+      "url": "https://www.nhsa.gov.cn/art/2026/4/21/art_109_20277.html",
+      "pub_date": "2026-04-21"
+    },
+    {
+      "batch": "第十批",
+      "url": "https://www.nhsa.gov.cn/art/2026/4/28/art_109_20351.html",
+      "pub_date": "2026-04-28"
+    },
+    {
+      "batch": "第十一批",
+      "url": "https://www.nhsa.gov.cn/art/2026/5/11/art_109_20462.html",
+      "pub_date": "2026-05-11"
+    },
+    {
+      "batch": "第十二批",
+      "url": "https://www.nhsa.gov.cn/art/2026/5/23/art_109_20682.html",
+      "pub_date": "2026-05-23"
+    },
+    {
+      "batch": "第十三批",
+      "url": "https://www.nhsa.gov.cn/art/2026/6/1/art_109_20822.html",
+      "pub_date": "2026-06-01"
+    },
+    {
+      "batch": "第十四批",
+      "url": "https://www.nhsa.gov.cn/art/2026/6/9/art_109_20899.html",
+      "pub_date": "2026-06-09"
+    },
+    {
+      "batch": "第十五批",
+      "url": "https://www.nhsa.gov.cn/art/2026/6/16/art_109_21004.html",
+      "pub_date": "2026-06-16"
+    }
+  ]
+}
