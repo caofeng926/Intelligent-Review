@@ -1,10 +1,27 @@
 ﻿{% extends "base.html" %}
 {% block title %}按批次浏览 · 医保智审{% endblock %}
 {% block content %}
+<nav class="crumb">
+  <a href="{{ url_for('home') }}">首页</a>
+  <span class="crumb-sep">›</span>
+  <span class="crumb-cur">规则</span>
+</nav>
+
 <section class="page-head">
   <h1 class="page-title">按批次浏览</h1>
   <p class="page-sub">{{ groups|length }} 个批次 · 共 {{ groups|sum(attribute=4) }} 条规则</p>
 </section>
+
+<nav class="rules-subnav" role="tablist" aria-label="规则浏览方式">
+  <a class="rules-subnav-item is-active" href="{{ url_for('rules_index') }}" role="tab" aria-selected="true">
+    <span class="subnav-ico">≡</span>
+    <span class="subnav-label">按批次浏览</span>
+  </a>
+  <a class="rules-subnav-item" href="{{ url_for('rules_find') }}" role="tab">
+    <span class="subnav-ico">⌕</span>
+    <span class="subnav-label">按知识点查询</span>
+  </a>
+</nav>
 
 {% set ns = namespace(curr_source='') %}
 {% for g in groups %}

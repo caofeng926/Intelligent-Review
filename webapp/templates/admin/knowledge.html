@@ -1,0 +1,50 @@
+{% extends "admin/base_admin.html" %}
+{% from "admin/_macros.html" import page_title, alert, empty, pager, tag %}
+{% block content %}
+  {{ page_title("知识点", "每个知识点对应一个药品 / 项目 + 一组医保编码") }}
+
+  <div class="admin-card">
+    <div class="admin-card-head">
+      <h3>知识点列表</h3>
+      <div class="actions">
+        <a class="btn btn-sm" href="{{ url_for('admin.dashboard') }}">概览</a>
+        <a class="btn btn-sm btn-primary" href="javascript:alert('搜索请使用顶部 ⌕ 搜索框')">搜索 →</a>
+      </div>
+    </div>
+    <div class="adm-table-wrap">
+      <table class="adm-table">
+        <thead>
+          <tr>
+            <th style="width:60px">ID</th>
+            <th>名称</th>
+            <th style="width:80px">拼音</th>
+            <th>所属规则</th>
+            <th>批次</th>
+            <th class="num" style="width:80px">编码数</th>
+            <th style="width:100px">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rows %}
+          <tr>
+            <td class="num text-3">#{{ r.id }}</td>
+            <td>
+              <a href="/admin/kp/{{ r.id }}" style="color:var(--brand); text-decoration:none;">
+                <strong>{{ r.subject_name or "—" }}</strong>
+              </a>
+            </td>
+            <td class="mono text-2">{{ r.pinyin_initials or "—" }}</td>
+            <td class="text-2">{{ r.rule_subject or "—" }}</td>
+            <td>{{ tag(r.batch_label, "mute") }}</td>
+            <td class="num"><strong>{{ "{:,}".format(r.code_count or 0) }}</strong></td>
+            <td><a class="btn btn-sm" href="/admin/kp/{{ r.id }}">查看</a></td>
+          </tr>
+          {% else %}
+          <tr class="empty-row"><td colspan="7">暂无知识点</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {{ pager(total, page, pages, page_size, url_for('admin.knowledge_page')) }}
+  </div>
+{% endblock %}

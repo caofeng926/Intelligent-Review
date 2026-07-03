@@ -10,7 +10,7 @@ from openpyxl import load_workbook
 from . import db
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-BATCH_DIRS = ["01-06批", "07-15批", "16批"]
+BATCH_DIRS = ["01-06批", "07-15批", "16批", "17-第十七批-药品限适应症(抗肿瘤+肌肉骨骼)"]
 SOURCE = "nhsa_batch"
 
 # Per-batch public-date / announcement-url map (from batches_attachments.json + batches_1to6.json)
@@ -32,6 +32,7 @@ BATCH_META = {
     "第十四批": ("2026-06-09", "https://www.nhsa.gov.cn/art/2026/6/9/art_109_20899.html"),
     "第十五批": ("2026-06-16", "https://www.nhsa.gov.cn/art/2026/6/16/art_109_21004.html"),
     "第十六批": ("2026-06-22", "https://www.nhsa.gov.cn/art/2026/6/22/art_109_21056.html"),
+    "第十七批": ("2026-06-29", "https://www.nhsa.gov.cn/art/2026/6/29/art_109_21146.html"),
 }
 
 CHINESE_QUOTES = "“”"

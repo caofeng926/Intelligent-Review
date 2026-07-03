@@ -1,0 +1,106 @@
+{% extends "admin/base_admin.html" %}
+{% from "admin/_macros.html" import page_title, alert, empty, pager, tag %}
+{% block content %}
+  {{ page_title(tab_label, "已同步 " + "{:,}".format(total or 0) + " 条" + (latest and (" · 最近入库 " + (latest.get("ingested_at") or "")) or "")) }}
+
+  {% if latest %}
+    {{ alert(
+      "最近同步：" + (latest.get("ingested_at") or "—") +
+      " · 批次 " + (latest.get("batch_label") or "—") +
+      " · 发布日期 " + (latest.get("pub_date") or "—") +
+      " · 入库 " + "{:,}".format(latest.get("record_count") or 0) + " 条",
+      "info", "↻"
+    ) }}
+  {% endif %}
+
+  <div class="admin-card">
+    <div class="admin-card-head">
+      <h3>{{ tab_label }} · 搜索 / 浏览</h3>
+      <div class="actions">
+        <a class="btn btn-sm" href="{{ url_for('admin.codes_page') }}">‹ 编码库</a>
+        {% if query %}
+          <a class="btn btn-sm btn-primary" href="{{ url_for('admin.admin_search') }}?q={{ query|urlencode }}">在知识点中搜</a>
+        {% endif %}
+      </div>
+    </div>
+    <form action="{{ url_for('admin.codes_' + tab_key) }}" method="get" role="search">
+      <div style="display:flex; gap:8px; align-items:center;">
+        <input type="search" name="q" value="{{ query }}" class="adm-input"
+               placeholder="输入药品 / 耗材 / 试剂 / 诊断 / 项目 / 编码"
+               style="flex:1;" autofocus>
+        <button type="submit" class="btn btn-primary">搜索</button>
+        {% if query %}<a class="btn btn-sm" href="{{ url_for('admin.codes_' + tab_key) }}">清除</a>{% endif %}
+      </div>
+      <div class="adm-help">提示：纯中文按前 2 字前缀；纯字母自动加 *；编码可直接精确匹配。</div>
+    </form>
+  </div>
+
+  {% if query %}
+    {% if rows %}
+      {{ alert("共匹配 " + "{:,}".format(matched or 0) + " 条 / 库内总 " + "{:,}".format(total or 0) + " 条", "success", "✓") }}
+      <div class="admin-card">
+        <div class="adm-card-head" style="display:flex; align-items:center; justify-content:space-between; padding:10px 14px; border-bottom:1px solid var(--border, #e8e8e8);">
+          <div>
+            <strong>{{ "{:,}".format(matched or 0) }}</strong> 条结果
+            <span class="text-3" style="font-size:12px; margin-left:8px;">显示 {{ columns|length }} 个字段</span>
+          </div>
+          <div class="text-3" style="font-size:12px;">第 {{ page }} / {{ pages }} 页 · 共 {{ "{:,}".format(matched or 0) }} 条</div>
+        </div>
+        <div class="adm-table-wrap" style="overflow-x:auto; max-width:100%;">
+          <table class="adm-table adm-table-codes">
+            <thead>
+              <tr>
+                <th style="width:50px">#</th>
+                {% for col_key, col_label in columns %}
+                  <th>{{ col_label }}</th>
+                {% endfor %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in rows %}
+              <tr>
+                <td class="num text-3">{{ (page - 1) * page_size + loop.index }}</td>
+                {% for col_key, col_label in columns %}
+                  <td class="{% if col_key == code_col %}mono{% endif %}" title="{{ r[col_key] or '' }}">
+                    {%- if col_key == code_col -%}
+                      <strong style="color:var(--brand);">{{ r[col_key] or "—" }}</strong>
+                    {%- elif col_key in ('is_using', 'list_class', 'generic_category') -%}
+                      {{ tag(r[col_key] or "—", "mute") }}
+                    {%- else -%}
+                      {{ r[col_key] or "—" }}
+                    {%- endif -%}
+                  </td>
+                {% endfor %}
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {{ pager(matched or 0, page, pages, page_size,
+            url_for('admin.codes_' + tab_key) + '?q=' + query|urlencode + '&') }}
+      </div>
+    {% else %}
+      {{ empty("未找到匹配项", "请换个关键词，或在知识点中搜索相关药品/项目", "∅") }}
+    {% endif %}
+  {% else %}
+    <div class="admin-card">
+      <div class="admin-card-head">
+        <h3>关键指标</h3>
+      </div>
+      <dl class="kv-list">
+        <div><dt>总条数</dt><dd><strong>{{ "{:,}".format(total or 0) }}</strong></dd></div>
+        <div><dt>数据源</dt><dd>{{ tab_label }}（{{ table }}）</dd></div>
+        {% if latest %}
+          <div><dt>最近入库</dt><dd>{{ latest.get("ingested_at") or "—" }}</dd></div>
+          <div><dt>批次</dt><dd>{{ latest.get("batch_label") or "—" }}</dd></div>
+          <div><dt>发布日期</dt><dd>{{ latest.get("pub_date") or "—" }}</dd></div>
+          <div><dt>入库记录数</dt><dd>{{ "{:,}".format(latest.get("record_count") or 0) }}</dd></div>
+        {% endif %}
+      </dl>
+      <div style="padding:12px 0; color:var(--text-2); font-size:13px;">
+        <p>👉 在上方输入关键词开始搜索。中文按前 2 字前缀匹配，纯字母/数字按通配符匹配，编码可精确匹配。</p>
+        <p>👉 也可使用页头 <kbd>/</kbd> 快捷键聚焦全局搜索（在知识点中搜索）。</p>
+      </div>
+    </div>
+  {% endif %}
+{% endblock %}

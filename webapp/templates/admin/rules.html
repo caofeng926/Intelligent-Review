@@ -1,0 +1,57 @@
+{% extends "admin/base_admin.html" %}
+{% from "admin/_macros.html" import page_title, alert, empty, pager, tag %}
+{% block content %}
+  {{ page_title("审核规则", "管理所有审核规则与对应知识点") }}
+
+  <div class="admin-card">
+    <div class="admin-card-head">
+      <h3>规则列表</h3>
+      <div class="actions">
+        <a class="btn btn-sm" href="{{ url_for('admin.dashboard') }}">概览</a>
+        <a class="btn btn-sm btn-primary" href="javascript:alert('新建规则功能 v2 · 待开发')">+ 新建规则</a>
+      </div>
+    </div>
+    <div class="adm-table-wrap">
+      <table class="adm-table">
+        <thead>
+          <tr>
+            <th style="width:60px">ID</th>
+            <th>规则主题</th>
+            <th>批次</th>
+            <th>发布日期</th>
+            <th class="num" style="width:80px">行数</th>
+            <th class="num" style="width:80px">知识点</th>
+            <th class="num" style="width:80px">编码数</th>
+            <th style="width:120px">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rows %}
+          <tr>
+            <td class="num text-3">#{{ r.id }}</td>
+            <td>
+              <a href="/admin/rules/{{ r.id }}" style="color:var(--brand); text-decoration:none;">
+                <strong>{{ r.rule_subject or "—" }}</strong>
+              </a>
+            </td>
+            <td>
+              {{ tag(r.batch_label, "mute") }}
+            </td>
+            <td class="text-2">{{ r.pub_date or "—" }}</td>
+            <td class="num text-2">{{ "{:,}".format(r.row_count or 0) }}</td>
+            <td class="num"><strong>{{ "{:,}".format(r.kp_count) }}</strong></td>
+            <td class="num text-2">{{ "{:,}".format(r.code_count) }}</td>
+            <td>
+              <a class="btn btn-sm" href="/admin/rules/{{ r.id }}">查看</a>
+              <a class="btn btn-sm" href="javascript:alert('编辑功能 v2')">编辑</a>
+            </td>
+          </tr>
+          {% else %}
+          <tr class="empty-row"><td colspan="8">暂无规则</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {{ pager(total, page, pages, page_size, url_for('admin.rules_page')) }}
+  </div>
+{% endblock %}

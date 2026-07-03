@@ -25,10 +25,12 @@ from flask import Flask, render_template, request, jsonify, abort
 from . import db
 from . import nhsa_api
 from . import nhsa_browse
+from . import admin
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
 nhsa_api.register(app)
 nhsa_browse.register(app)
+app.register_blueprint(admin.admin_bp)
 app.config["JSON_AS_ASCII"] = False
 app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
 
@@ -450,6 +452,129 @@ def rules_index():
             ORDER BY b.source, b.pub_date DESC, b.id
         """).fetchall()
     return render_template("rules.html", groups=groups, source_label=SOURCE_LABEL)
+
+
+
+
+@app.get("/rules/find")
+def rules_find():
+    """按知识点查询：录入具体药品/项目，列出所有涉及的规则。"""
+    q = (request.args.get("q") or "").strip()
+    src = (request.args.get("source") or "").strip() or None
+    if src and src not in SOURCE_LABEL:
+        src = None
+
+    groups = []        # 每条规则一组
+    total_kp = 0
+    total_rule = 0
+    mode = None
+
+    if q:
+        mode = detect_mode(q)
+        with db.connect() as conn:
+            rows, total_kp = _search_kps_grouped_by_rule(conn, q, mode, src, limit=300)
+            by_rule = {}
+            for r in rows:
+                rid = r["rule_id"]
+                if rid not in by_rule:
+                    by_rule[rid] = {
+                        "rule_id": rid,
+                        "rule_subject": r["rule_subject"],
+                        "source": r["source"],
+                        "category": r["category"],
+                        "object_type": r["object_type"],
+                        "batch_label": r["batch_label"],
+                        "pub_date": r["pub_date"],
+                        "kps": [],
+                    }
+                by_rule[rid]["kps"].append({
+                    "id": r["kp_id"],
+                    "seq": r["kp_seq"],
+                    "subject_name": r["subject_name"],
+                    "pinyin_initials": r["pinyin_initials"],
+                    "code_count": r["code_count"],
+                    "codes": r["codes"],
+                    "detection_logic": r["detection_logic"],
+                })
+            # NHSA 优先，然后按规则名排序
+            groups = sorted(
+                by_rule.values(),
+                key=lambda x: (x["source"] != "nhsa_batch", x["rule_subject"], x["rule_id"]),
+            )
+            total_rule = len(groups)
+    return render_template(
+        "rules_find.html",
+        q=q, source=src, mode=mode,
+        groups=groups, total_kp=total_kp, total_rule=total_rule,
+        source_label=SOURCE_LABEL,
+    )
+
+
+def _search_kps_grouped_by_rule(conn, q: str, mode: str, source, limit: int = 300):
+    """为 /rules/find 搜索 KPs，附带 rule_id 等列，便于分组。"""
+    if not q:
+        return [], 0
+    if mode == "code":
+        kp_rows, total = search_code(conn, q, source, limit, 0)
+        if not kp_rows:
+            return [], 0
+        return _enrich_kps_with_rule(conn, [r[0] for r in kp_rows], total), total
+    if mode == "initials":
+        kp_rows, total = search_initials(conn, q, source, limit, 0)
+        if not kp_rows:
+            return [], 0
+        return _enrich_kps_with_rule(conn, [r[0] for r in kp_rows], total), total
+    # name mode
+    fts_q = jieba_query(q)
+    if not fts_q:
+        return [], 0
+    sql = """
+        SELECT kp.id AS kp_id, kp.seq AS kp_seq, kp.subject_name, kp.pinyin_initials,
+               kp.code_count, kp.codes, kp.detection_logic,
+               r.id AS rule_id, r.rule_subject, r.source, r.category, r.object_type,
+               b.batch_label, b.pub_date
+        FROM kp_fts
+        JOIN knowledge_points kp ON kp.id = kp_fts.rowid
+        JOIN rules r ON r.id = kp.rule_id
+        JOIN batches b ON b.id = r.batch_id
+        WHERE kp_fts MATCH ?
+    """
+    params = [fts_q]
+    if source:
+        sql += " AND r.source = ?"
+        params.append(source)
+    sql += " ORDER BY bm25(kp_fts), r.source, r.rule_subject, kp.seq IS NULL, kp.seq, kp.id LIMIT ?"
+    params.append(limit)
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute(sql, params).fetchall()
+    conn.row_factory = None
+    total = conn.execute("SELECT COUNT(*) FROM kp_fts WHERE kp_fts MATCH ?", [fts_q]).fetchone()[0]
+    return rows, total
+
+
+def _enrich_kps_with_rule(conn, kp_ids, total):
+    """对一组 KP id，附带 rule 信息返回。结果保持 kp_ids 顺序。"""
+    if not kp_ids:
+        return [], 0
+    ph = ",".join("?" * len(kp_ids))
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute(
+        f"""
+        SELECT kp.id AS kp_id, kp.seq AS kp_seq, kp.subject_name, kp.pinyin_initials,
+               kp.code_count, kp.codes, kp.detection_logic,
+               r.id AS rule_id, r.rule_subject, r.source, r.category, r.object_type,
+               b.batch_label, b.pub_date
+        FROM knowledge_points kp
+        JOIN rules r ON r.id = kp.rule_id
+        JOIN batches b ON b.id = r.batch_id
+        WHERE kp.id IN ({ph})
+        """,
+        kp_ids,
+    ).fetchall()
+    conn.row_factory = None
+    pos = {kid: i for i, kid in enumerate(kp_ids)}
+    rows = sorted(rows, key=lambda r: pos[r["kp_id"]])
+    return rows
 
 
 @app.get("/rules/<int:rid>")

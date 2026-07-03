@@ -1,24 +1,24 @@
 ﻿{% extends "base.html" %}
-{% block title %}中药饮片 · 医保标准库 · 医保智审{% endblock %}
+{% block title %}中医病证术语 · 医保标准库 · 医保智审{% endblock %}
 {% block content %}
 <section class="page-head">
-  <h1 class="page-title">中药饮片</h1>
-  <p class="page-sub">国家医保中药饮片分类与代码 · {{ total_codes }} 条</p>
+  <h1 class="page-title">中医病证术语</h1>
+  <p class="page-sub">国家医保中医病证分类与代码 · {{ total_codes }} 条</p>
 </section>
 
 <nav class="bread">
   <a href="{{ url_for('nhsa_index') }}">标准数据库</a> <span class="bread-sep">›</span>
-  <span class="bread-cur">中药饮片</span>
+  <span class="bread-cur">中医病证术语</span>
   {% if query %}<span class="bread-sep">›</span> <span class="bread-cur">搜索：{{ query }}</span>{% endif %}
 </nav>
 
 <form action="{{ url_for('tcm_browse') }}" method="get" class="hero-search" style="margin-bottom: var(--s-4);">
   <span class="hero-search-icon">⌕</span>
-  <input name="q" type="search" value="{{ query|default('',true) }}" placeholder="输入饮片名称 / 编码" enterkeyhint="search">
+  <input name="q" type="search" value="{{ query|default('',true) }}" placeholder="输入病/证名 / 编码" enterkeyhint="search">
   <button class="hero-search-btn" type="submit">搜索</button>
 </form>
 
-{% if query %}
+{% if query or part or level %}
 <section class="list-card">
   {% for r in rows %}
   <a class="list-row" href="{{ url_for('tcm_detail', code=r.code) }}">
@@ -36,19 +36,48 @@
   <div class="empty">
     <div class="empty-ico">∅</div>
     <div class="empty-title">无匹配</div>
-    <div class="empty-tip">没有找到与「{{ query }}」相关的中药饮片</div>
+    <div class="empty-tip">{% if query %}没有找到与「{{ query }}」相关的中医病证{% elif part %}{{ part }} 部暂无术语{% else %}第 {{ level }} 级暂无术语{% endif %}</div>
   </div>
   {% endfor %}
 </section>
 <div class="pager">
   <span class="pager-info">共 {{ total }} 条 · 显示 {{ rows|length }}</span>
 </div>
+{% if part or level %}
+<div class="pager"><a class="sec-more" href="{{ url_for('tcm_browse') }}">‹ 返回浏览</a></div>
+{% endif %}
 {% else %}
+<section class="cat-list">
+  <h2 class="sec-title">按部位浏览</h2>
+  {% for p in parts %}
+  <a class="cat-card" href="{{ url_for('tcm_browse', part=p.part_code) }}">
+    <div class="cat-main">
+      <div class="cat-code">{{ p.part_code }} 部</div>
+      <div class="cat-name">{% if p.part_code == 'B' %}疾病术语（外感病、内伤病、妇科病…）{% elif p.part_code == 'Z' %}证候术语（寒热虚实、表里阴阳…）{% else %}其他部位{% endif %}</div>
+    </div>
+    <div class="cat-count">{{ "{:,}".format(p.count) }} 条</div>
+    <div class="cat-arrow">›</div>
+  </a>
+  {% endfor %}
+</section>
+<section class="cat-list">
+  <h2 class="sec-title">按层级浏览</h2>
+  {% for lv in levels %}
+  <a class="cat-card" href="{{ url_for('tcm_browse', level=lv.level) }}">
+    <div class="cat-main">
+      <div class="cat-code">第 {{ lv.level }} 级</div>
+      <div class="cat-name">{% if lv.level == 0 %}顶级分类{% elif lv.level == 1 %}大类{% elif lv.level == 2 %}中类{% elif lv.level == 3 %}小类 / 病种{% elif lv.level == 4 %}亚病种 / 病位{% elif lv.level == 5 %}证候细分{% else %}扩展层{% endif %}</div>
+    </div>
+    <div class="cat-count">{{ "{:,}".format(lv.count) }} 条</div>
+    <div class="cat-arrow">›</div>
+  </a>
+  {% endfor %}
+</section>
 <section class="tip">
   <div class="tip-icon">i</div>
   <div class="tip-body">
-    <div class="tip-title">关于中药饮片</div>
-    <div class="tip-text">国家医保局发布的中药饮片分类与代码。按部位 / 功效分类树状组织。使用上方搜索框按名称或编码查找。</div>
+    <div class="tip-title">关于中医病证术语</div>
+    <div class="tip-text">国家医保局发布的中医病证分类与代码：B = 疾病术语（7 级树状），Z = 证候术语。支持按名称 / 拼音 / 编码搜索，或按部位 / 层级浏览。</div>
   </div>
 </section>
 {% endif %}

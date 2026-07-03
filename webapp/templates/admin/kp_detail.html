@@ -1,0 +1,59 @@
+{% extends "admin/base_admin.html" %}
+{% from "admin/_macros.html" import page_title, alert, tag %}
+{% block content %}
+  {{ page_title(kp.subject_name or "(无名)", "知识点 #" + kp.id|string + " · " + kp.batch_label) }}
+
+  <div class="admin-card">
+    <div class="admin-card-head">
+      <h3>知识点信息</h3>
+      <div class="actions">
+        <a class="btn btn-sm" href="{{ url_for('admin.rule_detail', rid=kp.rule_id) }}">‹ 返回规则</a>
+      </div>
+    </div>
+    <dl class="kv-list">
+      <div><dt>知识点 ID</dt><dd>#{{ kp.id }}</dd></div>
+      <div><dt>名称</dt><dd><strong>{{ kp.subject_name or "—" }}</strong></dd></div>
+      <div><dt>拼音首字母</dt><dd class="mono">{{ kp.pinyin_initials or "—" }}</dd></div>
+      <div><dt>所属规则</dt><dd>{{ kp.rule_subject or "—" }}</dd></div>
+      <div><dt>所属批次</dt><dd>{{ kp.batch_label }} ({{ kp.pub_date or "—" }})</dd></div>
+      <div><dt>编码总数</dt><dd><strong>{{ kp.code_count or 0 }}</strong></dd></div>
+    </dl>
+  </div>
+
+  {% if kp.detection_logic %}
+  <div class="admin-card">
+    <div class="admin-card-head"><h3>检测逻辑</h3></div>
+    <div style="padding:14px 0; font-size:14px; line-height:1.7; color:var(--text);">{{ kp.detection_logic }}</div>
+  </div>
+  {% endif %}
+
+  {% if kp.logic_basis %}
+  <div class="admin-card">
+    <div class="admin-card-head"><h3>判定依据</h3></div>
+    <div style="padding:14px 0; font-size:14px; line-height:1.7; color:var(--text);">{{ kp.logic_basis }}</div>
+  </div>
+  {% endif %}
+
+  {% if kp.codes_list %}
+  <div class="admin-card">
+    <div class="admin-card-head">
+      <h3>医保编码（{{ kp.codes_list|length }} 条）</h3>
+      <div class="actions">
+        <button class="btn btn-sm" onclick="navigator.clipboard.writeText('{{ kp.codes_list | join('\n') }}')">复制全部</button>
+      </div>
+    </div>
+    <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:8px;">
+      {% for code in kp.codes_list %}
+      <a class="btn btn-sm" href="{{ url_for('admin.admin_search') }}?q={{ code }}" style="justify-content:flex-start; font-family:var(--f-mono); font-size:12px;">{{ code }}</a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if kp.remark %}
+  <div class="admin-card">
+    <div class="admin-card-head"><h3>备注</h3></div>
+    <div style="padding:14px 0; font-size:13px; color:var(--text-2);">{{ kp.remark }}</div>
+  </div>
+  {% endif %}
+{% endblock %}

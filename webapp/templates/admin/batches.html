@@ -1,0 +1,57 @@
+{% extends "admin/base_admin.html" %}
+{% from "admin/_macros.html" import page_title, alert, tag %}
+{% block content %}
+  {{ page_title("规则批次", "17 批 NHSA 公告 + 2025 PDF 合并版 · 共 " + batches|length|string + " 个批次") }}
+
+  <div class="admin-card">
+    <div class="admin-card-head">
+      <h3>批次列表</h3>
+      <div class="actions">
+        <a class="btn btn-sm" href="{{ url_for('admin.sync_page') }}">同步状态</a>
+      </div>
+    </div>
+    <div class="adm-table-wrap">
+      <table class="adm-table">
+        <thead>
+          <tr>
+            <th style="width:60px">ID</th>
+            <th>批次名</th>
+            <th>主题</th>
+            <th>来源</th>
+            <th>发布日期</th>
+            <th class="num" style="width:80px">规则</th>
+            <th class="num" style="width:80px">知识点</th>
+            <th class="num" style="width:100px">编码数</th>
+            <th>原文</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for b in batches %}
+          <tr>
+            <td class="num text-3">#{{ b.id }}</td>
+            <td><strong>{{ b.batch_label }}</strong></td>
+            <td class="text-2">{{ b.rule_subject or "-" }}</td>
+            <td>
+              {% if b.source == "nhsa_batch" %}
+                {{ tag("NHSA 公告", "primary") }}
+              {% else %}
+                {{ tag("PDF 2025", "purple") }}
+              {% endif %}
+            </td>
+            <td class="text-2">{{ b.pub_date or "-" }}</td>
+            <td class="num"><strong>{{ b.rule_count }}</strong></td>
+            <td class="num">{{ "{:,}".format(b.kp_count or 0) }}</td>
+            <td class="num text-2">{{ "{:,}".format(b.code_count or 0) }}</td>
+            <td>
+              {% if b.ann_url %}<a class="btn btn-sm" href="{{ b.ann_url }}" target="_blank" rel="noopener">公告</a>{% endif %}
+              {% if b.pdf_path %}<a class="btn btn-sm" href="/{{ b.pdf_path }}" target="_blank" rel="noopener">PDF</a>{% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr class="empty-row"><td colspan="9">暂无批次</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endblock %}

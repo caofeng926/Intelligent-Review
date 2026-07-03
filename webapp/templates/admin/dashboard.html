@@ -1,0 +1,125 @@
+﻿{% extends "admin/base_admin.html" %}
+{% from "admin/_macros.html" import stat_card, page_title, alert, tag %}
+{% block content %}
+  {{ page_title("概览", "系统关键指标与最近动态") }}
+
+  {{ alert("数据库连接正常 · 18 个批次 / 78 条规则已同步 · 上次同步 2026-06-30", "success", "✓") }}
+
+  <div class="stat-grid">
+    {{ stat_card("审核规则", stats.rules, "≡", url=url_for('admin.rules_page')) }}
+    {{ stat_card("知识点", "{:,}".format(stats.kp), "✦", url=url_for('admin.knowledge_page')) }}
+    {{ stat_card("医保编码", "{:,}".format(stats.codes), "⊞", url=url_for('admin.codes_page')) }}
+    {{ stat_card("已同步批次", stats.batches, "↻", url=url_for('admin.sync_page')) }}
+    {{ stat_card("药品编码 (YP)", "{:,}".format(counts.yp_codes or 0), "💊", url=url_for('admin.codes_yp')) }}
+    {{ stat_card("耗材编码 (HC)", "{:,}".format(counts.consumable_codes or 0), "⊡", url=url_for('admin.codes_hc')) }}
+    {{ stat_card("IVD 试剂", "{:,}".format(counts.ivd_codes or 0), "🧪", url=url_for('admin.codes_ivd')) }}
+    {{ stat_card("ICD-10", "{:,}".format(counts.icd_codes or 0), "✚", url=url_for('admin.codes_icd')) }}
+  </div>
+
+  <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px;">
+    <div class="admin-card">
+      <div class="admin-card-head">
+        <h2>最近批次</h2>
+        <a class="btn btn-sm" href="{{ url_for('admin.sync_page') }}">全部 →</a>
+      </div>
+      <div class="adm-table-wrap">
+        <table class="adm-table">
+          <thead>
+            <tr>
+              <th style="width:50px">ID</th>
+              <th>批次</th>
+              <th>来源</th>
+              <th style="width:100px">发布日期</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for b in recent_batches %}
+            <tr>
+              <td class="num text-3">#{{ b.id }}</td>
+              <td>
+                <strong>{{ b.batch_label }}</strong>
+                <div class="text-3" style="font-size:11px;">{{ (b.pub_date or "—") or "—" }}</div>
+              </td>
+              <td>
+                {% if b.source == "nhsa_batch" %}
+                  {{ tag("NHSA 公告", "primary") }}
+                {% else %}
+                  {{ tag("PDF 2025", "purple") }}
+                {% endif %}
+              </td>
+              <td class="text-2">{{ b.pub_date or "—" }}</td>
+            </tr>
+            {% else %}
+            <tr class="empty-row"><td colspan="4">暂无批次</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="admin-card">
+      <div class="admin-card-head">
+        <h2>最近规则</h2>
+        <a class="btn btn-sm" href="{{ url_for('admin.rules_page') }}">全部 →</a>
+      </div>
+      <div class="adm-table-wrap">
+        <table class="adm-table">
+          <thead>
+            <tr>
+              <th style="width:50px">ID</th>
+              <th>规则主题</th>
+              <th>批次</th>
+              <th class="num" style="width:80px">知识点</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in recent_rules %}
+            <tr>
+              <td class="num text-3">#{{ r.id }}</td>
+              <td>
+                <a href="/admin/rules/{{ r.id }}" style="color:var(--brand); text-decoration:none;">
+                  <strong>{{ r.rule_subject or "—" }}</strong>
+                </a>
+              </td>
+              <td class="text-2">{{ r.batch_label }}</td>
+              <td class="num"><strong>{{ "{:,}".format(r.kp_count) }}</strong></td>
+            </tr>
+            {% else %}
+            <tr class="empty-row"><td colspan="4">暂无规则</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="admin-card">
+    <div class="admin-card-head">
+      <h2>数据健康度</h2>
+      <a class="btn btn-sm" href="{{ url_for('admin.settings_page') }}">系统设置</a>
+    </div>
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:14px;">
+      <div>
+        <div class="text-3" style="font-size:12px;">数据库路径</div>
+        <div class="mono" style="font-size:12px; color:var(--text-2);">{{ info.data_path if info else "—" }}</div>
+      </div>
+      <div>
+        <div class="text-3" style="font-size:12px;">YP / 药品</div>
+        <strong>{{ "{:,}".format(counts.yp_codes or 0) }}</strong> · <span class="text-3">{{ "{:,}".format(counts.drug_detail or 0) }} 详情</span>
+      </div>
+      <div>
+        <div class="text-3" style="font-size:12px;">HC7 / 7 类耗材</div>
+        <strong>{{ "{:,}".format(counts.consumable7_codes or 0) }}</strong>
+      </div>
+      <div>
+        <div class="text-3" style="font-size:12px;">MS / 医疗服务</div>
+        <strong>{{ "{:,}".format(counts.medical_service_codes or 0) }}</strong>
+      </div>
+      <div>
+        <div class="text-3" style="font-size:12px;">TCM / 中医病证</div>
+        <strong>{{ "{:,}".format(counts.tcm_codes or 0) }}</strong>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+

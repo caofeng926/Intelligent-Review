@@ -1,0 +1,38 @@
+{% extends "admin/base_admin.html" %}
+{% from "admin/_macros.html" import page_title, alert, tag %}
+{% block content %}
+  {{ page_title("医保编码库", "管理 7 类医保编码 · 总计 " + "{:,}".format(counts.yp_codes|default(0) + counts.consumable_codes|default(0) + counts.ivd_codes|default(0) + counts.consumable7_codes|default(0) + counts.icd_codes|default(0) + counts.medical_service_codes|default(0) + counts.tcm_codes|default(0)) + " 条") }}
+
+  <div class="admin-card">
+    <div class="admin-card-head">
+      <h3>编码分类</h3>
+      <a class="btn btn-sm" href="{{ url_for('admin.sync_page') }}">同步状态</a>
+    </div>
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:14px;">
+      {% set tiles = [
+        ('yp',  '药品 (YP)',     '国家医保药品分类与代码', counts.yp_codes,         '#1677ff', url_for('admin.codes_yp')),
+        ('hc',  '医用耗材 (HC)', '医保医用耗材分类与代码', counts.consumable_codes, '#fa8c16', url_for('admin.codes_hc')),
+        ('ivd', 'IVD 试剂',      '医保体外诊断试剂',         counts.ivd_codes,        '#13a362', url_for('admin.codes_ivd')),
+        ('hc7', '7 类耗材',      '血管介入支架等 7 类',     counts.consumable7_codes,'#722ed1', url_for('admin.codes_hc7')),
+        ('icd', 'ICD-10',        '疾病诊断代码',             counts.icd_codes,        '#f53f3f', url_for('admin.codes_icd')),
+        ('ms',  '医疗服务',      '全国医疗服务项目',         counts.medical_service_codes, '#ff7d00', url_for('admin.codes_ms')),
+        ('tcm', '中医病证 (TCM)', 'B 疾病 + Z 证候',         counts.tcm_codes,        '#52c41a', url_for('admin.codes_tcm')),
+      ] %}
+      {% for key, label, sub, n, color, url in tiles %}
+        <a class="stat-card-admin" href="{{ url }}" style="text-decoration:none;">
+          <span class="stat-ico" aria-hidden="true" style="opacity:.3; color:{{ color }};">●</span>
+          <div class="stat-label">{{ label }}</div>
+          <div class="stat-num" style="color:{{ color }};">{{ "{:,}".format(n or 0) }}</div>
+          <div class="stat-delta text-3">{{ sub }}</div>
+        </a>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="admin-card">
+    <div class="admin-card-head">
+      <h3>同步时间线</h3>
+    </div>
+    <p class="text-3" style="font-size:12px;">最近各数据源的发布日期和入库时间，按数据源列出。完整信息见 <a href="{{ url_for('admin.sync_page') }}" style="color:var(--brand);">数据同步</a>。</p>
+  </div>
+{% endblock %}

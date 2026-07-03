@@ -1,0 +1,58 @@
+﻿{% extends "admin/base_admin.html" %}
+{% from "admin/_macros.html" import page_title, alert, tag %}
+{% block content %}
+  {{ page_title("数据同步", "管理各数据源（NHSA / PDF）的最新同步状态") }}
+
+  {{ alert("当前共 " + batches|length|string + " 个同步记录 · 8 个数据源在线", "info", "↻") }}
+
+  <div class="admin-card">
+    <div class="admin-card-head">
+      <h3>同步批次</h3>
+      <div class="actions">
+        <a class="btn btn-sm" href="javascript:location.reload()">↻ 刷新</a>
+        <a class="btn btn-sm btn-primary" href="javascript:alert('手动触发同步 · 调用 sync-nhsa-codes skill · 待开发')">立即同步</a>
+      </div>
+    </div>
+    <div class="adm-table-wrap">
+      <table class="adm-table">
+        <thead>
+          <tr>
+            <th style="width:50px">ID</th>
+            <th>批次名</th>
+            <th>数据源</th>
+            <th>系统标志</th>
+            <th class="num" style="width:80px">条数</th>
+            <th>发布日期</th>
+            <th>入库时间</th>
+            <th>文件</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for b in batches %}
+          <tr>
+            <td class="num text-3">#{{ b.rowid }}</td>
+            <td>
+              <strong>{{ b.batch_label }}</strong>
+            </td>
+            <td>
+              {{ tag(b.source, "primary") }}
+            </td>
+            <td class="mono text-2">{{ b.sysflag or "—" }}</td>
+            <td class="num"><strong>{{ "{:,}".format(b.record_count or 0) }}</strong></td>
+            <td class="text-2">{{ b.pub_date or "—" }}</td>
+            <td class="text-2">{{ b.ingested_at or "—" }}</td>
+            <td>
+              {% if b.csv_path %}<span class="text-3" style="font-size:11px;" title="{{ b.csv_path }}">CSV</span>
+              {% elif b.json_path %}<span class="text-3" style="font-size:11px;" title="{{ b.json_path }}">JSON</span>
+              {% else %}—{% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr class="empty-row"><td colspan="8">暂无同步记录</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endblock %}
+

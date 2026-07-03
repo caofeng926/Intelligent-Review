@@ -71,6 +71,12 @@
       药品详情
       <span class="sec-aux">{{ drug_details|length }} 条有厂家信息</span>
     </h2>
+    <p class="kp-section-tip">
+      <span class="tip-ico">ⓘ</span>
+      完整说明书（适应症/用法用量/不良反应等）需从
+      <a href="https://www.nmpa.gov.cn/datasearch/search-info.html?nmpa=ff80808183cad7500183eb2feeb02b59" target="_blank" rel="noopener">NMPA 药品数据库</a>
+      按批准文号查询。本页暂未集成全文说明书数据。
+    </p>
     <ul class="drug-list">
       {% for c in codes %}
         {% set d = drug_details.get(c) %}

@@ -1,0 +1,152 @@
+{% set _menu = admin_menu or [] %}
+{% set _active = active or "dashboard" %}
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#1677ff">
+<title>{{ title or "概览" }} · 医保智能审核规则和编码查询系统</title>
+<link rel="stylesheet" href="/static/mobile.css">
+<link rel="stylesheet" href="/static/admin.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231677ff'/%3E%3Cpath d='M20 22h6v8h12v-8h6v20h-6v-8H26v8h-6z' fill='white'/%3E%3C/svg%3E">
+</head>
+<body>
+<div class="admin-shell">
+  <aside class="admin-aside" id="admin-aside">
+    <div class="brand">
+      <span class="brand-mark">医</span>
+      <div>
+        医保审核
+        <small>规则与编码查询</small>
+      </div>
+    </div>
+    <ul class="admin-menu">
+      {% for item in _menu %}
+        {% if item.children %}
+            {% set _ns = namespace(has_active=false) %}
+            {% for sub in item.children %}
+              {% if _active == sub.key %}{% set _ns.has_active = true %}{% endif %}
+            {% endfor %}
+            <li class="menu-group{% if item.group %} is-divider{% endif %}{% if not _ns.has_active %} is-collapsed{% endif %}" data-group-key="{{ item.key }}">
+              <div class="menu-group-label" role="button" tabindex="0" aria-expanded="{{ 'true' if _has_active else 'false' }}">
+                <span class="ico">{{ item.icon }}</span>
+                <span class="label-text">{{ item.label }}</span>
+                <span class="arrow" aria-hidden="true">▾</span>
+              </div>
+              <ul class="sub">
+                {% for sub in item.children %}
+                  <li>
+                    <a href="{{ url_for(sub.endpoint) }}"
+                       class="{% if _active == sub.key %}is-active{% endif %}">{{ sub.label }}</a>
+                  </li>
+                {% endfor %}
+              </ul>
+          </li>
+        {% else %}
+          <li>
+            <a href="{{ url_for(item.endpoint) }}"
+               class="{% if _active == item.key or _active == item.key|replace('_page','') %}is-active{% endif %}">
+              <span class="ico">{{ item.icon }}</span>
+              <span>{{ item.label }}</span>
+              {% if item.badge and counts.get(item.badge) %}
+                <span class="badge">{{ "{:,}".format(counts[item.badge]) }}</span>
+              {% endif %}
+            </a>
+          </li>
+        {% endif %}
+      {% endfor %}
+    </ul>
+    <div class="admin-aside-foot">
+      v1.0 · Flask + SQLite
+    </div>
+  </aside>
+  <div class="admin-aside-backdrop" id="admin-aside-backdrop"></div>
+
+  <header class="admin-header">
+    <button class="burger" id="admin-burger" aria-label="菜单">☰</button>
+    <div class="title">
+      {{ title or "概览" }}
+      <small>· 医保智能审核规则和编码查询系统</small>
+    </div>
+    <div class="crumb">
+      {% block crumb %}
+        <a href="{{ url_for('admin.dashboard') }}">概览</a>
+        {% if _active != "dashboard" %}
+          <span class="sep">›</span>
+          <span>{{ title }}</span>
+        {% endif %}
+      {% endblock %}
+    </div>
+    <form class="admin-search" action="/admin/search" method="get" role="search">
+      <span class="ico" aria-hidden="true">⌕</span>
+      <input name="q" type="search" autocomplete="off"
+             placeholder="搜药品 / 编码 / 关键词" enterkeyhint="search">
+      <span class="kbd-hint">/</span>
+    </form>
+    <button class="admin-icon-btn" title="刷新" onclick="location.reload()">↻</button>
+    <button class="admin-icon-btn" title="通知">◉</button>
+    <div class="admin-user">
+      <div class="avatar">A</div>
+      <div>
+        <div class="name">管理员</div>
+        <div class="role">superadmin</div>
+      </div>
+    </div>
+  </header>
+
+  <main class="admin-main">
+    {% block content %}{% endblock %}
+  </main>
+</div>
+
+<script>
+(function(){
+  // 移动端抽屉
+  var burger = document.getElementById("admin-burger");
+  var aside = document.getElementById("admin-aside");
+  var backdrop = document.getElementById("admin-aside-backdrop");
+  if (burger && aside) {
+    burger.addEventListener("click", function(){
+      aside.classList.toggle("is-open");
+      backdrop.classList.toggle("is-open");
+    });
+    backdrop.addEventListener("click", function(){
+      aside.classList.remove("is-open");
+      backdrop.classList.remove("is-open");
+    });
+  }
+  // / 聚焦搜索
+  document.addEventListener("keydown", function(e){
+    if (e.key === "/" && document.activeElement.tagName !== "INPUT" &&
+        document.activeElement.tagName !== "TEXTAREA") {
+      e.preventDefault();
+      var s = document.querySelector(".admin-search input");
+      if (s) s.focus();
+    }
+  });
+  // 一级菜单伸缩（点 label 切换 .is-collapsed）
+  document.querySelectorAll(".menu-group-label").forEach(function(label){
+    var li = label.parentElement;
+    function toggle(){
+      var willCollapse = !li.classList.contains("is-collapsed");
+      li.classList.toggle("is-collapsed", willCollapse);
+      label.setAttribute("aria-expanded", willCollapse ? "false" : "true");
+    }
+    label.addEventListener("click", function(ev){
+      ev.preventDefault();
+      ev.stopPropagation();
+      toggle();
+    });
+    label.addEventListener("keydown", function(ev){
+      if (ev.key === "Enter" || ev.key === " ") {
+        ev.preventDefault();
+        toggle();
+      }
+    });
+  });
+})();
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

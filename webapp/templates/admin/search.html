@@ -1,0 +1,61 @@
+{% extends "admin/base_admin.html" %}
+{% from "admin/_macros.html" import page_title, alert, empty, pager %}
+{% block content %}
+  {{ page_title("搜索结果", "搜药品 / 知识点 / 拼音首字母 / 编码") }}
+
+  <div class="admin-card">
+    <div class="admin-card-head">
+      <h3>关键词</h3>
+    </div>
+    <form action="{{ url_for('admin.admin_search') }}" method="get" role="search">
+      <div style="display:flex; gap:8px;">
+        <input type="search" name="q" value="{{ q }}" class="adm-input"
+               placeholder="输入药品名 / 编码 / 拼音首字母"
+               style="flex:1;" autofocus>
+        <button type="submit" class="btn btn-primary">搜索</button>
+      </div>
+      <div class="adm-help">提示：纯中文按前 2 字前缀；纯字母自动加 *；大写编码精确匹配。</div>
+    </form>
+  </div>
+
+  {% if q %}
+    {% if rows %}
+      {{ alert("共找到 " + total|string + " 条结果（每页 " + page_size|string + " 条）", "success", "✓") }}
+      <div class="admin-card">
+        <div class="adm-table-wrap">
+          <table class="adm-table">
+            <thead>
+              <tr>
+                <th style="width:60px">ID</th>
+                <th>名称</th>
+                <th style="width:80px">拼音</th>
+                <th>所属规则</th>
+                <th>批次</th>
+                <th class="num" style="width:80px">编码数</th>
+                <th style="width:80px">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in rows %}
+              <tr>
+                <td class="num text-3">#{{ r.id }}</td>
+                <td><strong>{{ r.subject_name or "—" }}</strong></td>
+                <td class="mono text-2">{{ r.pinyin_initials or "—" }}</td>
+                <td class="text-2">{{ r.rule_subject or "—" }}</td>
+                <td class="text-2">{{ r.batch_label }}</td>
+                <td class="num">{{ r.code_count or 0 }}</td>
+                <td><a class="btn btn-sm" href="{{ url_for('admin.kp_detail', kp_id=r.id) }}">查看</a></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {{ pager(total, page, pages, page_size, url_for('admin.admin_search') + '?q=' + q|urlencode + '&') }}
+      </div>
+    {% else %}
+      {{ empty("未找到匹配项", "请检查关键词或换个搜索方式", "∅") }}
+    {% endif %}
+  {% else %}
+    {{ alert("请在上方输入关键词开始搜索", "info", "⌕") }}
+  {% endif %}
+{% endblock %}

@@ -1,0 +1,32 @@
+{% extends "admin/base_admin.html" %}
+{% from "admin/_macros.html" import page_title, alert %}
+{% block content %}
+  {{ page_title("职工医保政策", "三级菜单待定 · 当前为占位页面") }}
+
+  {{ alert("职工医保政策查询正在建设中。三级菜单确认后将上线个人账户、门诊统筹、住院报销、补充保险、个人账户家庭共济等模块。", "info", "i") }}
+
+  <div class="admin-card">
+    <div class="admin-card-head">
+      <h3>拟定目录（待您确认）</h3>
+    </div>
+    <ul style="line-height:2; padding-left:20px; color:var(--text-2); font-size:13px;">
+      <li>参保范围与缴费基数</li>
+      <li>个人账户划入与使用</li>
+      <li>门诊统筹与慢病管理</li>
+      <li>住院报销与封顶线</li>
+      <li>职工大额医疗费用补助</li>
+      <li>异地就医与转移接续</li>
+      <li>退休人员医保待遇</li>
+      <li>个人账户家庭共济</li>
+    </ul>
+  </div>
+
+  <div class="admin-card">
+    <div class="admin-card-head">
+      <h3>数据来源规划</h3>
+    </div>
+    <p class="text-3" style="font-size:12px;">
+      本模块将整合国家医保局、省医保局、各市医保局公开政策文件，支持按发布时间、生效时间、行政区划检索。
+    </p>
+  </div>
+{% endblock %}

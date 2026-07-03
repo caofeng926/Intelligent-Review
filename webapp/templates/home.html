@@ -4,11 +4,12 @@
 <section class="hero">
   <div class="hero-bg" aria-hidden="true"></div>
   <div class="hero-inner">
-    <h1 class="hero-title">医保智审规则与知识库</h1>
+    <h1 class="hero-title">医保智审知识库</h1>
+    <p class="hero-sub">智能审核规则 · 医保编码一站式查询</p>
     <form class="hero-search" action="{{ url_for('search_view') }}" method="get" role="search">
       <span class="hero-search-icon" aria-hidden="true">⌕</span>
       <input name="q" type="search" inputmode="search" autocomplete="off" autofocus
-             placeholder="搜药品 / 耗材 / 服务项目" enterkeyhint="search">
+             placeholder="搜药品 / 耗材 / 服务项目 / 编码" enterkeyhint="search">
       <button class="hero-search-btn" type="submit" aria-label="搜索">搜索</button>
     </form>
     <div class="hero-recent" id="hero-recent" aria-live="polite">
@@ -21,73 +22,51 @@
   </div>
 </section>
 
-<section class="stats">
-  <a class="stat-card" href="{{ url_for('rules_index') }}">
+<section class="stats stats-3col">
+  <a class="stat-card stat-mac-pink" href="{{ url_for('rules_index') }}">
     <div class="stat-num">{{ "{:,}".format(stats['kp']) }}</div>
     <div class="stat-label">知识点</div>
   </a>
-  <a class="stat-card stat-card-rich" href="{{ url_for('search_view') }}">
+  <a class="stat-card stat-mac-blue" href="{{ url_for('search_view') }}">
     <div class="stat-num">{{ "{:,}".format(stats['codes']) }}</div>
-    <div class="stat-label">医保编码 · {{ "{:,}".format(unique_subjects) }} 个品种</div>
-    <div class="stat-samples">
-      {% for code, _name, _id in code_samples[:3] %}
-      <span class="stat-sample">{{ code[:6] }}…</span>
-      {% endfor %}
-    </div>
+    <div class="stat-label">医保编码</div>
   </a>
-  <a class="stat-card" href="{{ url_for('rules_index') }}">
-    <div class="stat-num">{{ stats['rules'] }}</div>
-    <div class="stat-label">规则 ({{ stats['nhsa'] }}+{{ stats['pdf'] }})</div>
-  </a>
-  <a class="stat-card" href="{{ url_for('rules_index') }}">
-    <div class="stat-num">{{ stats['batches'] }}</div>
-    <div class="stat-label">批次</div>
-  </a>
-  <a class="stat-card" href="{{ url_for('consumables_index') }}">
+  <a class="stat-card stat-mac-green" href="{{ url_for('consumables_index') }}">
     <div class="stat-num">{{ "{:,}".format(stats['consumables']) }}</div>
     <div class="stat-label">耗材代码</div>
   </a>
 </section>
 
-<section class="entry-grid">
-  <a class="entry-card" href="{{ url_for('search_view') }}">
-    <div class="entry-ico" style="--ico-bg:#fff1e8;--ico-fg:#ff7d00">⌕</div>
+<section class="entry-grid entry-grid-2col">
+  <a class="entry-card entry-mac-pink" href="{{ url_for('search_view') }}">
+    <div class="entry-ico">⌕</div>
     <div class="entry-text">
-      <div class="entry-title">关键字 / 首字母 / 编码</div>
-      <div class="entry-sub">支持 艾附暖宫丸 / afngw / ZD03...</div>
+      <div class="entry-title">搜索查询</div>
+      <div class="entry-sub">关键字 / 首字母 / 编码</div>
     </div>
     <div class="entry-arrow">›</div>
   </a>
-  <a class="entry-card" href="{{ url_for('rules_index') }}">
-    <div class="entry-ico" style="--ico-bg:#e8f3ff;--ico-fg:#1677ff">≡</div>
+  <a class="entry-card entry-mac-peach" href="{{ url_for('rules_index') }}">
+    <div class="entry-ico">≡</div>
     <div class="entry-text">
       <div class="entry-title">按批次浏览</div>
-      <div class="entry-sub">{{ stats['batches'] }} 个批次 · 15 个 NHSA + 2025 版</div>
+      <div class="entry-sub">{{ stats['batches'] }} 个批次 · {{ stats['rules'] }} 条规则</div>
     </div>
     <div class="entry-arrow">›</div>
   </a>
-  <a class="entry-card" href="{{ url_for('consumables_index') }}">
-    <div class="entry-ico" style="--ico-bg:#fff8e6;--ico-fg:#fa8c16">⊞</div>
+  <a class="entry-card entry-mac-green" href="{{ url_for('consumables_index') }}">
+    <div class="entry-ico">⊞</div>
     <div class="entry-text">
       <div class="entry-title">耗材代码库</div>
-      <div class="entry-sub">{{ "{:,}".format(stats['consumables']) }} 条 · 2026-05 版</div>
+      <div class="entry-sub">{{ "{:,}".format(stats['consumables']) }} 条 · 2026 版</div>
     </div>
     <div class="entry-arrow">›</div>
   </a>
-  <a class="entry-card" href="{{ url_for('nhsa_index') }}">
-    <div class="entry-ico" style="--ico-bg:#e8fff3;--ico-fg:#13a362">⊞</div>
+  <a class="entry-card entry-mac-lavender" href="{{ url_for('nhsa_index') }}">
+    <div class="entry-ico">⊞</div>
     <div class="entry-text">
       <div class="entry-title">标准数据库</div>
-      <div class="entry-sub">HC / IVD / YP / ICD / MS / TCM 共 8 类</div>
-    </div>
-    <div class="entry-arrow">›</div>
-  </a>
-  
-  <a class="entry-card" href="#recent">
-    <div class="entry-ico" style="--ico-bg:#f3e8ff;--ico-fg:#722ed1">⏱</div>
-    <div class="entry-text">
-      <div class="entry-title">最近更新</div>
-      <div class="entry-sub">最新发布的规则与知识点</div>
+      <div class="entry-sub">HC / IVD / YP / ICD / MS / TCM</div>
     </div>
     <div class="entry-arrow">›</div>
   </a>
@@ -130,13 +109,5 @@
   {% else %}
   <div class="empty">暂无最近更新</div>
   {% endif %}
-</section>
-
-<section class="tip">
-  <div class="tip-icon" aria-hidden="true">i</div>
-  <div class="tip-body">
-    <div class="tip-title">查询小贴士</div>
-    <div class="tip-text">中文 → 全文搜索；纯字母 → 拼音首字母；大写字母+数字 → 医保编码精确匹配。系统自动识别。</div>
-  </div>
 </section>
 {% endblock %}

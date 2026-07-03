@@ -480,6 +480,8 @@ def register(app):
     @app.get("/nhsa/tcm")
     def tcm_browse():
         q = (request.args.get("q") or "").strip()
+        part = (request.args.get("part") or "").strip().upper()
+        level = request.args.get("level") or ""
         limit = _limit()
         with db.connect() as conn:
             total_all = conn.execute("SELECT COUNT(*) FROM tcm_codes").fetchone()[0]
@@ -502,13 +504,58 @@ def register(app):
                 return render_template(
                     "tcm.html",
                     total_codes=total_all, query=q,
+                    parts=[], levels=[],
                     rows=[dict(zip(
                         ["code", "p_code", "level", "name", "class_name", "apply_explain"], r))
                         for r in rows],
-                    total=total)
+                    total=total, part="", level="")
+            if part in ("B", "Z"):
+                rows = conn.execute(
+                    "SELECT code, p_code, level, name, class_name, apply_explain "
+                    "FROM tcm_codes WHERE part_code=? ORDER BY code LIMIT ?",
+                    (part, limit),
+                ).fetchall()
+                total = conn.execute(
+                    "SELECT COUNT(*) FROM tcm_codes WHERE part_code=?", (part,)
+                ).fetchone()[0]
+                return render_template(
+                    "tcm.html",
+                    total_codes=total_all, query="",
+                    parts=[], levels=[],
+                    rows=[dict(zip(
+                        ["code", "p_code", "level", "name", "class_name", "apply_explain"], r))
+                        for r in rows],
+                    total=total, part=part, level="")
+            if level.isdigit():
+                lv = int(level)
+                rows = conn.execute(
+                    "SELECT code, p_code, level, name, class_name, apply_explain "
+                    "FROM tcm_codes WHERE level=? ORDER BY code LIMIT ?",
+                    (lv, limit),
+                ).fetchall()
+                total = conn.execute(
+                    "SELECT COUNT(*) FROM tcm_codes WHERE level=?", (lv,)
+                ).fetchone()[0]
+                return render_template(
+                    "tcm.html",
+                    total_codes=total_all, query="",
+                    parts=[], levels=[],
+                    rows=[dict(zip(
+                        ["code", "p_code", "level", "name", "class_name", "apply_explain"], r))
+                        for r in rows],
+                    total=total, part="", level=str(lv))
+            parts = conn.execute(
+                "SELECT part_code, COUNT(*) AS c FROM tcm_codes "
+                "GROUP BY part_code ORDER BY part_code"
+            ).fetchall()
+            levels = conn.execute(
+                "SELECT level, COUNT(*) AS c FROM tcm_codes GROUP BY level ORDER BY level"
+            ).fetchall()
             return render_template(
                 "tcm.html", total_codes=total_all, query="",
-                rows=[], total=total_all)
+                parts=[{"part_code": p[0], "count": p[1]} for p in parts],
+                levels=[{"level": p[0], "count": p[1]} for p in levels],
+                rows=[], total=total_all, part="", level="")
 
     @app.get("/nhsa/tcm/code/<code>")
     def tcm_detail(code):
