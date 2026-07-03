@@ -38,13 +38,13 @@
 </section>
 
 <nav class="rules-subnav" role="tablist" aria-label="规则浏览方式">
-  <a class="rules-subnav-item" href="{{ url_for('rules_index') }}" role="tab">
-    <span class="subnav-ico">≡</span>
-    <span class="subnav-label">按批次浏览</span>
-  </a>
   <a class="rules-subnav-item is-active" href="{{ url_for('rules_find') }}" role="tab" aria-selected="true">
     <span class="subnav-ico">⌕</span>
     <span class="subnav-label">按知识点查询</span>
+  </a>
+  <a class="rules-subnav-item" href="{{ url_for('rules_index') }}" role="tab">
+    <span class="subnav-ico">≡</span>
+    <span class="subnav-label">按批次浏览</span>
   </a>
 </nav>
 
