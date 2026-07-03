@@ -1002,19 +1002,13 @@ a.chip:focus-visible { outline: 2px solid rgba(255,255,255,.7); outline-offset: 
 
 /* ===== Search tabs (6 categories) ===== */
 .search-tabs {
-  display: flex; gap: 6px; overflow-x: auto;
-  padding: 10px 28px 10px 12px; margin: 0 0 12px;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  scroll-padding-inline: 12px 28px;
-  scroll-snap-type: x proximity;
+  display: flex; flex-wrap: wrap; gap: 6px;
+  padding: 10px 12px; margin: 0 0 12px;
 }
-.search-tabs::-webkit-scrollbar { display: none; }
 .search-tab {
   flex: 0 0 auto;
   display: flex; align-items: center; gap: 6px;
   padding: 7px 14px; border-radius: 999px;
-  scroll-margin-inline-end: 28px;
   background: var(--card, #fff); color: var(--text, #1a1a1a);
   border: 1px solid var(--border, #e5e7eb);
   font-size: 15px; font-weight: 500; text-decoration: none;

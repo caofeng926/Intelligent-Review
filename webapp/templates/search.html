@@ -146,29 +146,4 @@
   <div class="empty-tip">支持 名字 / 拼音首字母 / 医保编码</div>
 </section>
 {% endif %}
-
-<script>
-(function(){
-  var nav = document.querySelector("nav.search-tabs");
-  if (!nav) return;
-  var active = nav.querySelector(".search-tab.is-active") || nav.querySelector(".search-tab");
-  if (!active) return;
-  function scrollActive(){
-    try {
-      var r = active.getBoundingClientRect();
-      var nr = nav.getBoundingClientRect();
-      if (r.left < nr.left + 8) {
-        nav.scrollBy({left: r.left - nr.left - 12, behavior: "instant"});
-      } else if (r.right > nr.right - 8) {
-        nav.scrollBy({left: r.right - nr.right + 32, behavior: "instant"});
-      }
-    } catch(e) {}
-  }
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", scrollActive);
-  } else {
-    scrollActive();
-  }
-})();
-</script>
 {% endblock %}
