@@ -2,55 +2,49 @@
    Design tokens
    ============================================================ */
 :root {
-  /* ===== 马卡龙主品牌色 (主色: 草莓粉) ===== */
-  --brand: #e07a93;
-  --brand-600: #c25d78;
-  --brand-50: #ffe9f0;
+  /* ===== 正式专业色系 (主色: 靛蓝) ===== */
+  --brand: #1e40af;
+  --brand-600: #1e3a8a;
+  --brand-50: #eff6ff;
 
-  /* ===== 马卡龙色板 (6 色 x 4 阶) ===== */
-  /* 草莓粉 (Strawberry) */
-  --mac-pink-50:   #ffe9f0;
-  --mac-pink-100:  #ffd6e2;
-  --mac-pink-500:  #f08ca0;
-  --mac-pink-700:  #c45a75;
-  /* 蜜桃 (Peach) */
-  --mac-peach-50:  #fff1e0;
-  --mac-peach-100: #ffe0c2;
-  --mac-peach-500: #e89b6c;
-  --mac-peach-700: #b36a45;
-  /* 柠檬 (Lemon) */
-  --mac-yellow-50:  #fff6cf;
-  --mac-yellow-100: #ffeaa0;
-  --mac-yellow-500: #c9a227;
-  --mac-yellow-700: #9c7d14;
-  /* 薄荷 (Mint) */
-  --mac-green-50:  #e0f5eb;
-  --mac-green-100: #b5ead7;
-  --mac-green-500: #5ba889;
-  --mac-green-700: #3d876a;
-  /* 海水蓝 (Sky) */
-  --mac-blue-50:   #e0f2f8;
-  --mac-blue-100:  #a6dcef;
-  --mac-blue-500:  #4f94b8;
-  --mac-blue-700:  #357694;
-  /* 薰衣草 (Lavender) */
-  --mac-lavender-50:  #ece6f4;
-  --mac-lavender-100: #c7ceea;
-  --mac-lavender-500: #7b71a6;
-  --mac-lavender-700: #5a5184;
+  /* ===== 状态色板 (低饱和、专业) ===== */
+  --mac-pink-50:   #eff6ff;
+  --mac-pink-100:  #dbeafe;
+  --mac-pink-500:  #2563eb;
+  --mac-pink-700:  #1e40af;
+  --mac-peach-50:  #ecfeff;
+  --mac-peach-100: #cffafe;
+  --mac-peach-500: #0891b2;
+  --mac-peach-700: #155e75;
+  --mac-yellow-50:  #fffbeb;
+  --mac-yellow-100: #fef3c7;
+  --mac-yellow-500: #d97706;
+  --mac-yellow-700: #92400e;
+  --mac-green-50:  #ecfdf5;
+  --mac-green-100: #d1fae5;
+  --mac-green-500: #059669;
+  --mac-green-700: #065f46;
+  --mac-blue-50:   #f1f5f9;
+  --mac-blue-100:  #e2e8f0;
+  --mac-blue-500:  #475569;
+  --mac-blue-700:  #334155;
+  --mac-lavender-50:  #f8fafc;
+  --mac-lavender-100: #e2e8f0;
+  --mac-lavender-500: #64748b;
+  --mac-lavender-700: #475569;
 
   /* ===== 中性色 ===== */
-  --bg: #fafbfc;
+  --bg: #f7f8fa;
   --card: #ffffff;
-  --text: #2a2d35;
-  --text-2: #555c66;
-  --text-3: #8a93a0;
-  --border: #ebeef2;
-  --border-2: #f4f6f9;
-  --success: #5ba889;
-  --warn: #e89b6c;
-  --danger: #e57a8a;
-  --purple: #7b71a6;
+  --text: #0f172a;
+  --text-2: #334155;
+  --text-3: #64748b;
+  --border: #e2e8f0;
+  --border-2: #f1f5f9;
+  --success: #059669;
+  --warn: #d97706;
+  --danger: #dc2626;
+  --purple: #64748b;
 
   --r-1: 4px;
   --r-2: 8px;
@@ -125,13 +119,13 @@ img { max-width: 100%; display: block; }
 .brand { display: flex; align-items: center; gap: var(--s-2); flex-shrink: 0; }
 .brand-mark {
   width: 30px; height: 30px;
-  background: linear-gradient(135deg, var(--mac-pink-500), var(--mac-peach-500));
+  background: var(--brand);
   color: #fff;
   font-weight: 700;
   font-size: 18px;
   border-radius: var(--r-2);
   display: grid; place-items: center;
-  box-shadow: 0 2px 6px rgba(240,140,160,.35);
+  box-shadow: 0 2px 6px rgba(30,64,175,.35);
 }
 .brand-text { font-size: 18px; font-weight: 600; color: var(--text); letter-spacing: .5px; }
 .topbar-search {
@@ -169,11 +163,11 @@ img { max-width: 100%; display: block; }
   color: #fff;
   background:
     linear-gradient(160deg,
-      #ffb7c5 0%,
-      #ffd4b8 35%,
-      #ffeaa0 65%,
+      #1e3a8a 0%,
+      #1e40af 50%,
+      #3b82f6 100%,
       #b5ead7 100%);
-  box-shadow: 0 8px 24px rgba(240, 140, 160, .12);
+  box-shadow: 0 8px 24px rgba(30,64,175,.12);
 }
 .hero-bg {
   position: absolute; inset: 0; opacity: .35;
@@ -200,14 +194,14 @@ img { max-width: 100%; display: block; }
 }
 .hero-search-btn {
   height: 36px; padding: 0 var(--s-4);
-  background: linear-gradient(135deg, var(--mac-pink-500), var(--mac-peach-500));
+  background: var(--brand);
   color: #fff;
   border-radius: 999px;
   font-size: 16px; font-weight: 600;
   transition: transform .15s, box-shadow .15s;
-  box-shadow: 0 2px 8px rgba(240,140,160,.35);
+  box-shadow: 0 2px 8px rgba(30,64,175,.35);
 }
-.hero-search-btn:active { transform: scale(.97); box-shadow: 0 1px 4px rgba(240,140,160,.4); }
+.hero-search-btn:active { transform: scale(.97); box-shadow: 0 1px 4px rgba(30,64,175,.4); }
 
 .hero-chips { display: flex; flex-wrap: wrap; gap: var(--s-2); margin-top: var(--s-3); }
 .chip {
@@ -335,7 +329,7 @@ a.chip:focus-visible { outline: 2px solid rgba(255,255,255,.7); outline-offset: 
 }
 
 /* ===== Entry card macaron variants ===== */
-.entry-mac-pink     { --ico-bg: var(--mac-pink-50);     --ico-fg: var(--mac-pink-700);     --ico-shadow: rgba(240,140,160,.18); --entry-border: var(--mac-pink-100);     --entry-glow: rgba(240,140,160,.18); }
+.entry-mac-pink     { --ico-bg: var(--mac-pink-50);     --ico-fg: var(--mac-pink-700);     --ico-shadow: rgba(30,64,175,.18); --entry-border: var(--mac-pink-100);     --entry-glow: rgba(30,64,175,.18); }
 .entry-mac-peach    { --ico-bg: var(--mac-peach-50);    --ico-fg: var(--mac-peach-700);    --ico-shadow: rgba(232,155,108,.18); --entry-border: var(--mac-peach-100);    --entry-glow: rgba(232,155,108,.18); }
 .entry-mac-yellow   { --ico-bg: var(--mac-yellow-50);   --ico-fg: var(--mac-yellow-700);   --ico-shadow: rgba(201,162,39,.18);  --entry-border: var(--mac-yellow-100);   --entry-glow: rgba(201,162,39,.18); }
 .entry-mac-green    { --ico-bg: var(--mac-green-50);    --ico-fg: var(--mac-green-700);    --ico-shadow: rgba(91,168,137,.18);  --entry-border: var(--mac-green-100);    --entry-glow: rgba(91,168,137,.18); }
@@ -609,11 +603,11 @@ a.chip:focus-visible { outline: 2px solid rgba(255,255,255,.7); outline-offset: 
   display: inline-block;
   height: 36px; line-height: 36px;
   padding: 0 var(--s-4);
-  background: linear-gradient(135deg, var(--mac-pink-500), var(--mac-peach-500));
+  background: var(--brand);
   color: #fff;
   border-radius: 999px; font-size: 15px;
   font-weight: 600;
-  box-shadow: 0 2px 8px rgba(240,140,160,.3);
+  box-shadow: 0 2px 8px rgba(30,64,175,.3);
 }
 
 /* ============================================================
@@ -966,7 +960,7 @@ a.chip:focus-visible { outline: 2px solid rgba(255,255,255,.7); outline-offset: 
 .pager { display: flex; gap: var(--s-2); justify-content: center; align-items: center; margin: var(--s-4) 0; }
 .pager-link { font-size: 15px; padding: 6px 12px; background: var(--card); border-radius: var(--r-2); box-shadow: var(--shadow-1); color: var(--text); text-decoration: none; }
 .pager-link:active { transform: scale(.97); }
-.pager-link.is-current { background: linear-gradient(135deg, var(--mac-pink-500), var(--mac-peach-500)); color: #fff; }
+.pager-link.is-current { background: var(--brand); color: #fff; }
 .pager-info { font-size: 14px; color: var(--text-3); }
 
 
@@ -1009,15 +1003,18 @@ a.chip:focus-visible { outline: 2px solid rgba(255,255,255,.7); outline-offset: 
 /* ===== Search tabs (6 categories) ===== */
 .search-tabs {
   display: flex; gap: 6px; overflow-x: auto;
-  padding: 10px 12px; margin: 0 0 12px;
+  padding: 10px 28px 10px 12px; margin: 0 0 12px;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
+  scroll-padding-inline: 12px 28px;
+  scroll-snap-type: x proximity;
 }
 .search-tabs::-webkit-scrollbar { display: none; }
 .search-tab {
   flex: 0 0 auto;
   display: flex; align-items: center; gap: 6px;
   padding: 7px 14px; border-radius: 999px;
+  scroll-margin-inline-end: 28px;
   background: var(--card, #fff); color: var(--text, #1a1a1a);
   border: 1px solid var(--border, #e5e7eb);
   font-size: 15px; font-weight: 500; text-decoration: none;
@@ -1025,10 +1022,10 @@ a.chip:focus-visible { outline: 2px solid rgba(255,255,255,.7); outline-offset: 
 }
 .search-tab:active { transform: scale(.97); }
 .search-tab.is-active {
-  background: linear-gradient(135deg, var(--mac-pink-500), var(--mac-peach-500));
+  background: var(--brand);
   color: #fff;
   border-color: transparent;
-  box-shadow: 0 2px 8px rgba(240,140,160,.3);
+  box-shadow: 0 2px 8px rgba(30,64,175,.3);
 }
 .search-tab-label { font-weight: 600; }
 .search-tab-count {
@@ -1307,9 +1304,9 @@ a, button { min-height: 32px; }
 }
 .rules-subnav-item:active { background: var(--border-2); }
 .rules-subnav-item.is-active {
-  background: linear-gradient(135deg, var(--mac-pink-500), var(--mac-peach-500));
+  background: var(--brand);
   color: #fff;
-  box-shadow: 0 2px 8px rgba(240,140,160,.3);
+  box-shadow: 0 2px 8px rgba(30,64,175,.3);
 }
 .subnav-ico { font-size: 18px; line-height: 1; }
 .subnav-label { font-size: 15px; }
