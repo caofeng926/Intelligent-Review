@@ -456,23 +456,33 @@ def rules_index():
 
 @app.get("/rules/list")
 def rules_list():
-    """列出所有规则(按名称聚合)。支持 ?q= 按名称关键字过滤。"""
+    """列出所有规则(按名称去重聚合)。同名规则会合并,展示总 KP 数与所有 rule_id。
+    支持 ?q= 按名称/分类关键字过滤。"""
     q = (request.args.get("q") or "").strip()
     with db.connect() as conn:
+        base_sql = """
+            SELECT
+                rules.rule_subject,
+                COUNT(*) AS rule_count,
+                GROUP_CONCAT(rules.id) AS rule_ids,
+                GROUP_CONCAT(DISTINCT b.batch_label) AS batches,
+                GROUP_CONCAT(DISTINCT rules.category) AS categories,
+                GROUP_CONCAT(DISTINCT rules.object_type) AS object_types,
+                MIN(rules.id) AS first_id,
+                SUM((SELECT COUNT(*) FROM knowledge_points kp WHERE kp.rule_id = rules.id)) AS kp_cnt
+            FROM rules
+            LEFT JOIN batches b ON b.id = rules.batch_id
+        """
         if q:
             like = f"%{q}%"
             rows = conn.execute(
-                "SELECT id, rule_subject, category, object_type, "
-                "       (SELECT COUNT(*) FROM knowledge_points kp WHERE kp.rule_id = rules.id) AS kp_cnt "
-                "FROM rules WHERE rule_subject LIKE ? OR category LIKE ? "
-                "ORDER BY rule_subject",
+                base_sql + " WHERE rules.rule_subject LIKE ? OR rules.category LIKE ? "
+                "GROUP BY rules.rule_subject ORDER BY rules.rule_subject",
                 (like, like),
             ).fetchall()
         else:
             rows = conn.execute(
-                "SELECT id, rule_subject, category, object_type, "
-                "       (SELECT COUNT(*) FROM knowledge_points kp WHERE kp.rule_id = rules.id) AS kp_cnt "
-                "FROM rules ORDER BY rule_subject"
+                base_sql + " GROUP BY rules.rule_subject ORDER BY rules.rule_subject"
             ).fetchall()
     return render_template("rules_list.html", rules=rows, q=q, source_label=SOURCE_LABEL)
 

@@ -9,7 +9,7 @@
 
 <section class="page-head">
   <h1 class="page-title">规则查询</h1>
-  <p class="page-sub">共 {{ rules|length }} 条审核规则 · 按规则名称搜索 / 浏览</p>
+  <p class="page-sub">共 {{ rules|length }} 条独立规则 · 按规则名称搜索 / 浏览</p>
 </section>
 
 <section class="searchbar">
@@ -32,13 +32,17 @@
 <ul class="result-list">
   {% for r in rules %}
   <li class="result-card">
-    <a class="result-link" href="{{ url_for('rule_detail', rid=r[0]) }}">
+    <a class="result-link" href="{{ url_for('rule_detail', rid=r[6]) }}">
       <div class="result-head">
-        <span class="result-name">{{ r[1]|h }}</span>
-        {% if r[2] %}<span class="result-py">{{ r[2]|h }}</span>{% endif %}
-        {% if r[4] %}<span class="result-cnt">{{ r[4] }} 知识点</span>{% endif %}
+        <span class="result-name">{{ r[0]|h }}</span>
+        {% if r[1] and r[1] > 1 %}<span class="result-cnt">{{ r[1] }}x</span>{% endif %}
+        {% if r[7] %}<span class="result-cnt">{{ r[7] }} 知识点</span>{% endif %}
       </div>
-      {% if r[3] %}<div class="result-pair"><span class="result-pair-label">适用对象：</span><span class="result-pair-name">{{ r[3]|h }}</span></div>{% endif %}
+      <div class="result-rule">
+        {% if r[4] %}<span class="meta-k">分类</span> {{ r[4]|h }}{% endif %}
+        {% if r[5] %}<span class="meta-k">对象</span> {{ r[5]|h }}{% endif %}
+        {% if r[1] and r[1] > 1 %}<span class="meta-k">批次</span> {{ r[3]|h }}{% endif %}
+      </div>
     </a>
   </li>
   {% endfor %}
