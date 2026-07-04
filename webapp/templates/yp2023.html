@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}2023 版药品目录 · 医保智审{% endblock %}
+{% block content %}
+<section class="page-head">
+  <h1 class="page-title">2023 版药品目录</h1>
+  <p class="page-sub">国家医保局 2023 年药品目录 · {{ "{:,}".format(stats.total) }} 条</p>
+</section>
+
+<nav class="bread">
+  <a href="{{ url_for('home') }}">首页</a> <span class="bread-sep">›</span>
+  <span class="bread-cur">2023 版药品目录</span>
+</nav>
+
+<section class="stat-grid">
+  {% for label, key in [('西药','西药'), ('中成药','中成药'), ('谈判西药','谈判西药'), ('谈判中成药','谈判中成药'), ('中药饮片·支付','中药饮片-支付'), ('中药饮片·不支付','中药饮片-不支付')] %}
+  <div class="stat-card">
+    <div class="stat-num">{{ "{:,}".format(stats.by_category.get(key, 0)) }}</div>
+    <div class="stat-label">{{ label }}</div>
+  </div>
+  {% endfor %}
+</section>
+
+<section class="tabbar">
+  {% for label, key in categories %}
+  <a class="tab {% if cat == key %}is-active{% endif %}" href="{{ url_for('yp2023_browse', cat=key, q=q, list_class=list_class) }}">
+    {{ label }} <span class="tab-count">({{ "{:,}".format(stats.by_category.get(key if key!='中药饮片' else '中药饮片-支付', 0)) }})</span>
+  </a>
+  {% endfor %}
+</section>
+
+{% if cat == '中药饮片' %}
+<section class="tabbar tabbar-sub">
+  <a class="tab {% if request.args.get('tcm') != '0' %}is-active{% endif %}" href="{{ url_for('yp2023_browse', cat=cat, q=q, list_class=list_class, tcm=1) }}">支付 ({{ "{:,}".format(stats.by_category.get('中药饮片-支付', 0)) }})</a>
+  <a class="tab {% if request.args.get('tcm') == '0' %}is-active{% endif %}" href="{{ url_for('yp2023_browse', cat=cat, q=q, list_class=list_class, tcm=0) }}">不支付 ({{ "{:,}".format(stats.by_category.get('中药饮片-不支付', 0)) }})</a>
+</section>
+{% endif %}
+
+<form class="hero-search" action="{{ url_for('yp2023_browse') }}" method="get" style="margin-bottom: var(--s-3);">
+  <input type="hidden" name="cat" value="{{ cat }}">
+  {% if cat == '中药饮片' and request.args.get('tcm') %}<input type="hidden" name="tcm" value="{{ request.args.get('tcm') }}">{% endif %}
+  <span class="hero-search-icon">⌕</span>
+  <input name="q" type="search" value="{{ q }}" placeholder="搜索 {{ cat }} 药品名" enterkeyhint="search">
+  <button class="hero-search-btn" type="submit">搜索</button>
+</form>
+
+{% if cat not in ['中药饮片'] %}
+<section class="mode-pills">
+  <a class="mode-pill {% if not list_class %}is-active{% endif %}" href="{{ url_for('yp2023_browse', cat=cat, q=q) }}">全部</a>
+  <a class="mode-pill {% if list_class == '甲' %}is-active{% endif %}" href="{{ url_for('yp2023_browse', cat=cat, q=q, list_class='甲') }}">甲类</a>
+  <a class="mode-pill {% if list_class == '乙' %}is-active{% endif %}" href="{{ url_for('yp2023_browse', cat=cat, q=q, list_class='乙') }}">乙类</a>
+</section>
+{% endif %}
+
+<section class="list">
+  {% for r in results %}
+  <a class="list-row" href="{{ url_for('yp2023_detail', code=r.code) if r.code and r.code.isdigit() else url_for('yp2023_browse', q=r.name) }}">
+    <div class="list-main">
+      <div class="list-title">
+        {% if r.code %}<span class="list-no">{{ r.code }}</span>{% endif %}
+        <span class="list-name">{{ r.name }}</span>
+        {% if r.dosage_form %}<span class="list-sub">· {{ r.dosage_form }}</span>{% endif %}
+      </div>
+      {% if r.subcategory %}<div class="list-sub-row">{{ r.subcategory }}</div>{% endif %}
+      {% if r.payment_standard %}<div class="list-sub-row list-pay">支付标准：{{ r.payment_standard }}</div>{% endif %}
+      {% if r.remark %}<div class="list-sub-row list-remark">备注：{{ r.remark[:100] }}{% if r.remark|length > 100 %}…{% endif %}</div>{% endif %}
+    </div>
+    <div class="list-meta">
+      {% if r.list_class %}<span class="badge badge-{{ r.list_class }}">{{ r.list_class }}类</span>{% endif %}
+      {% if r.spec_count %}<span class="badge badge-info" title="对应 yp_codes 厂家规格数">{{ r.spec_count }} 规格</span>{% endif %}
+      {% if r.manufacturer_count %}<span class="badge badge-info" title="厂家数">{{ r.manufacturer_count }} 家</span>{% endif %}
+    </div>
+  </a>
+  {% else %}
+  <div class="empty">未找到匹配条目</div>
+  {% endfor %}
+</section>
+
+{% if total > page_size %}
+<nav class="pager">
+  {% if page > 1 %}<a href="{{ url_for('yp2023_browse', cat=cat, q=q, list_class=list_class, page=page-1) }}">‹ 上一页</a>{% endif %}
+  <span class="pager-info">第 {{ page }} 页 · 共 {{ total }} 条</span>
+  {% if page * page_size < total %}<a href="{{ url_for('yp2023_browse', cat=cat, q=q, list_class=list_class, page=page+1) }}">下一页 ›</a>{% endif %}
+</nav>
+{% endif %}
+
+{% endblock %}

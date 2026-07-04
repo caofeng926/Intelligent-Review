@@ -26,10 +26,12 @@ from . import db
 from . import nhsa_api
 from . import nhsa_browse
 from . import admin
+from . import yp2023
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
 nhsa_api.register(app)
 nhsa_browse.register(app)
+yp2023.register(app)
 app.register_blueprint(admin.admin_bp)
 app.config["JSON_AS_ASCII"] = False
 app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
