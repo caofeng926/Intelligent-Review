@@ -83,6 +83,8 @@ $smallFiles = @(
     "nhsa_api.py",
     "nhsa_browse.py",
     "qa.py",
+    "yp2023.py",
+    "ingest_yp_2023.py",
     "requirements.txt"
 )
 foreach ($name in $smallFiles) {
@@ -118,7 +120,10 @@ if (-not $SkipDb) {
 Write-Host "`n[5/5] Restarting medical-audit.service..."
 Invoke-SshHelper exec "systemctl restart medical-audit.service && sleep 3 && systemctl is-active medical-audit.service"
 
-Write-Host "`n[health] Waiting for $HealthcheckUrl to return 200..."
+Write-Host "`n[health:local] Waiting for $HealthcheckUrl to return 200 (local view)..."
 Invoke-SshHelper healthcheck $HealthcheckUrl
+
+Write-Host "`n[health:cvm] Re-checking $HealthcheckUrl from inside the CVM (catches gunicorn-boot failures that local view misses)..."
+Invoke-SshHelper healthcheck-remote $HealthcheckUrl
 
 Write-Host "`n[done] Sync complete."
