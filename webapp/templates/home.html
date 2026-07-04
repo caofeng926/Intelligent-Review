@@ -25,7 +25,7 @@
 <section class="stats stats-3col">
   <a class="stat-card stat-mac-pink" href="{{ url_for('rules_find') }}">
     <div class="stat-num">{{ "{:,}".format(stats['kp']) }}</div>
-    <div class="stat-label">知识点</div>
+    <div class="stat-label">医保审核知识点</div>
   </a>
   <a class="stat-card stat-mac-blue" href="{{ url_for('search_view') }}">
     <div class="stat-num">{{ "{:,}".format(stats['codes']) }}</div>
@@ -33,7 +33,7 @@
   </a>
   <a class="stat-card stat-mac-green" href="{{ url_for('rules_list') }}">
     <div class="stat-num">{{ "{:,}".format(stats['rules']) }}</div>
-    <div class="stat-label">规则查询</div>
+    <div class="stat-label">审核规则</div>
   </a>
 </section>
 
@@ -41,7 +41,7 @@
   <a class="entry-card entry-mac-pink" href="{{ url_for('rules_find') }}">
     <div class="entry-ico">⌕</div>
     <div class="entry-text">
-      <div class="entry-title">规则查询</div>
+      <div class="entry-title">审核规则查询</div>
       <div class="entry-sub">输入药品 / 项目 · 反查涉及规则</div>
     </div>
     <div class="entry-arrow">›</div>
@@ -49,8 +49,8 @@
   <a class="entry-card entry-mac-lavender" href="{{ url_for('nhsa_index') }}">
     <div class="entry-ico">⊞</div>
     <div class="entry-text">
-      <div class="entry-title">标准数据库</div>
-      <div class="entry-sub">HC / IVD / YP / ICD / MS / TCM</div>
+      <div class="entry-title">医保编码查询</div>
+      <div class="entry-sub">耗材 / 试剂 / 药品 / 诊断 / 服务 / 中药</div>
     </div>
     <div class="entry-arrow">›</div>
   </a>
