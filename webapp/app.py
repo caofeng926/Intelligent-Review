@@ -454,6 +454,29 @@ def rules_index():
     return render_template("rules.html", groups=groups, source_label=SOURCE_LABEL)
 
 
+@app.get("/rules/list")
+def rules_list():
+    """列出所有规则(按名称聚合)。支持 ?q= 按名称关键字过滤。"""
+    q = (request.args.get("q") or "").strip()
+    with db.connect() as conn:
+        if q:
+            like = f"%{q}%"
+            rows = conn.execute(
+                "SELECT id, rule_subject, category, object_type, "
+                "       (SELECT COUNT(*) FROM knowledge_points kp WHERE kp.rule_id = rules.id) AS kp_cnt "
+                "FROM rules WHERE rule_subject LIKE ? OR category LIKE ? "
+                "ORDER BY rule_subject",
+                (like, like),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT id, rule_subject, category, object_type, "
+                "       (SELECT COUNT(*) FROM knowledge_points kp WHERE kp.rule_id = rules.id) AS kp_cnt "
+                "FROM rules ORDER BY rule_subject"
+            ).fetchall()
+    return render_template("rules_list.html", rules=rows, q=q, source_label=SOURCE_LABEL)
+
+
 
 
 @app.get("/rules/find")

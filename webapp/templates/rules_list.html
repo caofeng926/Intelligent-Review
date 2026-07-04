@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}{% if q %}搜 "{{ q }}" 涉及的规则 · 医保智审{% else %}全部审核规则 · 医保智审{% endif %}{% endblock %}
+{% block content %}
+<nav class="crumb">
+  <a href="{{ url_for('home') }}">首页</a>
+  <span class="crumb-sep">›</span>
+  <span class="crumb-cur">规则查询</span>
+</nav>
+
+<section class="page-head">
+  <h1 class="page-title">规则查询</h1>
+  <p class="page-sub">共 {{ rules|length }} 条审核规则 · 按规则名称搜索 / 浏览</p>
+</section>
+
+<section class="searchbar">
+  <form class="searchbar-form" action="{{ url_for('rules_list') }}" method="get" role="search">
+    <span class="searchbar-icon" aria-hidden="true">⌕</span>
+    <input name="q" type="search" inputmode="search" autocomplete="off" autofocus
+           value="{{ q|h }}" placeholder="输入规则名称关键字(如 限适应症 / 限二线)" enterkeyhint="search">
+  </form>
+  <div class="searchbar-meta">
+    {% if q %}
+      <span class="meta-total">匹配 <b>{{ rules|length }}</b> 条规则</span>
+      <a class="meta-clear" href="{{ url_for('rules_list') }}">清空</a>
+    {% else %}
+      <span class="meta-tip">支持 规则名称 / 分类 关键字模糊匹配</span>
+    {% endif %}
+  </div>
+</section>
+
+{% if rules %}
+<ul class="result-list">
+  {% for r in rules %}
+  <li class="result-card">
+    <a class="result-link" href="{{ url_for('rule_detail', rid=r[0]) }}">
+      <div class="result-head">
+        <span class="result-name">{{ r[1]|h }}</span>
+        {% if r[2] %}<span class="result-py">{{ r[2]|h }}</span>{% endif %}
+        {% if r[4] %}<span class="result-cnt">{{ r[4] }} 知识点</span>{% endif %}
+      </div>
+      {% if r[3] %}<div class="result-pair"><span class="result-pair-label">适用对象：</span><span class="result-pair-name">{{ r[3]|h }}</span></div>{% endif %}
+    </a>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<section class="empty">
+  <div class="empty-ico">∅</div>
+  <div class="empty-title">{% if q %}没找到匹配 "{{ q }}" 的规则{% else %}暂无规则数据{% endif %}</div>
+  <div class="empty-tip">试试更短关键字,或直接浏览下方列表</div>
+  {% if q %}<a class="empty-link" href="{{ url_for('rules_list') }}">查看全部规则</a>{% endif %}
+</section>
+{% endif %}
+{% endblock %}
