@@ -1,4 +1,4 @@
-# 医保智审规则库 (Medical Audit Rules Library)
+﻿# 医保智审规则库 (Medical Audit Rules Library)
 
 医保智能审核规则库 — NHSA 发布的限适应症 / 限性别 / 限儿童等药品审核规则，含 PDF/XLSX 解析入库、医保编码/耗材代码库、Web 检索。
 
@@ -35,12 +35,12 @@
 
 | 表 | 数量 | 说明 |
 |---|---|---|
-| `batches` | 17 | 批次 (含 NHSA + PDF 2025) |
-| `rules` | 77 | 审核规则 (32 NHSA + 45 PDF 2025) |
-| `knowledge_points` | 21,658 | 知识点 (药品/项目) |
-| `knowledge_point_codes` | 28,929 | 医保编码 |
-| `consumable_codes` | 89,279 | 耗材代码 + FTS5 索引 |
-| `drug_detail` | 187,426 | 药品详情 (含生产厂家) |
+| `batches` | 18 | 批次 (含 NHSA + PDF 2025) |
+| `rules` | 78 | 审核规则 (33 NHSA + 45 PDF 2025) |
+| `knowledge_points` | 21,886 | 知识点 (药品/项目) |
+| `knowledge_point_codes` | 30,829 | 医保编码 |
+| `consumable_codes` | 87,499 | 耗材代码 + FTS5 索引 |
+| `drug_detail` | 260,692 | 药品详情 (含生产厂家) |
 | `kp_fts` / `drug_fts` / `consumable_codes_fts` | — | FTS5 全文索引 |
 
 ### drug_detail 字段 (2026-06-28 清洗后)

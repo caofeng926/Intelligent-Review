@@ -49,3 +49,22 @@ Thumbs.db
 _server*.log
 _server*.err
 webapp/data/_pdf_yp_chunks/
+
+# 临时/调试件
+__tmp_*.js
+__tmp_*.css
+webapp/admin.py.tmp
+webapp/data/.chunk_*.bin
+webapp/data/_pdf_yp_chunks_*/
+
+# 微信小程序实验壳
+.cloudbase/
+project.config.json
+project.private.config.json
+
+# 移动端重设计截图(本地参考用)
+_shots_mobile_redesign/
+
+# Python 缓存
+scripts/__pycache__/
+
