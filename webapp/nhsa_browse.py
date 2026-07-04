@@ -70,6 +70,38 @@ def _nhsa_counts(conn):
             out[tbl] = 0
     return out
 
+def _kps_for_codes(conn, code):
+    """Return KPs (knowledge points) that reference the given code.
+    Used to show bidirectional link: code detail -> KPs -> rules.
+    """
+    if not code:
+        return []
+    rows = conn.execute(
+        "SELECT DISTINCT kp.id, kp.subject_name, kp.code_count, "
+        "       r.id, r.rule_subject, b.batch_label, b.pub_date "
+        "FROM knowledge_point_codes kpc "
+        "JOIN knowledge_points kp ON kp.id = kpc.kp_id "
+        "JOIN rules r ON r.id = kp.rule_id "
+        "JOIN batches b ON b.id = r.batch_id "
+        "WHERE kpc.code = ? "
+        "ORDER BY b.id DESC LIMIT 30",
+        (code,),
+    ).fetchall()
+    return [
+        {
+            "kp_id": r[0],
+            "kp_name": r[1],
+            "kp_code_count": r[2],
+            "rule_id": r[3],
+            "rule_subject": r[4],
+            "batch_label": r[5],
+            "pub_date": r[6],
+        }
+        for r in rows
+    ]
+
+
+
 
 # ============================================================
 # registration
@@ -163,11 +195,12 @@ def register(app):
                     "company_name", "business_license", "spec_code", "catalog_full_name"]
             data = dict(zip(keys, r)) if r else None
             rules = _rules_for_codes(conn, [code]) if data else []
+            kps = _kps_for_codes(conn, code) if data else []
         return render_template(
             "nhsa_detail.html",
             code=code, data=data, name=(data or {}).get("catalog_full_name") or "体外诊断试剂",
             title="体外诊断试剂", index_url=url_for("ivd_browse"),
-            code_field="code", name_field="catalog_full_name", rules=rules,
+            code_field="code", name_field="catalog_full_name", kps=kps, rules=rules,
             labels={
                 "cat_l1": "一级分类", "cat_l1_name": "一级名称",
                 "cat_l2": "二级分类", "cat_l2_name": "二级名称",
@@ -246,12 +279,13 @@ def register(app):
                     "min_pkg_unit", "manufacturer", "approval_no", "base_code", "list_class"]
             data = dict(zip(keys, r)) if r else None
             rules = _rules_for_codes(conn, [code]) if data else []
+            kps = _kps_for_codes(conn, code) if data else []
         name = (data or {}).get("reg_name") or (data or {}).get("product_name") or "医保药品"
         return render_template(
             "nhsa_detail.html",
             code=code, data=data, name=name,
             title="医保药品", index_url=url_for("yp_browse"),
-            code_field="code", name_field="reg_name", rules=rules,
+            code_field="code", name_field="reg_name", kps=kps, rules=rules,
             labels={
                 "reg_name": "注册名称",
                 "reg_dosage_form": "注册剂型",
@@ -355,12 +389,13 @@ def register(app):
                     "subcategory_code", "subcategory_name", "diagnosis_code", "diagnosis_name"]
             data = dict(zip(keys, r)) if r else None
             rules = _rules_for_codes(conn, [code]) if data else []
+            kps = _kps_for_codes(conn, code) if data else []
         name = (data or {}).get("diagnosis_name") or (data or {}).get("category_name") or "ICD 诊断"
         return render_template(
             "nhsa_detail.html",
             code=code, data=data, name=name,
             title="ICD-10 诊断编码", index_url=url_for("icd_browse"),
-            code_field="code", name_field="diagnosis_name", rules=rules,
+            code_field="code", name_field="diagnosis_name", kps=kps, rules=rules,
             labels={
                 "chapter_no": "章节号",
                 "chapter_range": "章节范围",
@@ -457,11 +492,12 @@ def register(app):
                     "area", "is_using"]
             data = dict(zip(keys, r)) if r else None
             rules = _rules_for_codes(conn, [code]) if data else []
+            kps = _kps_for_codes(conn, code) if data else []
         return render_template(
             "nhsa_detail.html",
             code=code, data=data, name=(data or {}).get("name") or "医疗服务项目",
             title="医疗服务项目", index_url=url_for("ms_browse"),
-            code_field="code", name_field="name", rules=rules,
+            code_field="code", name_field="name", kps=kps, rules=rules,
             labels={
                 "p_code": "父编码",
                 "level": "层级",
@@ -570,11 +606,12 @@ def register(app):
                     "apply_explain", "remark", "class_code", "class_name"]
             data = dict(zip(keys, r)) if r else None
             rules = _rules_for_codes(conn, [code]) if data else []
+            kps = _kps_for_codes(conn, code) if data else []
         return render_template(
             "nhsa_detail.html",
             code=code, data=data, name=(data or {}).get("name") or "中药饮片",
             title="中药饮片", index_url=url_for("tcm_browse"),
-            code_field="code", name_field="name", rules=rules,
+            code_field="code", name_field="name", kps=kps, rules=rules,
             labels={
                 "p_code": "父编码",
                 "part_code": "部位编码",
@@ -637,11 +674,12 @@ def register(app):
                     "spec", "generic_no", "generic_name", "manufacturer"]
             data = dict(zip(keys, r)) if r else None
             rules = _rules_for_codes(conn, [code]) if data else []
+            kps = _kps_for_codes(conn, code) if data else []
         return render_template(
             "nhsa_detail.html",
             code=code, data=data, name=(data or {}).get("generic_name") or "7 类医用耗材",
             title="7 类医用耗材", index_url=url_for("hc7_index"),
-            code_field="code", name_field="generic_name", rules=rules,
+            code_field="code", name_field="generic_name", kps=kps, rules=rules,
             labels={
                 "cat_l1": "一级分类", "cat_l1_name": "一级名称",
                 "cat_l2": "二级分类", "cat_l2_name": "二级名称",

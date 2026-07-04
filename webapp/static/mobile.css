@@ -753,6 +753,16 @@ a.chip:focus-visible { outline: 2px solid rgba(255,255,255,.7); outline-offset: 
   font-family: var(--f-mono);
   font-size: 15px;
 }
+.code-link {
+  text-decoration: none;
+  color: var(--brand, #1e40af);
+  font-family: ui-monospace, "SFMono-Regular", "Consolas", monospace;
+  cursor: pointer;
+  transition: color .15s ease;
+}
+.code-link:hover { text-decoration: underline; }
+.code-link:active { color: var(--brand-600, #1e3a8a); }
+
 .code-text { flex: 1; min-width: 0; word-break: break-all; color: var(--text); }
 .code-copy {
   flex-shrink: 0;

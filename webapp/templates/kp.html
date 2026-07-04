@@ -115,7 +115,7 @@
     <ul class="code-list" id="codeList">
       {% for c in codes %}
       <li class="code-item">
-        <span class="code-text">{{ c|h }}</span>
+        <a class="code-text code-link" href="{{ url_for('search_view') }}?q={{ c|urlencode }}" title="在搜索中查看此编码">{{ c|h }}</a>
         <button class="code-copy" data-code="{{ c|h }}" type="button" aria-label="复制编码">复制</button>
       </li>
       {% endfor %}

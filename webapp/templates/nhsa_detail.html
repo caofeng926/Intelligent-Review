@@ -33,6 +33,19 @@
   {% endfor %}
 </ul>
 {% endif %}
+{% if kps %}
+<h2 class="sec-title">涉及知识点 ({{ kps|length }})</h2>
+<ul class="rule-refs">
+  {% for k in kps %}
+  <li>
+    <a class="rule-ref" href="{{ url_for('kp_detail', kp_id=k.kp_id) }}">
+      <span class="rule-ref-name">{{ k.kp_name }}</span>
+      <span class="rule-ref-meta">{{ k.rule_subject }} · {{ k.batch_label }}{% if k.pub_date %} · {{ k.pub_date }}{% endif %}</span>
+    </a>
+  </li>
+  {% endfor %}
+</ul>
+{% endif %}
 
 {% else %}
 <section class="empty">
