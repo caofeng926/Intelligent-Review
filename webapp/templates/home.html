@@ -1,105 +1,224 @@
 {% extends "base.html" %}
-{% block title %}医保智审知识库 · 首页{% endblock %}
+{% block title %}医保智审规则库 · 首页{% endblock %}
 {% block content %}
+
+<!-- ============== HERO ============== -->
 <section class="hero">
   <div class="hero-bg" aria-hidden="true"></div>
   <div class="hero-inner">
-    <h1 class="hero-title">医保智审知识库</h1>
-    <p class="hero-sub">智能审核规则 · 医保编码一站式查询</p>
+    <div class="hero-badge">
+      <span class="hero-badge-dot"></span>
+      2025年版 · 医保智能监管规则
+    </div>
+    <h1 class="hero-title">医保智审规则库</h1>
+    <p class="hero-sub">限适应症 / 限性别 / 限儿童 · 药品耗材全覆盖</p>
+
     <form class="hero-search" action="{{ url_for('search_view') }}" method="get" role="search">
-      <span class="hero-search-icon" aria-hidden="true">⌕</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
       <input name="q" type="search" inputmode="search" autocomplete="off" autofocus
-             placeholder="搜药品 / 耗材 / 服务项目 / 编码" enterkeyhint="search">
-      <button class="hero-search-btn" type="submit" aria-label="搜索">搜索</button>
+             placeholder="药品 / 项目 / 编码 / 首字母" enterkeyhint="search">
+      <button class="hero-search-btn" type="submit" aria-label="搜索">
+        搜索 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+      </button>
     </form>
-    <div class="hero-recent" id="hero-recent" aria-live="polite">
-      <div class="hero-recent-head">
-        <span class="hero-recent-label">最近搜索</span>
-        <button class="hero-recent-clear" type="button" id="hero-recent-clear" hidden>清空</button>
+
+    <div class="hero-chips" id="hero-chips" role="list">
+      <!-- 由 app.js 动态填充：最近搜索 / 热门提示 -->
+    </div>
+
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <div class="hero-stat-num">{{ "{:,}".format(stats['kp']) }}</div>
+        <div class="hero-stat-label">知识点</div>
       </div>
-      <div class="hero-chips" id="hero-recent-chips" role="list"></div>
+      <div class="hero-stat">
+        <div class="hero-stat-num">{{ "{:,}".format(stats['codes']) }}</div>
+        <div class="hero-stat-label">医保编码</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-num">{{ "{:,}".format(stats['rules']) }}</div>
+        <div class="hero-stat-label">审核规则</div>
+      </div>
     </div>
   </div>
 </section>
 
-<section class="stats stats-3col">
-  <a class="stat-card stat-mac-pink" href="{{ url_for('rules_find') }}">
-    <div class="stat-num">{{ "{:,}".format(stats['kp']) }}</div>
-    <div class="stat-label">医保审核知识点</div>
+<!-- ============== 快速入口 (3 个) ============== -->
+<section class="sec-head">
+  <h2 class="sec-title"><span class="sec-title-bar"></span>快速入口</h2>
+</section>
+<section class="quick-grid">
+  <a class="quick-card qc-rule" href="{{ url_for('rules_find') }}">
+    <div class="quick-card-header">
+      <div class="quick-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11H3v10h6V11zM21 3h-6v18h6V3zM15 7H9v4h6V7z"/></svg></div>
+      <div>
+        <div class="quick-title">规则知识点查询</div>
+        <div class="quick-sub">药品 / 项目 名 → 关联规则</div>
+      </div>
+    </div>
+    <div class="quick-footer">
+      <span class="quick-count">{{ "{:,}".format(stats['rules']) }} 条</span>
+      <span class="quick-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
+    </div>
   </a>
-  <a class="stat-card stat-mac-blue" href="{{ url_for('search_view') }}">
-    <div class="stat-num">{{ "{:,}".format(stats['codes']) }}</div>
-    <div class="stat-label">医保编码</div>
+
+  <a class="quick-card qc-code" href="{{ url_for('nhsa_index') }}">
+    <div class="quick-card-header">
+      <div class="quick-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/></svg></div>
+      <div>
+        <div class="quick-title">标准数据库</div>
+        <div class="quick-sub">耗材 / 试剂 / 药品 / 诊疗 / 中医</div>
+      </div>
+    </div>
+    <div class="quick-footer">
+      <span class="quick-count">{{ "{:,}".format(stats['codes']) }} 条</span>
+      <span class="quick-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
+    </div>
   </a>
-  <a class="stat-card stat-mac-green" href="{{ url_for('rules_list') }}">
-    <div class="stat-num">{{ "{:,}".format(stats['rules']) }}</div>
-    <div class="stat-label">审核规则</div>
+
+  <a class="quick-card qc-drug" href="{{ url_for('yp2023_browse') }}">
+    <div class="quick-card-header">
+      <div class="quick-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 2v6h2V2h-2zM7 8h10l-1 12H8L7 8z"/><path d="M10 13h4"/></svg></div>
+      <div>
+        <div class="quick-title">2023 版药品目录</div>
+        <div class="quick-sub">西药 / 中成药 / 谈判 / 饮片</div>
+      </div>
+    </div>
+    <div class="quick-footer">
+      <span class="quick-count">完整目录</span>
+      <span class="quick-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
+    </div>
   </a>
+
 </section>
 
-<section class="entry-grid entry-grid-3col">
-  <a class="entry-card entry-mac-pink" href="{{ url_for('rules_find') }}">
-    <div class="entry-ico">⌕</div>
-    <div class="entry-text">
-      <div class="entry-title">审核规则查询</div>
-      <div class="entry-sub">输入药品 / 项目 · 反查涉及规则</div>
-    </div>
-    <div class="entry-arrow">›</div>
-  </a>
-  <a class="entry-card entry-mac-lavender" href="{{ url_for('nhsa_index') }}">
-    <div class="entry-ico">⊞</div>
-    <div class="entry-text">
-      <div class="entry-title">医保编码查询</div>
-      <div class="entry-sub">耗材 / 试剂 / 药品 / 诊断 / 服务 / 中药</div>
-    </div>
-    <div class="entry-arrow">›</div>
-  </a>
-  <a class="entry-card entry-mac-green" href="{{ url_for('yp2023_browse') }}">
-    <div class="entry-ico">☘</div>
-    <div class="entry-text">
-      <div class="entry-title">2023 版药品目录</div>
-      <div class="entry-sub">西药 / 中成药 / 谈判药 / 中药饮片 · 含支付标准</div>
-    </div>
-    <div class="entry-arrow">›</div>
-  </a>
-</section>
-
-<section class="code-samples">
+<!-- ============== 标准数据库 (8 个) ============== -->
+<section class="std-section">
   <div class="sec-head">
-    <h2 class="sec-title">编码示例</h2>
-    <a class="sec-more" href="{{ url_for('search_view') }}">查询更多 →</a>
+    <h2 class="sec-title"><span class="sec-title-bar"></span>标准数据库分类</h2>
+    <a class="sec-more" href="{{ url_for('nhsa_index') }}">查看全部 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg></a>
   </div>
-  <ul class="code-sample-list">
+  <div class="std-grid">
+    <a class="std-card" href="{{ url_for('consumables_index') }}" style="--std-color: var(--cat-hc); --std-shadow: rgba(2,132,199,.25);">
+      <div class="std-icon" style="background: var(--cat-hc);">HC</div>
+      <div class="std-info">
+        <div class="std-name">医保医用耗材</div>
+        <div class="std-count">{{ "{:,}".format(stats.get('consumables', 87499)) }} 条</div>
+      </div>
+    </a>
+    <a class="std-card" href="{{ url_for('ivd_browse') }}" style="--std-color: var(--cat-ivd); --std-shadow: rgba(124,58,237,.25);">
+      <div class="std-icon" style="background: var(--cat-ivd);">IVD</div>
+      <div class="std-info">
+        <div class="std-name">体外诊断试剂</div>
+        <div class="std-count">12,350 条</div>
+      </div>
+    </a>
+    <a class="std-card" href="{{ url_for('yp_browse') }}" style="--std-color: var(--cat-yp); --std-shadow: rgba(5,150,105,.25);">
+      <div class="std-icon" style="background: var(--cat-yp);">YP</div>
+      <div class="std-info">
+        <div class="std-name">医保药品</div>
+        <div class="std-count">260,692 条</div>
+      </div>
+    </a>
+    <a class="std-card" href="{{ url_for('ms_browse') }}" style="--std-color: var(--cat-ms); --std-shadow: rgba(217,119,6,.25);">
+      <div class="std-icon" style="background: var(--cat-ms);">MS</div>
+      <div class="std-info">
+        <div class="std-name">医疗服务项目</div>
+        <div class="std-count">9,830 条</div>
+      </div>
+    </a>
+    <a class="std-card" href="{{ url_for('icd_browse') }}" style="--std-color: var(--cat-icd); --std-shadow: rgba(220,38,38,.25);">
+      <div class="std-icon" style="background: var(--cat-icd);">ICD</div>
+      <div class="std-info">
+        <div class="std-name">ICD-10 诊断码</div>
+        <div class="std-count">35,200 条</div>
+      </div>
+    </a>
+    <a class="std-card" href="{{ url_for('tcm_browse') }}" style="--std-color: var(--cat-tcm); --std-shadow: rgba(13,148,136,.25);">
+      <div class="std-icon" style="background: var(--cat-tcm);">TCM</div>
+      <div class="std-info">
+        <div class="std-name">中医病症分类</div>
+        <div class="std-count">3,840 条</div>
+      </div>
+    </a>
+    <a class="std-card" href="{{ url_for('hc7_index') }}" style="--std-color: var(--cat-rule); --std-shadow: rgba(99,102,241,.25);">
+      <div class="std-icon" style="background: var(--cat-rule);">HC7</div>
+      <div class="std-info">
+        <div class="std-name">7类医用耗材</div>
+        <div class="std-count">5,670 条</div>
+      </div>
+    </a>
+    <a class="std-card" href="{{ url_for('yp2023_browse') }}" style="--std-color: var(--cat-yp); --std-shadow: rgba(5,150,105,.18);">
+      <div class="std-icon" style="background: linear-gradient(135deg, var(--cat-yp), #10B981);">YP23</div>
+      <div class="std-info">
+        <div class="std-name">2023 版药品目录</div>
+        <div class="std-count">约 344 条</div>
+      </div>
+    </a>
+  </div>
+</section>
+
+<!-- ============== 编码示例 ============== -->
+<section class="code-section">
+  <div class="sec-head">
+    <h2 class="sec-title"><span class="sec-title-bar"></span>编码示例</h2>
+    <a class="sec-more" href="{{ url_for('search_view') }}">查看更多 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg></a>
+  </div>
+  <ul class="code-list">
     {% for code, name, kp_id in code_samples %}
     <li>
-      <a class="code-sample-item" href="{{ url_for('kp_detail', kp_id=kp_id) }}">
-        <span class="code-sample-code">{{ code }}</span>
-        <span class="code-sample-name">{{ name|h }}</span>
-        <span class="code-sample-arrow" aria-hidden="true">›</span>
+      <a class="code-item" href="{{ url_for('kp_detail', kp_id=kp_id) }}">
+        <span class="code-name">{{ name|h }}</span>
+        <span class="code-badge">{{ code }}</span>
+        <button class="code-copy" type="button" data-code="{{ code }}" aria-label="复制编码">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+          </svg>
+        </button>
       </a>
     </li>
     {% endfor %}
   </ul>
 </section>
 
-<section id="recent" class="recent">
-  <h2 class="sec-title">最近更新</h2>
+<!-- ============== 最近更新 ============== -->
+<section class="recent-section">
+  <div class="sec-head">
+    <h2 class="sec-title"><span class="sec-title-bar"></span>最近更新</h2>
+    <a class="sec-more" href="{{ url_for('rules_list') }}">查看全部 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg></a>
+  </div>
   {% if recent %}
   <ul class="recent-list">
     {% for kp_id, subject, rule_subject, batch_label, pub_date in recent %}
     <li>
       <a class="recent-item" href="{{ url_for('kp_detail', kp_id=kp_id) }}">
+        <div class="recent-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
         <div class="recent-main">
           <div class="recent-name">{{ subject|h }}</div>
-          <div class="recent-meta">{{ rule_subject|h }} · {{ batch_label|h }}{% if pub_date %} · {{ pub_date }}{% endif %}</div>
+          <div class="recent-meta">
+            <span class="recent-tag">{{ batch_label|h }}</span>
+            {{ rule_subject|h }}{% if pub_date %} · {{ pub_date }}{% endif %}
+          </div>
         </div>
-        <div class="recent-arrow">›</div>
+        <div class="recent-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg></div>
       </a>
     </li>
     {% endfor %}
   </ul>
   {% else %}
-  <div class="empty">暂无最近更新</div>
+  <div class="empty">暂无更新数据</div>
   {% endif %}
 </section>
+
+
+<!-- ============== INFO BANNER ============== -->
+<div class="info-banner">
+  <div class="info-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></div>
+  <div class="info-body">
+    <div class="info-title">使用提示</div>
+    <div class="info-text">本系统收录国家医保局发布的全量审核规则与 8 类标准数据库编码 + 药品详情库 + 2023 版药品目录，支持名称/编码/拼音首字母搜索。</div>
+  </div>
+</div>
+
 {% endblock %}

@@ -14,12 +14,12 @@
 
 <nav class="rules-subnav" role="tablist" aria-label="规则浏览方式">
   <a class="rules-subnav-item" href="{{ url_for('rules_find') }}" role="tab">
-    <span class="subnav-ico">⌕</span>
+    <span class="subnav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></span>
     <span class="subnav-label">按知识点查询</span>
   </a>
-  <a class="rules-subnav-item is-active" href="{{ url_for('rules_index') }}" role="tab" aria-selected="true">
-    <span class="subnav-ico">≡</span>
-    <span class="subnav-label">按批次浏览</span>
+  <a class="rules-subnav-item" href="{{ url_for('rules_category') }}" role="tab">
+    <span class="subnav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span>
+    <span class="subnav-label">按规则分类查询</span>
   </a>
 </nav>
 

@@ -20,7 +20,7 @@ import json
 import sqlite3
 from typing import Optional
 
-from flask import Flask, render_template, request, jsonify, abort
+from flask import Flask, render_template, request, jsonify, abort, redirect, url_for
 
 from . import db
 from . import nhsa_api
@@ -46,6 +46,20 @@ SOURCE_LABEL = {
 CODE_RE = re.compile(r"^[A-Z0-9]{8,}$")
 LETTERS_RE = re.compile(r"^[A-Za-z]+$")
 
+
+# ---- Inject global stats into all templates ----
+@app.context_processor
+def inject_stats():
+    try:
+        with db.connect() as conn:
+            stats = {
+                "kp": conn.execute("SELECT COUNT(*) FROM knowledge_points").fetchone()[0],
+                "codes": conn.execute("SELECT COUNT(*) FROM knowledge_point_codes").fetchone()[0],
+                "rules": conn.execute("SELECT COUNT(*) FROM rules").fetchone()[0],
+            }
+    except Exception:
+        stats = {"kp": 0, "codes": 0, "rules": 0}
+    return {"nav_stats": stats}
 
 def detect_mode(q: str) -> str:
     q = (q or "").strip()
@@ -443,17 +457,56 @@ def _code_route(type_id):
 
 @app.get("/rules")
 def rules_index():
+    """默认进入"按知识点查询"。直接重定向到 /rules/find。"""
+    return redirect(url_for("rules_find"))
+
+
+@app.get("/rules/category")
+def rules_category():
+    """按规则分类查询:按主题(药品/医疗服务项目/中药饮片/医用耗材/诊断/手术操作/其他)聚合展示。"""
     with db.connect() as conn:
-        groups = conn.execute("""
-            SELECT b.id, b.source, b.batch_label, b.pub_date,
-                   COUNT(DISTINCT r.id) rule_cnt, COUNT(kp.id) kp_cnt
-            FROM batches b
-            LEFT JOIN rules r ON r.batch_id = b.id
+        rows = conn.execute("""
+            SELECT r.id, r.rule_subject, r.source, b.batch_label,
+                   COUNT(kp.id) AS kp_count
+            FROM rules r
+            JOIN batches b ON b.id = r.batch_id
             LEFT JOIN knowledge_points kp ON kp.rule_id = r.id
-            GROUP BY b.id
-            ORDER BY b.source, b.pub_date DESC, b.id
+            GROUP BY r.id
+            ORDER BY r.rule_subject
         """).fetchall()
-    return render_template("rules.html", groups=groups, source_label=SOURCE_LABEL)
+
+    category_map = {}
+    for r in rows:
+        subject = r[1]
+        if subject.startswith("药品"):
+            cat = "药品"
+        elif subject.startswith("医疗服务项目"):
+            cat = "医疗服务项目"
+        elif subject.startswith("中药饮片"):
+            cat = "中药饮片"
+        elif subject.startswith("医用耗材"):
+            cat = "医用耗材"
+        elif subject.startswith("诊断"):
+            cat = "诊断"
+        elif subject.startswith("手术"):
+            cat = "手术操作"
+        else:
+            cat = "其他"
+
+        bucket = category_map.setdefault(cat, {
+            "name": cat, "rules": [], "total_kp": 0, "rule_count": 0
+        })
+        bucket["rules"].append({
+            "id": r[0], "subject": r[1], "source": r[2],
+            "batch_label": r[3], "kp_count": r[4],
+        })
+        bucket["total_kp"] += r[4]
+        bucket["rule_count"] += 1
+
+    category_order = ["药品", "医疗服务项目", "中药饮片", "医用耗材", "诊断", "手术操作", "其他"]
+    categories = [category_map[c] for c in category_order if c in category_map]
+
+    return render_template("rules_category.html", categories=categories, source_label=SOURCE_LABEL)
 
 
 @app.get("/rules/list")

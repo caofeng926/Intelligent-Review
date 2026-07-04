@@ -16,7 +16,7 @@
 
 <section class="searchbar">
   <form class="searchbar-form" action="{{ url_for('rules_find') }}" method="get" role="search">
-    <span class="searchbar-icon" aria-hidden="true">⌕</span>
+    <span class="searchbar-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></span>
     <input name="q" type="search" inputmode="search" autocomplete="off" autofocus
            value="{{ q|h }}" placeholder="如 阿莫西林 / 艾附暖宫丸 / afngw / ZD01..." enterkeyhint="search">
     {% if source %}<input type="hidden" name="source" value="{{ source }}">{% endif %}
@@ -24,9 +24,9 @@
   <div class="searchbar-meta">
     {% if q %}
       <span class="mode-pill mode-{{ mode }}">
-        {% if mode=='code' %}#️⃣ 编码搜索
-        {% elif mode=='initials' %}🔠 首字母搜索
-        {% else %}🔤 名字搜索
+        {% if mode=='code' %}编码搜索
+        {% elif mode=='initials' %}首字母搜索
+        {% else %}名字搜索
         {% endif %}
       </span>
       <span class="meta-total">共 <b>{{ total_kp }}</b> 个知识点 · 涉及 <b>{{ total_rule }}</b> 条规则</span>
@@ -39,12 +39,12 @@
 
 <nav class="rules-subnav" role="tablist" aria-label="规则浏览方式">
   <a class="rules-subnav-item is-active" href="{{ url_for('rules_find') }}" role="tab" aria-selected="true">
-    <span class="subnav-ico">⌕</span>
+    <span class="subnav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></span>
     <span class="subnav-label">按知识点查询</span>
   </a>
-  <a class="rules-subnav-item" href="{{ url_for('rules_index') }}" role="tab">
-    <span class="subnav-ico">≡</span>
-    <span class="subnav-label">按批次浏览</span>
+  <a class="rules-subnav-item" href="{{ url_for('rules_category') }}" role="tab">
+    <span class="subnav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span>
+    <span class="subnav-label">按规则分类查询</span>
   </a>
 </nav>
 
@@ -102,8 +102,8 @@
 
 {% elif q and total_kp == 0 %}
 <section class="empty">
-  <div class="empty-ico">∅</div>
-  <div class="empty-title">没找到 “{{ q|h }}” 相关的知识点</div>
+  <div class="empty-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><path d="M8 11h6"/></svg></div>
+  <div class="empty-title">没找到 "{{ q|h }}" 相关的知识点</div>
   <div class="empty-tip">
     {% if mode == 'initials' %}试试更短的首字母 · 或切换到名字搜索
     {% elif mode == 'code' %}确认编码完整且大写 · 或尝试部分编码
@@ -115,7 +115,7 @@
 
 {% else %}
 <section class="empty">
-  <div class="empty-ico">⌕</div>
+  <div class="empty-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></div>
   <div class="empty-title">输入药品或项目名称开始查询</div>
   <div class="empty-tip">将显示该品种涉及的所有审核规则与限制条件</div>
   <div class="empty-hints">
