@@ -23,7 +23,7 @@
 </section>
 
 <section class="stats stats-3col">
-  <a class="stat-card stat-mac-pink" href="{{ url_for('rules_index') }}">
+  <a class="stat-card stat-mac-pink" href="{{ url_for('rules_find') }}">
     <div class="stat-num">{{ "{:,}".format(stats['kp']) }}</div>
     <div class="stat-label">知识点</div>
   </a>
@@ -31,9 +31,9 @@
     <div class="stat-num">{{ "{:,}".format(stats['codes']) }}</div>
     <div class="stat-label">医保编码</div>
   </a>
-  <a class="stat-card stat-mac-green" href="{{ url_for('consumables_index') }}">
-    <div class="stat-num">{{ "{:,}".format(stats['consumables']) }}</div>
-    <div class="stat-label">耗材代码</div>
+  <a class="stat-card stat-mac-green" href="{{ url_for('rules_index') }}">
+    <div class="stat-num">{{ "{:,}".format(stats['rules']) }}</div>
+    <div class="stat-label">规则查询</div>
   </a>
 </section>
 
