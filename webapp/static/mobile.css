@@ -1946,3 +1946,212 @@ svg { display: block; }
   }
   .toast.is-show { transform: none; }
 }
+
+
+/* ============================================================
+   Code Detail (nhsa_detail.html)
+   - 用于 /nhsa/icd/code/<code>, /nhsa/yp/code/<code> 等
+   - 设计语言与 kp.html 一致 (kp-head/kp-section), 复用现有令牌
+   ============================================================ */
+
+.code-detail {
+  display: flex; flex-direction: column; gap: var(--sp-5);
+  animation: fadeInUp .35s ease-out both;
+}
+
+/* ---- 头部 (code + name + 类别标签) ---- */
+.code-head {
+  border-radius: var(--r-xl);
+  padding: var(--sp-6) var(--sp-5);
+  border: 1px solid var(--c-border-2);
+  box-shadow: var(--shadow-sm);
+  background: linear-gradient(160deg, var(--c-primary-50) 0%, #F5F3FF 100%);
+  border-color: var(--c-primary-100);
+  display: flex; flex-direction: column; gap: var(--sp-3);
+}
+.code-head--icd {
+  background: linear-gradient(160deg, #FEF2F2 0%, #FFF7ED 100%);
+  border-color: #FECACA;
+}
+.code-head--yp {
+  background: linear-gradient(160deg, #ECFDF5 0%, #F0FDF4 100%);
+  border-color: #BBF7D0;
+}
+.code-head--hc {
+  background: linear-gradient(160deg, var(--c-primary-50) 0%, #F0F9FF 100%);
+  border-color: var(--c-primary-100);
+}
+.code-head--tcm {
+  background: linear-gradient(160deg, #F0FDFA 0%, #ECFEFF 100%);
+  border-color: #99F6E4;
+}
+.code-head--ivd {
+  background: linear-gradient(160deg, #F5F3FF 0%, #FAF5FF 100%);
+  border-color: #DDD6FE;
+}
+.code-head--ms {
+  background: linear-gradient(160deg, #FFFBEB 0%, #FEF3C7 100%);
+  border-color: #FDE68A;
+}
+
+.code-head-meta {
+  display: flex; flex-wrap: wrap; gap: var(--sp-2);
+}
+.code-head-tag {
+  display: inline-flex; align-items: center; height: 22px;
+  padding: 0 10px; border-radius: var(--r-full);
+  font-size: var(--fs-xs); font-weight: var(--fw-semi);
+  background: var(--c-surface); color: var(--c-text-2);
+  border: 1px solid var(--c-border-2);
+}
+.code-head-tag--muted {
+  background: var(--c-bg-alt); color: var(--c-text-3);
+}
+
+.code-head-code {
+  font-family: var(--font-mono);
+  font-size: var(--fs-3xl); font-weight: var(--fw-bold);
+  letter-spacing: -.5px;
+  color: var(--c-primary-dark);
+  line-height: 1.1;
+}
+.code-head--icd  .code-head-code { color: #B91C1C; }
+.code-head--yp   .code-head-code { color: #047857; }
+.code-head--hc   .code-head-code { color: var(--c-primary-dark); }
+.code-head--tcm  .code-head-code { color: #0F766E; }
+.code-head--ivd  .code-head-code { color: #6D28D9; }
+.code-head--ms   .code-head-code { color: #B45309; }
+
+.code-head-name {
+  font-size: var(--fs-xl); font-weight: var(--fw-bold);
+  color: var(--c-text);
+  line-height: 1.4; letter-spacing: -.2px;
+  margin: 0;
+}
+
+/* ---- 章节路径 (breadcrumb 风格, 用于 ICD 类目/亚目/扩展码) ---- */
+.code-path {
+  background: var(--c-surface);
+  border-radius: var(--r-lg);
+  padding: var(--sp-4);
+  border: 1px solid var(--c-border-2);
+  box-shadow: var(--shadow-xs);
+}
+.code-path-inner {
+  display: flex; align-items: center; flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+.code-path-step {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: var(--r-md);
+  background: var(--c-bg-alt);
+  font-size: var(--fs-sm); color: var(--c-text-2);
+  max-width: 240px; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.code-path-step.is-self {
+  background: linear-gradient(135deg, rgba(220,38,38,.12), rgba(252,165,165,.15));
+  color: #991B1B; font-weight: var(--fw-semi);
+  box-shadow: inset 0 0 0 1px rgba(220,38,38,.35);
+}
+.code-path-no {
+  font-family: var(--font-mono); font-weight: var(--fw-semi);
+  font-size: var(--fs-xs); color: var(--c-text-3);
+  background: var(--c-surface);
+  padding: 1px 6px; border-radius: var(--r-sm);
+  border: 1px solid var(--c-border-2);
+}
+.code-path-code {
+  font-family: var(--font-mono); font-weight: var(--fw-semi);
+  font-size: var(--fs-xs); color: var(--c-primary);
+  background: var(--c-surface);
+  padding: 1px 6px; border-radius: var(--r-sm);
+  border: 1px solid var(--c-border-2);
+  text-decoration: none;
+  transition: all var(--t-fast);
+}
+.code-path-code:hover {
+  color: var(--c-primary-dark);
+  border-color: var(--c-primary-light);
+  background: var(--c-primary-50);
+}
+.code-path-label { overflow: hidden; text-overflow: ellipsis; }
+.code-path-arrow {
+  color: var(--c-text-4); font-weight: var(--fw-bold);
+  font-size: var(--fs-md); user-select: none;
+}
+
+/* ---- 元数据键值表 ---- */
+.code-section {
+  background: var(--c-surface); border-radius: var(--r-lg);
+  padding: var(--sp-5); border: 1px solid var(--c-border-2);
+  box-shadow: var(--shadow-xs);
+  animation: fadeInUp .4s ease-out both;
+}
+.code-section .sec-title { margin-bottom: var(--sp-4); }
+.code-section .sec-aux {
+  font-size: var(--fs-sm); font-weight: var(--fw-medium);
+  color: var(--c-text-3);
+}
+
+.code-kv {
+  display: grid;
+  grid-template-columns: minmax(120px, max-content) 1fr;
+  gap: var(--sp-3) var(--sp-5);
+  margin: 0;
+}
+.code-kv-row { display: contents; }
+.code-kv-key {
+  color: var(--c-text-3);
+  font-size: var(--fs-sm); font-weight: var(--fw-medium);
+  text-align: right;
+  padding-top: 2px;
+}
+.code-kv-val {
+  color: var(--c-text);
+  font-size: var(--fs-base);
+  margin: 0;
+  min-width: 0;
+}
+.code-mono {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  word-break: break-word;
+}
+
+/* ---- 规则/知识点列表 (引用现有样式) ---- */
+.code-section .rule-refs {
+  list-style: none; padding: 0; margin: 0;
+  display: flex; flex-direction: column; gap: var(--sp-2);
+}
+.code-section .rule-ref {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--c-bg-alt);
+  border-radius: var(--r-md);
+  text-decoration: none; color: var(--c-text);
+  transition: all var(--t-fast);
+}
+.code-section .rule-ref:hover {
+  background: var(--c-primary-50);
+  transform: translateX(2px);
+}
+.code-section .rule-ref-name {
+  font-size: var(--fs-base); font-weight: var(--fw-medium);
+  flex: 1; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.code-section .rule-ref-meta {
+  font-size: var(--fs-xs); color: var(--c-text-3);
+  flex-shrink: 0;
+}
+
+/* ---- 移动端 ---- */
+@media (max-width: 640px) {
+  .code-head-code { font-size: var(--fs-2xl); }
+  .code-head-name { font-size: var(--fs-lg); }
+  .code-kv { grid-template-columns: 1fr; gap: 4px var(--sp-3); }
+  .code-kv-key { text-align: left; }
+  .code-path-step { max-width: 180px; font-size: var(--fs-xs); }
+}

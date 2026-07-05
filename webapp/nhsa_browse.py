@@ -198,6 +198,7 @@ def register(app):
             kps = _kps_for_codes(conn, code) if data else []
         return render_template(
             "nhsa_detail.html",
+            code_kind="ivd",
             code=code, data=data, name=(data or {}).get("catalog_full_name") or "体外诊断试剂",
             title="体外诊断试剂", index_url=url_for("ivd_browse"),
             code_field="code", name_field="catalog_full_name", kps=kps, rules=rules,
@@ -283,6 +284,7 @@ def register(app):
         name = (data or {}).get("reg_name") or (data or {}).get("product_name") or "医保药品"
         return render_template(
             "nhsa_detail.html",
+            code_kind="yp",
             code=code, data=data, name=name,
             title="医保药品", index_url=url_for("yp_browse"),
             code_field="code", name_field="reg_name", kps=kps, rules=rules,
@@ -377,22 +379,51 @@ def register(app):
     @app.get("/nhsa/icd/code/<code>")
     def icd_detail(code):
         with db.connect() as conn:
-            r = conn.execute(
+            # 按精确度分层级匹配:
+            # 1. code=?           (亚目/扩展码/类目如果直接存为 code)
+            # 2. diagnosis_code=? (扩展码)
+            # 3. category_code=?  (类目 A00)
+            # 4. subcategory_code=?  (亚目 A00.0)
+            # SELECT 末尾加一列 "_match" 标识命中层级, 让 name/diagnosis_name 字段可分级呈现
+            sql = (
+                # 1. code 直接匹配 -> name = diagnosis_name (or category_name)
                 "SELECT code, chapter_no, chapter_range, chapter_name, section_range, section_name, "
                 "category_code, category_name, subcategory_code, subcategory_name, "
-                "diagnosis_code, diagnosis_name "
-                "FROM icd_codes WHERE code=? OR diagnosis_code=? LIMIT 1",
-                (code, code),
-            ).fetchone()
+                "diagnosis_code, diagnosis_name, COALESCE(diagnosis_name, category_name) AS _name, 1 AS _match "
+                "FROM icd_codes WHERE code=? "
+                # 2. diagnosis_code 匹配 -> name = diagnosis_name
+                "UNION ALL SELECT code, chapter_no, chapter_range, chapter_name, section_range, section_name, "
+                "category_code, category_name, subcategory_code, subcategory_name, "
+                "diagnosis_code, diagnosis_name, diagnosis_name AS _name, 2 AS _match "
+                "FROM icd_codes WHERE diagnosis_code=? AND code<>? "
+                # 3. category_code 匹配 -> name = category_name
+                "UNION ALL SELECT code, chapter_no, chapter_range, chapter_name, section_range, section_name, "
+                "category_code, category_name, subcategory_code, subcategory_name, "
+                "diagnosis_code, diagnosis_name, category_name AS _name, 3 AS _match "
+                "FROM icd_codes WHERE category_code=? AND code<>? AND diagnosis_code<>? "
+                # 4. subcategory_code 匹配 -> name = subcategory_name
+                "UNION ALL SELECT code, chapter_no, chapter_range, chapter_name, section_range, section_name, "
+                "category_code, category_name, subcategory_code, subcategory_name, "
+                "diagnosis_code, diagnosis_name, subcategory_name AS _name, 4 AS _match "
+                "FROM icd_codes WHERE subcategory_code=? AND code<>? AND diagnosis_code<>? AND category_code<>? "
+                "LIMIT 1"
+            )
+            r = conn.execute(sql, (code, code, code, code, code, code, code, code, code, code)).fetchone()
             keys = ["code", "chapter_no", "chapter_range", "chapter_name",
                     "section_range", "section_name", "category_code", "category_name",
-                    "subcategory_code", "subcategory_name", "diagnosis_code", "diagnosis_name"]
+                    "subcategory_code", "subcategory_name", "diagnosis_code", "diagnosis_name",
+                    "_name", "_match"]
             data = dict(zip(keys, r)) if r else None
+            if data:
+                # 显示匹配的层级名 (4 个 SELECT 各自返回该层级的名字)
+                data["display_name"] = data.pop("_name")
+                data.pop("_match", None)
             rules = _rules_for_codes(conn, [code]) if data else []
             kps = _kps_for_codes(conn, code) if data else []
-        name = (data or {}).get("diagnosis_name") or (data or {}).get("category_name") or "ICD 诊断"
+        name = (data or {}).get("display_name") or "ICD 诊断"
         return render_template(
             "nhsa_detail.html",
+            code_kind="icd",
             code=code, data=data, name=name,
             title="ICD-10 诊断编码", index_url=url_for("icd_browse"),
             code_field="code", name_field="diagnosis_name", kps=kps, rules=rules,
@@ -495,6 +526,7 @@ def register(app):
             kps = _kps_for_codes(conn, code) if data else []
         return render_template(
             "nhsa_detail.html",
+            code_kind="ms",
             code=code, data=data, name=(data or {}).get("name") or "医疗服务项目",
             title="医疗服务项目", index_url=url_for("ms_browse"),
             code_field="code", name_field="name", kps=kps, rules=rules,
@@ -609,6 +641,7 @@ def register(app):
             kps = _kps_for_codes(conn, code) if data else []
         return render_template(
             "nhsa_detail.html",
+            code_kind="tcm",
             code=code, data=data, name=(data or {}).get("name") or "中药饮片",
             title="中药饮片", index_url=url_for("tcm_browse"),
             code_field="code", name_field="name", kps=kps, rules=rules,
@@ -677,6 +710,7 @@ def register(app):
             kps = _kps_for_codes(conn, code) if data else []
         return render_template(
             "nhsa_detail.html",
+            code_kind="hc",
             code=code, data=data, name=(data or {}).get("generic_name") or "7 类医用耗材",
             title="7 类医用耗材", index_url=url_for("hc7_index"),
             code_field="code", name_field="generic_name", kps=kps, rules=rules,

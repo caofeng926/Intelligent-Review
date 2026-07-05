@@ -1,55 +1,110 @@
-﻿{% extends "base.html" %}
-{% block title %}{{ code }} · {{ title }} · 医保智审{% endblock %}
+{% extends "base.html" %}
+{% block title %}{{ code }} · {{ name }} · {{ title }} · 医保智审{% endblock %}
 {% block content %}
-<nav class="bread">
-  <a href="{{ url_for('nhsa_index') }}">标准数据库</a> <span class="bread-sep">›</span>
+<nav class="crumb">
+  <a href="{{ url_for('home') }}">首页</a>
+  <span class="crumb-sep">›</span>
+  <a href="{{ url_for('nhsa_index') }}">标准数据库</a>
+  <span class="crumb-sep">›</span>
   <a href="{{ index_url }}">{{ title }}</a>
+  <span class="crumb-sep">›</span>
+  <span class="crumb-cur">{{ code }}</span>
 </nav>
 
 {% if data %}
-<section class="kp-detail">
-  <div class="kp-code">{{ code }}</div>
-  <h1 class="kp-name">{{ name }}</h1>
-  <dl>
-    {% for k, v in data.items() %}
-      {% if v and k != code_field and k != name_field %}
-      <dt>{{ labels[k] or k }}</dt>
-      <dd>{{ v }}</dd>
-      {% endif %}
-    {% endfor %}
-  </dl>
-</section>
+{# ---------- 头部: code + name ---------- #}
+<article class="code-detail">
+  <header class="code-head code-head--{{ code_kind|default('icd') }}">
+    <div class="code-head-meta">
+      <span class="code-head-tag">{{ title }}</span>
+      {% if data.chapter_no %}<span class="code-head-tag code-head-tag--muted">第 {{ data.chapter_no }} 章</span>{% endif %}
+    </div>
+    <div class="code-head-code">{{ code }}</div>
+    <h1 class="code-head-name">{{ data.display_name or name if data else name }}</h1>
+  </header>
 
-{% if rules %}
-<h2 class="sec-title">涉及审核规则</h2>
-<ul class="rule-refs">
-  {% for r in rules %}
-  <li>
-    <a class="rule-ref" href="{{ url_for('rule_detail', rid=r.rule_id) }}">
-      <span class="rule-ref-name">{{ r.rule_subject }}</span>
-      <span class="rule-ref-meta">{{ r.batch_label }}{% if r.pub_date %} · {{ r.pub_date }}{% endif %}</span>
-    </a>
-  </li>
-  {% endfor %}
-</ul>
-{% endif %}
-{% if kps %}
-<h2 class="sec-title">涉及知识点 ({{ kps|length }})</h2>
-<ul class="rule-refs">
-  {% for k in kps %}
-  <li>
-    <a class="rule-ref" href="{{ url_for('kp_detail', kp_id=k.kp_id) }}">
-      <span class="rule-ref-name">{{ k.kp_name }}</span>
-      <span class="rule-ref-meta">{{ k.rule_subject }} · {{ k.batch_label }}{% if k.pub_date %} · {{ k.pub_date }}{% endif %}</span>
-    </a>
-  </li>
-  {% endfor %}
-</ul>
-{% endif %}
+  {# ---------- ICD 章节路径 (仅 ICD 类目/亚目/扩展码) ---------- #}
+  {% set path_steps = [] %}
+  {% if data.chapter_no is defined and data.chapter_name %}
+    {% set _ = path_steps.append({'label': data.chapter_name, 'range': data.chapter_range or '', 'no': data.chapter_no}) %}
+  {% endif %}
+  {% if data.section_name %}
+    {% set _ = path_steps.append({'label': data.section_name, 'range': data.section_range or '', 'no': ''}) %}
+  {% endif %}
+  {% if data.category_name %}
+    {% set _ = path_steps.append({'label': data.category_name, 'range': '', 'no': data.category_code or '', 'code': data.category_code or '', 'is_self': data.code == data.category_code}) %}
+  {% endif %}
+  {% if data.subcategory_name %}
+    {% set _ = path_steps.append({'label': data.subcategory_name, 'range': '', 'no': data.subcategory_code or '', 'code': data.subcategory_code or '', 'is_self': data.code == data.subcategory_code}) %}
+  {% endif %}
+  {% if data.diagnosis_name %}
+    {% set _ = path_steps.append({'label': data.diagnosis_name or data.display_name or data.diagnosis_name, 'range': '', 'no': data.diagnosis_code or '', 'code': data.diagnosis_code or '', 'is_self': data.code == data.diagnosis_code}) %}
+  {% endif %}
+  {% if path_steps|length > 1 %}
+  <section class="code-path">
+    <div class="code-path-inner">
+      {% for step in path_steps %}
+        <div class="code-path-step {% if step.is_self %}is-self{% endif %}">
+          {% if step.code and not step.is_self %}<a class="code-path-code" href="{{ url_for('icd_detail', code=step.code) }}">{{ step.code }}</a>{% elif step.no %}<span class="code-path-no">{{ step.no }}</span>{% endif %}
+          <span class="code-path-label">{{ step.label }}</span>
+        </div>
+        {% if not loop.last %}<span class="code-path-arrow">›</span>{% endif %}
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  {# ---------- 元数据键值表格 ---------- #}
+  <section class="code-section">
+    <h2 class="sec-title">编码元数据</h2>
+    <dl class="code-kv">
+      {% for k, v in data.items() %}
+        {% if v and k != code_field and k != name_field %}
+        <div class="code-kv-row">
+          <dt class="code-kv-key">{{ labels[k] or k }}</dt>
+          <dd class="code-kv-val"><span class="code-mono">{{ v }}</span></dd>
+        </div>
+        {% endif %}
+      {% endfor %}
+    </dl>
+  </section>
+
+  {% if rules %}
+  <section class="code-section">
+    <h2 class="sec-title">涉及审核规则 <span class="sec-aux">{{ rules|length }}</span></h2>
+    <ul class="rule-refs">
+      {% for r in rules %}
+      <li>
+        <a class="rule-ref" href="{{ url_for('rule_detail', rid=r.rule_id) }}">
+          <span class="rule-ref-name">{{ r.rule_subject }}</span>
+          <span class="rule-ref-meta">{{ r.batch_label }}{% if r.pub_date %} · {{ r.pub_date }}{% endif %}</span>
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+  {% if kps %}
+  <section class="code-section">
+    <h2 class="sec-title">涉及知识点 <span class="sec-aux">{{ kps|length }}</span></h2>
+    <ul class="rule-refs">
+      {% for k in kps %}
+      <li>
+        <a class="rule-ref" href="{{ url_for('kp_detail', kp_id=k.kp_id) }}">
+          <span class="rule-ref-name">{{ k.kp_name }}</span>
+          <span class="rule-ref-meta">{{ k.rule_subject }} · {{ k.batch_label }}{% if k.pub_date %} · {{ k.pub_date }}{% endif %}</span>
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+</article>
 
 {% else %}
 <section class="empty">
-  <div class="empty-ico">∅</div>
+  <svg class="empty-ico" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
   <div class="empty-title">未找到 {{ code }}</div>
   <div class="empty-tip">该编码不在当前版本的 {{ title }} 数据库中。</div>
   <a class="empty-link" href="{{ index_url }}">返回</a>
