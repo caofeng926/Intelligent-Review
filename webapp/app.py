@@ -12,45 +12,36 @@ GET  /api/kp/<int:kp_id>  single KP JSON
 GET  /api/code/<code>      reverse-lookup by 医保编码
 """
 from __future__ import annotations
+
+import html
+import math
 import os
 import sys
-import re
-import math
-import html
-import json
-import sqlite3
-from typing import Optional
 
-from flask import Flask, render_template, request, jsonify, abort, redirect, url_for
+from flask import Flask, abort, jsonify, render_template, request
 
-from . import db
-from . import nhsa_api
-from . import nhsa_browse
-from . import admin
-from . import yp2023
-from .query_utils import fts_query as jieba_query
+from . import admin, db, nhsa_api, nhsa_browse, yp2023
+from .helpers import PAGE_SIZE, SOURCE_LABEL
 from .query_utils import row_to_dict
+from .search_backend import _row_to_kp_dict, detect_mode, do_search
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
 nhsa_api.register(app)
-from . import consumables  # noqa: F401
+from . import consumables  # noqa: E402, F401
+
 consumables.register(app)
+from . import kp  # noqa: E402, F401
+
+kp.register(app)
+from . import rules  # noqa: E402, F401
+
+rules.register(app)
 nhsa_browse.register(app)
 yp2023.register(app)
 app.register_blueprint(admin.admin_bp)
 app.config["JSON_AS_ASCII"] = False
 # 静态资源缓存: 本地开发可即时刷新, 生产可走 CDN/反向代理缓存
 app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0 if app.debug else 3600  # dev=0 / prod=1h
-
-PAGE_SIZE = 20
-
-SOURCE_LABEL = {
-    "nhsa_batch": "NHSA 公告",
-    "pdf_2025": "2025 版主册",
-}
-
-CODE_RE = re.compile(r"^[A-Z0-9]{8,}$")
-LETTERS_RE = re.compile(r"^[A-Za-z]+$")
 
 
 # ---- Inject global stats into all templates ----
@@ -66,157 +57,6 @@ def inject_stats():
     except Exception:
         stats = {"kp": 0, "codes": 0, "rules": 0}
     return {"nav_stats": stats}
-
-def detect_mode(q: str) -> str:
-    q = (q or "").strip()
-    if not q:
-        return "name"
-    upper = q.upper()
-    if CODE_RE.match(upper):
-        return "code"
-    if LETTERS_RE.match(q) and len(q) >= 2:
-        return "initials"
-    return "name"
-
-
-def parse_kp_partner(raw_row, object_type):
-    """从 raw_row 解出 KP 配对项目。
-    - pair:    {subject_name_b, codes_b}   → label=配对项目
-    - service: row[1]=code, row[2]=name    → label=配对手术
-    返回 {name, code, label} 或 None。"""
-    if not raw_row:
-        return None
-    try:
-        d = json.loads(raw_row)
-    except Exception:
-        return None
-    if object_type == "pair":
-        nb = (d.get("subject_name_b") or "").strip()
-        cb = (d.get("codes_b") or "").strip()
-        if nb or cb:
-            return {"name": nb, "code": cb, "label": "配对项目"}
-    elif object_type == "service":
-        row = d.get("row")
-        if isinstance(row, list) and len(row) >= 3:
-            code = str(row[1] or "").strip()
-            name = str(row[2] or "").strip()
-            if code or name:
-                return {"name": name, "code": code, "label": "配对手术"}
-    return None
-
-
-def _row_to_kp_dict(row) -> dict:
-    raw = row[11] if len(row) > 11 else None
-    obj = row[12] if len(row) > 12 else None
-    return {
-        "id": row[0],
-        "subject_name": row[1],
-        "pinyin_initials": row[2],
-        "code_count": row[3],
-        "detection_logic": row[4],
-        "logic_basis": row[5],
-        "codes_preview": row[6],
-        "rule_subject": row[7],
-        "source": row[8],
-        "batch_label": row[9],
-        "pub_date": row[10],
-        "partner": parse_kp_partner(raw, obj),
-    }
-
-
-def search_name(conn, q: str, source: Optional[str], limit: int, offset: int):
-    fts_q = jieba_query(q)
-    if not fts_q:
-        return [], 0
-    sql = """
-        SELECT kp.id, kp.subject_name, kp.pinyin_initials, kp.code_count,
-               kp.detection_logic, kp.logic_basis, kp.codes,
-               r.rule_subject, r.source, b.batch_label, b.pub_date,
-               kp.raw_row, r.object_type,
-               bm25(kp_fts) AS score
-        FROM kp_fts
-        JOIN knowledge_points kp ON kp.id = kp_fts.rowid
-        JOIN rules r ON r.id = kp.rule_id
-        JOIN batches b ON b.id = r.batch_id
-        WHERE kp_fts MATCH ?
-    """
-    params: list = [fts_q]
-    if source:
-        sql += " AND r.source = ?"
-        params.append(source)
-    sql += " ORDER BY score LIMIT ? OFFSET ?"
-    params.extend([limit, offset])
-    rows = conn.execute(sql, params).fetchall()
-    # total
-    cnt_sql = "SELECT COUNT(*) FROM kp_fts WHERE kp_fts MATCH ?"
-    cnt_params: list = [fts_q]
-    if source:
-        cnt_sql = "SELECT COUNT(*) FROM kp_fts JOIN knowledge_points kp ON kp.id=kp_fts.rowid JOIN rules r ON r.id=kp.rule_id WHERE kp_fts MATCH ? AND r.source = ?"
-        cnt_params.append(source)
-    total = conn.execute(cnt_sql, cnt_params).fetchone()[0]
-    return rows, total
-
-
-def search_initials(conn, q: str, source: Optional[str], limit: int, offset: int):
-    needle = q.lower()
-    sql = """
-        SELECT kp.id, kp.subject_name, kp.pinyin_initials, kp.code_count,
-               kp.detection_logic, kp.logic_basis, kp.codes,
-               r.rule_subject, r.source, b.batch_label, b.pub_date,
-               kp.raw_row, r.object_type
-        FROM knowledge_points kp
-        JOIN rules r ON r.id = kp.rule_id
-        JOIN batches b ON b.id = r.batch_id
-        WHERE kp.pinyin_initials LIKE ?
-    """
-    params: list = [needle + "%"]
-    if source:
-        sql += " AND r.source = ?"
-        params.append(source)
-    sql += " ORDER BY kp.subject_name LIMIT ? OFFSET ?"
-    params.extend([limit, offset])
-    rows = conn.execute(sql, params).fetchall()
-    cnt_sql = "SELECT COUNT(*) FROM knowledge_points kp WHERE kp.pinyin_initials LIKE ?"
-    cnt_params: list = [needle + "%"]
-    if source:
-        cnt_sql = "SELECT COUNT(*) FROM knowledge_points kp JOIN rules r ON r.id=kp.rule_id WHERE kp.pinyin_initials LIKE ? AND r.source = ?"
-        cnt_params.append(source)
-    total = conn.execute(cnt_sql, cnt_params).fetchone()[0]
-    return [tuple(r) + (None, None) for r in rows], total
-
-
-def search_code(conn, q: str, source: Optional[str], limit: int, offset: int):
-    code = q.upper()
-    sql = """
-        SELECT kp.id, kp.subject_name, kp.pinyin_initials, kp.code_count,
-               kp.detection_logic, kp.logic_basis, kp.codes,
-               r.rule_subject, r.source, b.batch_label, b.pub_date,
-               kp.raw_row, r.object_type
-        FROM knowledge_point_codes kpc
-        JOIN knowledge_points kp ON kp.id = kpc.kp_id
-        JOIN rules r ON r.id = kp.rule_id
-        JOIN batches b ON b.id = r.batch_id
-        WHERE kpc.code = ?
-    """
-    params: list = [code]
-    if source:
-        sql += " AND r.source = ?"
-        params.append(source)
-    sql += " ORDER BY kp.id LIMIT ? OFFSET ?"
-    params.extend([limit, offset])
-    rows = conn.execute(sql, params).fetchall()
-    total = len(rows) + offset if len(rows) == limit else (offset + len(rows))
-    return [(r + (None,)) for r in rows], total
-
-
-def do_search(conn, q: str, mode: str, source: Optional[str], limit: int, offset: int):
-    if mode == "code":
-        rows, total = search_code(conn, q, source, limit, offset)
-    elif mode == "initials":
-        rows, total = search_initials(conn, q, source, limit, offset)
-    else:
-        rows, total = search_name(conn, q, source, limit, offset)
-    return rows, total
 
 
 @app.get("/")
@@ -265,7 +105,7 @@ def search_view():
     if source and source not in SOURCE_LABEL:
         source = None
     page = max(int(request.args.get("page", 1) or 1), 1)
-    limit = PAGE_SIZE
+    limit = PAGE_SIZE  # noqa: F821 (Flask closure)
     offset = (page - 1) * limit
     mode = detect_mode(q)
     with db.connect() as conn:
@@ -274,7 +114,7 @@ def search_view():
         # 批量查询每个 KP 的代表厂家
         if items:
             kp_ids = [it["id"] for it in items]
-            ph = ",".join("?" * len(kp_ids))
+            ph = ", ".join("?" * len(kp_ids))
             mfg_rows = conn.execute(
                 f"""SELECT kpc.kp_id, dd.manufacturer, dd.manufacturer_flag
                     FROM knowledge_point_codes kpc
@@ -308,22 +148,23 @@ def search_view():
 # ---------------- 代码表搜索（5 种） ----------------
 CODE_SEARCH_CONFIG = [
     ("yp",   "医保药品",  "yp_codes",                  "yp_codes_fts",
-     ["code","reg_name","product_name","manufacturer","approval_no","spec","list_class"],
+     ["code", "reg_name", "product_name", "manufacturer", "approval_no", "spec", "list_class"],
      "reg_name", "code", "/nhsa/yp",   "yp_browse"),
     ("hc",   "医用耗材",  "consumable_codes",          "consumable_codes_fts",
-     ["code","cat_l1_name","cat_l2_name","cat_l3_name","generic_name","manufacturer","spec","material"],
+     ["code", "cat_l1_name", "cat_l2_name", "cat_l3_name", "generic_name", "manufacturer", "spec", "material"],
      "generic_name", "code", "/nhsa/hc", "consumables_index"),
     ("tcm",  "中医病证",  "tcm_codes",                 "tcm_codes_fts",
-     ["code","name","class_name","part_code","apply_explain","remark"],
+     ["code", "name", "class_name", "part_code", "apply_explain", "remark"],
      "name", "code", "/nhsa/tcm", "tcm_browse"),
     ("icd",  "ICD-10",   "icd_codes",                 "icd_codes_fts",
-     ["code","diagnosis_name","chapter_name","section_name","category_name","subcategory_name"],
+     ["code", "diagnosis_name", "chapter_name", "section_name", "category_name", "subcategory_name"],
      "diagnosis_name", "code", "/nhsa/icd", "icd_browse"),
     ("ivd",  "诊断试剂",  "ivd_codes",                 "ivd_codes_fts",
-     ["code","catalog_full_name","testing_index","testing_category","company_name","cat_l1_name","cat_l2_name","cat_l3_name"],
+     ["code", "catalog_full_name", "testing_index", "testing_category",
+      "company_name", "cat_l1_name", "cat_l2_name", "cat_l3_name"],
      "catalog_full_name", "code", "/nhsa/ivd", "ivd_browse"),
     ("ms",   "医疗服务",  "medical_service_codes",     "medical_service_codes_fts",
-     ["code","name","explain","contains_content","charge_unit","level"],
+     ["code", "name", "explain", "contains_content", "charge_unit", "level"],
      "name", "code", "/nhsa/ms", "ms_browse"),
 ]
 
@@ -435,348 +276,6 @@ def _code_route(type_id):
     )
 
 
-
-
-@app.get("/rules")
-def rules_index():
-    """默认进入"按知识点查询"。直接重定向到 /rules/find。"""
-    return redirect(url_for("rules_find"))
-
-
-@app.get("/rules/category")
-def rules_category():
-    """按规则分类查询:按主题(药品/医疗服务项目/中药饮片/医用耗材/诊断/手术操作/其他)聚合展示。"""
-    with db.connect() as conn:
-        rows = conn.execute("""
-            SELECT r.id, r.rule_subject, r.source, b.batch_label,
-                   COUNT(kp.id) AS kp_count
-            FROM rules r
-            JOIN batches b ON b.id = r.batch_id
-            LEFT JOIN knowledge_points kp ON kp.rule_id = r.id
-            GROUP BY r.id
-            ORDER BY r.rule_subject
-        """).fetchall()
-
-    category_map = {}
-    for r in rows:
-        subject = r[1]
-        if subject.startswith("药品"):
-            cat = "药品"
-        elif subject.startswith("医疗服务项目"):
-            cat = "医疗服务项目"
-        elif subject.startswith("中药饮片"):
-            cat = "中药饮片"
-        elif subject.startswith("医用耗材"):
-            cat = "医用耗材"
-        elif subject.startswith("诊断"):
-            cat = "诊断"
-        elif subject.startswith("手术"):
-            cat = "手术操作"
-        else:
-            cat = "其他"
-
-        bucket = category_map.setdefault(cat, {
-            "name": cat, "rules": [], "total_kp": 0, "rule_count": 0
-        })
-        bucket["rules"].append({
-            "id": r[0], "subject": r[1], "source": r[2],
-            "batch_label": r[3], "kp_count": r[4],
-        })
-        bucket["total_kp"] += r[4]
-        bucket["rule_count"] += 1
-
-    category_order = ["药品", "医疗服务项目", "中药饮片", "医用耗材", "诊断", "手术操作", "其他"]
-    categories = [category_map[c] for c in category_order if c in category_map]
-
-    return render_template("rules_category.html", categories=categories, source_label=SOURCE_LABEL)
-
-
-@app.get("/rules/list")
-def rules_list():
-    """列出所有规则(按名称去重聚合)。同名规则会合并,展示总 KP 数与所有 rule_id。
-    支持 ?q= 按名称/分类关键字过滤。"""
-    q = (request.args.get("q") or "").strip()
-    with db.connect() as conn:
-        base_sql = """
-            SELECT
-                rules.rule_subject,
-                COUNT(*) AS rule_count,
-                GROUP_CONCAT(rules.id) AS rule_ids,
-                GROUP_CONCAT(DISTINCT b.batch_label) AS batches,
-                GROUP_CONCAT(DISTINCT rules.category) AS categories,
-                GROUP_CONCAT(DISTINCT rules.object_type) AS object_types,
-                MIN(rules.id) AS first_id,
-                SUM((SELECT COUNT(*) FROM knowledge_points kp WHERE kp.rule_id = rules.id)) AS kp_cnt
-            FROM rules
-            LEFT JOIN batches b ON b.id = rules.batch_id
-        """
-        if q:
-            like = f"%{q}%"
-            rows = conn.execute(
-                base_sql + " WHERE rules.rule_subject LIKE ? OR rules.category LIKE ? "
-                "GROUP BY rules.rule_subject ORDER BY rules.rule_subject",
-                (like, like),
-            ).fetchall()
-        else:
-            rows = conn.execute(
-                base_sql + " GROUP BY rules.rule_subject ORDER BY rules.rule_subject"
-            ).fetchall()
-    return render_template("rules_list.html", rules=rows, q=q, source_label=SOURCE_LABEL)
-
-
-
-
-@app.get("/rules/find")
-def rules_find():
-    """按知识点查询：录入具体药品/项目，列出所有涉及的规则。"""
-    q = (request.args.get("q") or "").strip()
-    src = (request.args.get("source") or "").strip() or None
-    if src and src not in SOURCE_LABEL:
-        src = None
-
-    groups = []        # 每条规则一组
-    total_kp = 0
-    total_rule = 0
-    mode = None
-
-    if q:
-        mode = detect_mode(q)
-        with db.connect() as conn:
-            rows, total_kp = _search_kps_grouped_by_rule(conn, q, mode, src, limit=300)
-            by_rule = {}
-            for r in rows:
-                rid = r["rule_id"]
-                if rid not in by_rule:
-                    by_rule[rid] = {
-                        "rule_id": rid,
-                        "rule_subject": r["rule_subject"],
-                        "source": r["source"],
-                        "category": r["category"],
-                        "object_type": r["object_type"],
-                        "batch_label": r["batch_label"],
-                        "pub_date": r["pub_date"],
-                        "kps": [],
-                    }
-                by_rule[rid]["kps"].append({
-                    "id": r["kp_id"],
-                    "seq": r["kp_seq"],
-                    "subject_name": r["subject_name"],
-                    "pinyin_initials": r["pinyin_initials"],
-                    "code_count": r["code_count"],
-                    "codes": r["codes"],
-                    "detection_logic": r["detection_logic"],
-                })
-            # NHSA 优先，然后按规则名排序
-            groups = sorted(
-                by_rule.values(),
-                key=lambda x: (x["source"] != "nhsa_batch", x["rule_subject"], x["rule_id"]),
-            )
-            total_rule = len(groups)
-    return render_template(
-        "rules_find.html",
-        q=q, source=src, mode=mode,
-        groups=groups, total_kp=total_kp, total_rule=total_rule,
-        source_label=SOURCE_LABEL,
-    )
-
-
-def _search_kps_grouped_by_rule(conn, q: str, mode: str, source, limit: int = 300):
-    """为 /rules/find 搜索 KPs，附带 rule_id 等列，便于分组。"""
-    if not q:
-        return [], 0
-    if mode == "code":
-        kp_rows, total = search_code(conn, q, source, limit, 0)
-        if not kp_rows:
-            return [], 0
-        return _enrich_kps_with_rule(conn, [r[0] for r in kp_rows], total), total
-    if mode == "initials":
-        kp_rows, total = search_initials(conn, q, source, limit, 0)
-        if not kp_rows:
-            return [], 0
-        return _enrich_kps_with_rule(conn, [r[0] for r in kp_rows], total), total
-    # name mode
-    fts_q = jieba_query(q)
-    if not fts_q:
-        return [], 0
-    sql = """
-        SELECT kp.id AS kp_id, kp.seq AS kp_seq, kp.subject_name, kp.pinyin_initials,
-               kp.code_count, kp.codes, kp.detection_logic,
-               r.id AS rule_id, r.rule_subject, r.source, r.category, r.object_type,
-               b.batch_label, b.pub_date
-        FROM kp_fts
-        JOIN knowledge_points kp ON kp.id = kp_fts.rowid
-        JOIN rules r ON r.id = kp.rule_id
-        JOIN batches b ON b.id = r.batch_id
-        WHERE kp_fts MATCH ?
-    """
-    params = [fts_q]
-    if source:
-        sql += " AND r.source = ?"
-        params.append(source)
-    sql += " ORDER BY bm25(kp_fts), r.source, r.rule_subject, kp.seq IS NULL, kp.seq, kp.id LIMIT ?"
-    params.append(limit)
-    conn.row_factory = sqlite3.Row
-    rows = conn.execute(sql, params).fetchall()
-    conn.row_factory = None
-    total = conn.execute("SELECT COUNT(*) FROM kp_fts WHERE kp_fts MATCH ?", [fts_q]).fetchone()[0]
-    return rows, total
-
-
-def _enrich_kps_with_rule(conn, kp_ids, total):
-    """对一组 KP id，附带 rule 信息返回。结果保持 kp_ids 顺序。"""
-    if not kp_ids:
-        return [], 0
-    ph = ",".join("?" * len(kp_ids))
-    conn.row_factory = sqlite3.Row
-    rows = conn.execute(
-        f"""
-        SELECT kp.id AS kp_id, kp.seq AS kp_seq, kp.subject_name, kp.pinyin_initials,
-               kp.code_count, kp.codes, kp.detection_logic,
-               r.id AS rule_id, r.rule_subject, r.source, r.category, r.object_type,
-               b.batch_label, b.pub_date
-        FROM knowledge_points kp
-        JOIN rules r ON r.id = kp.rule_id
-        JOIN batches b ON b.id = r.batch_id
-        WHERE kp.id IN ({ph})
-        """,
-        kp_ids,
-    ).fetchall()
-    conn.row_factory = None
-    pos = {kid: i for i, kid in enumerate(kp_ids)}
-    rows = sorted(rows, key=lambda r: pos[r["kp_id"]])
-    return rows
-
-
-@app.get("/rules/<int:rid>")
-def rule_detail(rid: int):
-    page = max(int(request.args.get("page", 1) or 1), 1)
-    limit = PAGE_SIZE
-    offset = (page - 1) * limit
-    with db.connect() as conn:
-        rule = conn.execute("""
-            SELECT r.id, r.rule_subject, r.source, r.category, r.object_type,
-                   r.page_start, r.page_end, r.row_count, b.batch_label, b.pub_date
-            FROM rules r JOIN batches b ON b.id = r.batch_id
-            WHERE r.id = ?
-        """, (rid,)).fetchone()
-        if not rule:
-            abort(404)
-        total = conn.execute("SELECT COUNT(*) FROM knowledge_points WHERE rule_id = ?", (rid,)).fetchone()[0]
-        rows = conn.execute("""
-            SELECT id, seq, subject_name, pinyin_initials, code_count, codes
-            FROM knowledge_points
-            WHERE rule_id = ?
-            ORDER BY seq IS NULL, seq, id
-            LIMIT ? OFFSET ?
-        """, (rid, limit, offset)).fetchall()
-    pages = max(1, math.ceil(total / limit)) if total else 0
-    return render_template(
-        "rule_detail.html", rule=rule, items=rows,
-        total=total, page=page, pages=pages, limit=limit,
-        source_label=SOURCE_LABEL,
-    )
-
-
-@app.get("/kp/<int:kp_id>")
-def kp_detail(kp_id: int):
-    with db.connect() as conn:
-        conn.row_factory = sqlite3.Row
-        kp = conn.execute("""
-            SELECT kp.id, kp.seq, kp.subject_name, kp.pinyin_initials, kp.code_count,
-                   kp.detection_logic, kp.logic_basis, kp.remark, kp.codes, kp.raw_row,
-                   r.rule_subject, r.source, r.category, r.object_type, r.id AS rule_id,
-                   b.batch_label, b.pub_date
-            FROM knowledge_points kp
-            JOIN rules r ON r.id = kp.rule_id
-            JOIN batches b ON b.id = r.batch_id
-            WHERE kp.id = ?
-        """, (kp_id,)).fetchone()
-        if not kp:
-            abort(404)
-        codes = db.get_kp_codes(conn, kp_id)
-        # 查询 drug_detail 获取每个 code 对应的厂家
-        if codes:
-            ph = ",".join("?" * len(codes))
-            drug_rows = conn.execute(
-                f"SELECT goods_code, manufacturer, manufacturer_flag, "
-                f"       approval_no, base_code, dosage_form, spec, packaging, product_name "
-                f"FROM drug_detail WHERE goods_code IN ({ph})",
-                codes
-            ).fetchall()
-            drug_details = {r[0]: r for r in drug_rows}
-        else:
-            drug_details = {}
-    partner = parse_kp_partner(kp["raw_row"], kp["object_type"])
-    return render_template("kp.html", kp=kp, codes=codes,
-                           drug_details=drug_details, source_label=SOURCE_LABEL,
-                           partner=partner)
-
-
-@app.get("/api/search")
-def api_search():
-    q = (request.args.get("q") or "").strip()
-    source = request.args.get("source") or None
-    mode = request.args.get("mode") or "auto"
-    if mode == "auto":
-        mode = detect_mode(q)
-    if source and source not in SOURCE_LABEL:
-        source = None
-    page = max(int(request.args.get("page", 1) or 1), 1)
-    limit = min(int(request.args.get("limit", PAGE_SIZE) or PAGE_SIZE), 50)
-    offset = (page - 1) * limit
-    with db.connect() as conn:
-        rows, total = do_search(conn, q, mode, source, limit, offset)
-        items = [_row_to_kp_dict(r) for r in rows]
-        if items:
-            kp_ids = [it["id"] for it in items]
-            ph = ",".join("?" * len(kp_ids))
-            mfg_rows = conn.execute(
-                f"""SELECT kpc.kp_id, dd.manufacturer, dd.manufacturer_flag
-                    FROM knowledge_point_codes kpc
-                    JOIN drug_detail dd ON dd.goods_code = kpc.code
-                    WHERE kpc.kp_id IN ({ph})
-                      AND kpc.code_seq = 1
-                      AND dd.manufacturer IS NOT NULL AND dd.manufacturer != ''
-                      AND (dd.manufacturer_flag IS NULL
-                           OR dd.manufacturer_flag NOT LIKE '%混入规格%')
-                    ORDER BY kpc.kp_id
-                    LIMIT 100""",
-                kp_ids
-            ).fetchall()
-            kp_mfgs = {}
-            for kp_id, mfg, flag in mfg_rows:
-                kp_mfgs.setdefault(kp_id, []).append({"manufacturer": mfg, "manufacturer_flag": flag or ""})
-            for it in items:
-                it["manufacturers"] = kp_mfgs.get(it["id"], [])
-    return jsonify({"q": q, "mode": mode, "source": source, "total": total,
-                    "page": page, "limit": limit, "items": items})
-
-
-@app.get("/api/kp/<int:kp_id>")
-def api_kp(kp_id: int):
-    with db.connect() as conn:
-        kp = conn.execute("""
-            SELECT kp.id, kp.seq, kp.subject_name, kp.pinyin_initials, kp.code_count,
-                   kp.detection_logic, kp.logic_basis, kp.remark,
-                   r.rule_subject, r.source, r.category, r.object_type, r.id AS rule_id,
-                   b.batch_label, b.pub_date
-            FROM knowledge_points kp
-            JOIN rules r ON r.id = kp.rule_id
-            JOIN batches b ON b.id = r.batch_id
-            WHERE kp.id = ?
-        """, (kp_id,)).fetchone()
-        if not kp:
-            abort(404)
-        codes = db.get_kp_codes(conn, kp_id)
-    return jsonify({
-        "id": kp[0], "seq": kp[1], "subject_name": kp[2], "pinyin_initials": kp[3],
-        "code_count": kp[4], "detection_logic": kp[5], "logic_basis": kp[6],
-        "remark": kp[7], "rule_subject": kp[8], "source": kp[9], "category": kp[10],
-        "object_type": kp[11], "rule_id": kp[12], "batch_label": kp[13], "pub_date": kp[14],
-        "codes": codes,
-    })
-
-
 @app.get("/api/code/<code>")
 def api_code(code: str):
     code = code.upper()
@@ -822,8 +321,10 @@ def api_code(code: str):
                 "product_name, dosage_form, spec FROM drug_detail WHERE goods_code = ?",
                 (r[7],)
             ).fetchone()
-            item = row_to_dict(r, ["kp_id", "subject_name", "code_count", "rule_subject",
-                 "source", "batch_label", "pub_date", "code"])
+            item = row_to_dict(r, [
+                "kp_id", "subject_name", "code_count", "rule_subject",
+                "source", "batch_label", "pub_date", "code",
+            ])
             if d:
                 item["drug_detail"] = {
                     "manufacturer": d[0] or "",
@@ -836,53 +337,6 @@ def api_code(code: str):
                 }
             items.append(item)
     return jsonify({"code": code, "kind": "rule_code", "count": len(items), "items": items})
-
-
-@app.get("/api/rule-categories")
-def api_rule_categories():
-    """返回按规则类型分类的数据，用于小程序规则浏览页"""
-    with db.connect() as conn:
-        rules = conn.execute("""
-            SELECT r.id, r.rule_subject, r.source, b.batch_label,
-                   COUNT(kp.id) as kp_count
-            FROM rules r
-            JOIN batches b ON b.id = r.batch_id
-            LEFT JOIN knowledge_points kp ON kp.rule_id = r.id
-            GROUP BY r.id
-            ORDER BY r.rule_subject
-        """).fetchall()
-
-    category_map = {}
-    for r in rules:
-        rule_subject = r[1]
-        if rule_subject.startswith("药品"):
-            category = "药品"
-        elif rule_subject.startswith("医疗服务项目"):
-            category = "医疗服务项目"
-        elif rule_subject.startswith("中药饮片"):
-            category = "中药饮片"
-        elif rule_subject.startswith("医用耗材"):
-            category = "医用耗材"
-        elif rule_subject.startswith("诊断"):
-            category = "诊断"
-        elif rule_subject.startswith("手术"):
-            category = "手术操作"
-        else:
-            category = "其他"
-
-        if category not in category_map:
-            category_map[category] = {"name": category, "rules": [], "total_kp": 0, "rule_count": 0}
-        category_map[category]["rules"].append({
-            "id": r[0], "subject": r[1], "source": r[2],
-            "batch_label": r[3], "kp_count": r[4],
-        })
-        category_map[category]["total_kp"] += r[4]
-        category_map[category]["rule_count"] += 1
-
-    category_order = ["药品", "医疗服务项目", "中药饮片", "医用耗材", "诊断", "手术操作", "其他"]
-    categories = [category_map[c] for c in category_order if c in category_map]
-
-    return jsonify({"categories": categories})
 
 
 @app.template_filter("h")
@@ -910,7 +364,7 @@ if __name__ == "__main__":
     ap.add_argument("--debug", action="store_true",
                     help="启用 Flask debug (生产环境会被拒绝)")
     args = ap.parse_args()
-    # 安全门: FLASK_ENV=production 时禁止 --debug
+    # 安全闸: FLASK_ENV=production 时要禁 --debug
     if args.debug and os.environ.get("FLASK_ENV") == "production":
         sys.stderr.write("错误: --debug 与 FLASK_ENV=production 互斥。请直接 gunicorn webapp.app:app。\n")
         sys.exit(2)

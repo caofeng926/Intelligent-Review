@@ -2,13 +2,13 @@
 挂载: app.py 里 from . import yp2023; yp2023.register(app)
 """
 from __future__ import annotations
-import re
-from typing import Optional, List, Dict, Any
 
-from flask import render_template, request, jsonify, redirect, url_for, abort
+import re
+from typing import Optional
+
+from flask import abort, jsonify, render_template, request
 
 from . import db
-
 
 CATEGORIES = [("西药", "西药"), ("中成药", "中成药"), ("谈判西药", "谈判西药"), ("谈判中成药", "谈判中成药"), ("中药饮片", "中药饮片")]
 CATEGORY_SET = {c for c, _ in CATEGORIES}
@@ -46,7 +46,7 @@ def _catalog_stats(conn):
     by_category = {}
     for cat, tcm, n in rows:
         if cat == "中药饮片":
-            key = f"{cat}-{'支付' if (tcm or 0)==1 else '不支付'}"
+            key = f"{cat}-{'支付' if (tcm or 0) == 1 else '不支付'}"
         else:
             key = cat
         by_category[key] = n
