@@ -101,6 +101,12 @@
   text-align: center;
   opacity: .85;
 }
+.admin-menu li a .ico svg {
+  vertical-align: -3px;  /* tighten baseline after icon switch to inline-SVG */
+}
+.admin-menu .menu-group-label .ico svg {
+  vertical-align: -3px;
+}
 .admin-menu li a .badge {
   margin-left: auto;
   background: rgba(255,255,255,.08);
@@ -709,4 +715,3 @@
   position: relative;
   z-index: 1;
 }
-
