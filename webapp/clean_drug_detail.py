@@ -11,6 +11,7 @@
   python -m webapp.clean_drug_detail --db PATH  # 指定 DB 路径
 """
 import argparse
+import re
 import sqlite3
 import time
 
@@ -135,55 +136,91 @@ def truncate_pages(c: sqlite3.Connection) -> int:
     c.commit()
     return cur.rowcount
 
+
+# 折叠 CJK-空白-CJK (例如: "珠海联邦制药股份 有限公司" -> "珠海联邦制药股份有限公司").
+# 防御性修复 — 2026-06-28 之后回归保护. 命中通常为 0.
+_CJK = re.compile(r"([\u4e00-\u9fff])\s+([\u4e00-\u9fff])")
+
+
+def collapse_cjk_spaces(c: sqlite3.Connection) -> int:
+    """移除 CJK 字符之间的空白."""
+    rows = c.execute("SELECT goods_code, manufacturer FROM drug_detail WHERE manufacturer LIKE '% %'").fetchall()
+    if not rows:
+        return 0
+    fixed = 0
+    BATCH = 500
+    buf: list[tuple[str, int]] = []
+    for rid, mfr in rows:
+        if not mfr:
+            continue
+        new_mfr = _CJK.sub(r"\1\2", mfr).strip()
+        if new_mfr != mfr:
+            buf.append((new_mfr, rid))
+            fixed += 1
+            if len(buf) >= BATCH:
+                c.executemany("UPDATE drug_detail SET manufacturer=? WHERE goods_code=?", buf)
+                buf.clear()
+    if buf:
+        c.executemany("UPDATE drug_detail SET manufacturer=? WHERE goods_code=?", buf)
+    c.commit()
+    return fixed
+
+
 def tag_suspicious(c: sqlite3.Connection) -> dict:
     counts = {}
     # 先清空
     c.execute("UPDATE drug_detail SET manufacturer_flag = NULL")
     # ⚠空
-    c.execute(
+    cur = c.execute(
         "UPDATE drug_detail SET manufacturer_flag='⚠空' "
         "WHERE manufacturer IS NULL OR trim(manufacturer) = ''"
     )
-    counts["⚠空"] = c.total_changes
+    counts["⚠空"] = cur.rowcount
     # ⚠过短
-    c.execute(
+    cur = c.execute(
         "UPDATE drug_detail SET manufacturer_flag='⚠过短' "
         "WHERE manufacturer_flag IS NULL AND length(trim(manufacturer)) < 3"
     )
-    counts["⚠过短"] = c.total_changes
+    counts["⚠过短"] = cur.rowcount
     # ⚠过长 (>50 字符, 中外合资长名可放过)
-    c.execute(
+    cur = c.execute(
         "UPDATE drug_detail SET manufacturer_flag='⚠过长' "
         "WHERE manufacturer_flag IS NULL AND length(trim(manufacturer)) > 50"
     )
-    counts["⚠过长"] = c.total_changes
+    counts["⚠过长"] = cur.rowcount
     # 末位 g/片/丸/袋/瓶/支
-    c.execute(
+    cur = c.execute(
         "UPDATE drug_detail SET manufacturer_flag='⚠混入规格' "
         "WHERE manufacturer_flag IS NULL AND trim(manufacturer) GLOB '*[g片丸袋瓶支]'"
     )
-    counts["末位单位"] = c.total_changes
+    counts["⚠末位单位"] = cur.rowcount
     # 每 N 单位
+    sub = 0
     for pat in PER_UNIT_PATTERNS:
-        c.execute(
+        sub += c.execute(
             "UPDATE drug_detail SET manufacturer_flag='⚠混入规格' "
             "WHERE manufacturer_flag IS NULL AND manufacturer LIKE ?",
             (pat,),
-        )
+        ).rowcount
+    counts["⚠每N单位"] = sub
     # 末位 PE/膜
+    sub = 0
     for g in TAIL_PE_MEM:
-        c.execute(
+        sub += c.execute(
             "UPDATE drug_detail SET manufacturer_flag='⚠混入规格' "
             "WHERE manufacturer_flag IS NULL AND trim(manufacturer) GLOB ?",
             (g,),
-        )
+        ).rowcount
+    counts["⚠末位PE"] = sub
     # 精确关键词
+    sub = 0
     for kw in SPEC_KEYWORDS:
-        c.execute(
+        sub += c.execute(
             "UPDATE drug_detail SET manufacturer_flag='⚠混入规格' "
             "WHERE manufacturer_flag IS NULL AND manufacturer LIKE ?",
             (f"%{kw}%",),
-        )
+        ).rowcount
+    counts["⚠精确关键词"] = sub
     c.commit()
     return counts
 
@@ -240,6 +277,9 @@ def main() -> None:
 
     n = truncate_pages(c)
     print(f"  [7] 截第N页/共N页:        {n:>6,} 行  ({time.time()-t0:.1f}s)")
+
+    n = collapse_cjk_spaces(c)
+    print(f"  [7.5] 折叠 CJK 间空白:    {n:>6,} 行  ({time.time()-t0:.1f}s)")
 
     tag_suspicious(c)
     print(f"  [8] 标记完成            ({time.time()-t0:.1f}s)")
