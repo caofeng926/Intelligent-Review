@@ -11,6 +11,7 @@ from typing import Optional, List, Dict, Any
 from flask import render_template, request, jsonify, redirect, url_for, abort
 
 from . import db
+from .query_utils import fts_query as _fts_query
 
 
 PAGE_SIZE = 50
@@ -22,21 +23,6 @@ def _limit(default: int = PAGE_SIZE, max_: int = 200) -> int:
     except (TypeError, ValueError):
         n = default
     return max(1, min(n, max_))
-
-
-def _fts_query(q: str) -> Optional[str]:
-    """Build FTS5 MATCH expression (matches nhsa_api convention)."""
-    q = (q or "").strip()
-    if not q:
-        return None
-    safe = re.sub(r"[^\w\u4e00-\u9fff]+", " ", q).strip()
-    if not safe:
-        return None
-    if re.match(r"^[A-Za-z0-9]+$", safe):
-        return safe + "*"
-    if len(safe) >= 2:
-        return f'"{safe[:2]}"*'
-    return f'"{safe}"*'
 
 
 def _rules_for_codes(conn, codes):

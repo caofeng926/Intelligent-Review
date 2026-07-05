@@ -28,30 +28,12 @@ from typing import Optional
 from flask import jsonify, request
 
 from . import db
+from .query_utils import fts_query as _fts_query
 
 
 # ============================================================
 # helpers
 # ============================================================
-def _fts_query(q: str) -> Optional[str]:
-    """Build a safe FTS5 MATCH expression for free-text queries.
-
-    Strategy mirrors jieba_query in app.py: FTS5 unicode61 tokenizes
-    Chinese as single chars, so phrase matching fails. We use prefix
-    match on first 1-2 chars for Chinese, plain prefix for ASCII.
-    """
-    q = (q or "").strip()
-    if not q:
-        return None
-    # strip special chars that have FTS5 meaning
-    safe = re.sub(r"[^\w\u4e00-\u9fff]+", " ", q).strip()
-    if not safe:
-        return None
-    if re.match(r"^[A-Za-z0-9]+$", safe):
-        return safe + "*"
-    if len(safe) >= 2:
-        return f'"{safe[:2]}"*'
-    return f'"{safe}"*'
 
 
 def _row_to_dict(row, keys):

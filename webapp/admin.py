@@ -16,6 +16,7 @@ from flask import (
 )
 
 from . import db
+from .query_utils import fts_query
 
 admin_bp = Blueprint(
     "admin",
@@ -645,19 +646,6 @@ def admin_search():
         active="",
         q=q, rows=rows, total=total, page=page, pages=pages, page_size=page_size,
     )
-
-
-def _admin_fts_query(q: str) -> str:
-    """为 FTS5 MATCH 构造查询（同 app.py jieba_query 逻辑）。"""
-    q = q.strip()
-    if not q:
-        return ""
-    import re as _re
-    if _re.match(r"^[A-Za-z0-9]+$", q):
-        return q + "*"
-    if len(q) >= 2:
-        return f'"{q[:2]}"*'
-    return f'"{q}"*'
 
 # ---------- helpers ----------
 def _nhsa_batch(source: str) -> dict:

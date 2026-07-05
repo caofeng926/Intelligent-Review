@@ -13,6 +13,7 @@ GET  /api/code/<code>      reverse-lookup by 医保编码
 """
 from __future__ import annotations
 import os
+import sys
 import re
 import math
 import html
@@ -27,6 +28,7 @@ from . import nhsa_api
 from . import nhsa_browse
 from . import admin
 from . import yp2023
+from .query_utils import fts_query as jieba_query
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
 nhsa_api.register(app)
@@ -34,7 +36,8 @@ nhsa_browse.register(app)
 yp2023.register(app)
 app.register_blueprint(admin.admin_bp)
 app.config["JSON_AS_ASCII"] = False
-app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
+# 静态资源缓存: 本地开发可即时刷新, 生产可走 CDN/反向代理缓存
+app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0 if app.debug else 3600  # dev=0 / prod=1h
 
 PAGE_SIZE = 20
 
@@ -71,30 +74,6 @@ def detect_mode(q: str) -> str:
     if LETTERS_RE.match(q) and len(q) >= 2:
         return "initials"
     return "name"
-
-
-def jieba_query(q: str) -> str:
-    """Build FTS5 MATCH expression for the query.
-
-    FTS5 unicode61 tokenizes Chinese as single chars, so multi-char phrase
-    matching (e.g. '"阿泰特韦"') does not work and silently returns 0 hits.
-    Use prefix match (token*) instead.
-
-    Strategy:
-    - Pure ASCII/digits: append * for prefix match.
-    - Chinese: prefix match on the first 2 chars of the query.
-      Single-char query: prefix match that single char.
-    """
-    q = q.strip()
-    if not q:
-        return ""
-    # if pure english/digits, just append *
-    if re.match(r"^[A-Za-z0-9]+$", q):
-        return q + "*"
-    # Chinese: FTS5 phrase match fails (per-char tokenization), use prefix*
-    if len(q) >= 2:
-        return f'"{q[:2]}"*'
-    return f'"{q}"*'
 
 
 def parse_kp_partner(raw_row, object_type):
@@ -1106,6 +1085,11 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--host", default="0.0.0.0")
     ap.add_argument("--port", type=int, default=5000)
-    ap.add_argument("--debug", action="store_true")
+    ap.add_argument("--debug", action="store_true",
+                    help="启用 Flask debug (生产环境会被拒绝)")
     args = ap.parse_args()
+    # 安全门: FLASK_ENV=production 时禁止 --debug
+    if args.debug and os.environ.get("FLASK_ENV") == "production":
+        sys.stderr.write("错误: --debug 与 FLASK_ENV=production 互斥。请直接 gunicorn webapp.app:app。\n")
+        sys.exit(2)
     app.run(host=args.host, port=args.port, debug=args.debug)

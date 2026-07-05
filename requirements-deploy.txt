@@ -1,0 +1,12 @@
+# Operational dependencies (sync scripts + prod WSGI server)
+#
+# Install alongside webapp/requirements.txt before running:
+#   pip install -r requirements.txt
+#   pip install -r requirements-deploy.txt
+#
+# Used by:
+#   - scripts/sync_yp2023_to_cvm.py / scripts/_ssh.py (Paramiko SFTP)
+#   - CVM gunicorn service (systemd medical-audit.service)
+
+paramiko>=3.4      # SSH/SFTP for CVM sync scripts
+gunicorn>=22.0     # Production WSGI server (alternative: python -m webapp.app --debug)
