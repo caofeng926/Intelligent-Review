@@ -1,12 +1,11 @@
 """CLI search: cross-source FTS5 query of knowledge points."""
 from __future__ import annotations
-import os
-import sys
-import argparse
-import time
-import json
 
+import argparse
+import json
 import sqlite3
+import time
+
 from . import db
 
 

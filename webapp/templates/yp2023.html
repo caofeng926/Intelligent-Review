@@ -38,7 +38,7 @@
 <form class="hero-search" action="{{ url_for('yp2023_browse') }}" method="get" style="margin-bottom: var(--s-3);">
   <input type="hidden" name="cat" value="{{ cat }}">
   {% if cat == '中药饮片' and request.args.get('tcm') %}<input type="hidden" name="tcm" value="{{ request.args.get('tcm') }}">{% endif %}
-  <span class="hero-search-icon">⌕</span>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;color:var(--c-text-3);margin-right:8px;flex-shrink:0;"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
   <input name="q" type="search" value="{{ q }}" placeholder="搜索 {{ cat }} 药品名" enterkeyhint="search">
   <button class="hero-search-btn" type="submit">搜索</button>
 </form>

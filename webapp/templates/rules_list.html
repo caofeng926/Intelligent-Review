@@ -14,7 +14,7 @@
 
 <section class="searchbar">
   <form class="searchbar-form" action="{{ url_for('rules_list') }}" method="get" role="search">
-    <span class="searchbar-icon" aria-hidden="true">⌕</span>
+    <span class="searchbar-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></span>
     <input name="q" type="search" inputmode="search" autocomplete="off" autofocus
            value="{{ q|h }}" placeholder="输入规则名称关键字(如 限适应症 / 限二线)" enterkeyhint="search">
   </form>
@@ -49,7 +49,7 @@
 </ul>
 {% else %}
 <section class="empty">
-  <div class="empty-ico">∅</div>
+  <div class="empty-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><path d="M8 11h6"/></svg></div>
   <div class="empty-title">{% if q %}没找到匹配 "{{ q }}" 的规则{% else %}暂无规则数据{% endif %}</div>
   <div class="empty-tip">试试更短关键字,或直接浏览下方列表</div>
   {% if q %}<a class="empty-link" href="{{ url_for('rules_list') }}">查看全部规则</a>{% endif %}

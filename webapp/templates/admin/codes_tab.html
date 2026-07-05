@@ -80,7 +80,7 @@
             url_for('admin.codes_' + tab_key) + '?q=' + query|urlencode + '&') }}
       </div>
     {% else %}
-      {{ empty("未找到匹配项", "请换个关键词，或在知识点中搜索相关药品/项目", "∅") }}
+      {{ empty("未找到匹配项", "请换个关键词，或在知识点中搜索相关药品/项目") }}
     {% endif %}
   {% else %}
     <div class="admin-card">

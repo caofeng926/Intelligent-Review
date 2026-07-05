@@ -40,7 +40,7 @@
 </section>
 {% else %}
 <section class="empty">
-  <div class="empty-ico">∅</div>
+  <svg class="empty-ico" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
   <div class="empty-title">未找到 {{ code }}</div>
   <div class="empty-tip">该代码不在 2026 年 5 月版耗材代码库中。请检查编码或使用搜索。</div>
   <a class="empty-link" href="{{ url_for('consumables_index') }}">返回耗材库</a>

@@ -1,4 +1,4 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 {% block title %}标准数据库 · 医保智审{% endblock %}
 {% block content %}
 <section class="page-head">
@@ -45,15 +45,15 @@
   <a class="nhsa-tile" href="/api/nhsa/stats">
     <div class="nhsa-tile-name">数据来源</div>
     <div class="nhsa-tile-desc">查看 8 类数据库批次与元数据</div>
-    <div class="nhsa-tile-count" style="font-size:14px;color:var(--text-3);">{{ counts.get('nhsa_batches', 0) }} 批次</div>
+    <div class="nhsa-tile-count" style="font-size:14px;color:var(--c-text-3);">{{ counts.get('nhsa_batches', 0) }} 批次</div>
   </a>
 </section>
 
-<section class="tip">
-  <div class="tip-icon">i</div>
-  <div class="tip-body">
-    <div class="tip-title">使用说明</div>
-    <div class="tip-text">点击任一卡片进入浏览页；或使用顶部搜索框（按编码 / 名称 / 拼音首字母），系统会自动识别并路由到对应表。所有数据来源于国家医保局官方发布。</div>
+<div class="info-banner">
+  <div class="info-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></div>
+  <div class="info-body">
+    <div class="info-title">使用说明</div>
+    <div class="info-text">点击任一卡片进入浏览页；或使用顶部搜索框（按编码 / 名称 / 拼音首字母），系统会自动识别并路由到对应表。所有数据来源于国家医保局官方发布。</div>
   </div>
-</section>
+</div>
 {% endblock %}

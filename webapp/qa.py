@@ -1,9 +1,9 @@
 """Cross-source QA: 1-15 batch XLSX vs 2025 PDF."""
 from __future__ import annotations
-import os
-import json
+
 import difflib
-from collections import defaultdict
+import json
+import os
 
 from . import db
 
@@ -139,21 +139,21 @@ def main():
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(report, f, ensure_ascii=False, indent=2, default=str)
     print(f"QA report written to: {out_path}\n")
-    print(f"=== Totals ===")
+    print("=== Totals ===")
     for k, v in report["totals"].items():
         print(f"  {k}: {v}")
-    print(f"\n=== Coverage ===")
+    print("\n=== Coverage ===")
     print(f"  XLSX rule subjects: {cov['xlsx_rule_count']}")
     print(f"  PDF rule subjects:  {cov['pdf_rule_count']}")
     print(f"  Exact intersect:    {cov['exact_intersect_count']}")
     print(f"  Fuzzy intersect:    {cov['fuzzy_intersect_count']}  (= match after stripping '医疗服务项目/药品/中药饮片/耗材')")
     print(f"  Only in XLSX:       {len(cov['only_in_xlsx'])}  {cov['only_in_xlsx']}")
     print(f"  Only in PDF:        {len(cov['only_in_pdf'])}")
-    print(f"\n=== Sample similarity ===")
+    print("\n=== Sample similarity ===")
     print(f"  Rules compared:           {sim['rules_compared']}")
     print(f"  Avg max similarity:       {sim['average_max_similarity']}")
     print(f"  Avg mean similarity:      {sim['average_mean_similarity']}")
-    print(f"\n=== Verdict ===")
+    print("\n=== Verdict ===")
     print(f"  pdf_covers_all_xlsx:      {report['verdict']['pdf_covers_all_xlsx_rules']}")
     print(f"  sample_similarity_ok:     {report['verdict']['sample_similarity_ok']}")
     print(f"  PASS:                     {report['verdict']['pass']}")

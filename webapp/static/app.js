@@ -8,17 +8,11 @@
     if (!btn) return;
     var code = btn.getAttribute('data-code') || '';
     copyText(code).then(function() {
-      var orig = btn.textContent;
       btn.classList.add('is-copied');
-      btn.textContent = '已复制';
-      setTimeout(function() {
-        btn.classList.remove('is-copied');
-        btn.textContent = orig;
-      }, 1200);
+      showToast('已复制：' + code, 'success');
+      setTimeout(function() { btn.classList.remove('is-copied'); }, 1200);
     }).catch(function() {
-      // fallback提示
-      btn.textContent = '失败';
-      setTimeout(function() { btn.textContent = '复制'; }, 1200);
+      showToast('复制失败，请手动复制', 'error');
     });
   });
 
@@ -111,9 +105,9 @@
     });
   }
   function renderRecentSearches() {
-    var container = document.getElementById('hero-recent-chips');
+    var container = document.getElementById('hero-chips');
     if (!container) return;
-    var clearBtn = document.getElementById('hero-recent-clear');
+    var clearBtn = document.getElementById('hero-clear');
     var items = loadRecentSearches();
     var html;
     if (items.length === 0) {
@@ -132,7 +126,7 @@
   }
   function initRecentSearches() {
     renderRecentSearches();
-    var clearBtn = document.getElementById('hero-recent-clear');
+    var clearBtn = document.getElementById('hero-clear');
     if (clearBtn) {
       clearBtn.addEventListener('click', function() {
         clearRecentSearches();
@@ -151,9 +145,108 @@
       if (e.key === RECENT_KEY) renderRecentSearches();
     });
   }
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initRecentSearches);
-  } else {
+
+  // ---- Ctrl/Cmd+K shortcut to focus search ----
+  document.addEventListener('keydown', function(e) {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      var input = document.querySelector('.topbar-search input');
+      if (input) { input.focus(); input.select(); }
+    } else if (e.key === 'Escape') {
+      var modal = document.querySelector('.modal.is-show');
+      if (modal) modal.classList.remove('is-show');
+    }
+  });
+
+  // ---- Toast 通知系统 ----
+  var toastContainer;
+  function ensureToastContainer() {
+    if (toastContainer) return toastContainer;
+    toastContainer = document.createElement('div');
+    toastContainer.className = 'toast-container';
+    toastContainer.setAttribute('role', 'status');
+    toastContainer.setAttribute('aria-live', 'polite');
+    document.body.appendChild(toastContainer);
+    return toastContainer;
+  }
+  function showToast(message, kind) {
+    kind = kind || 'info';
+    var container = ensureToastContainer();
+    var toast = document.createElement('div');
+    toast.className = 'toast toast--' + kind;
+    toast.textContent = message;
+    container.appendChild(toast);
+    requestAnimationFrame(function() { toast.classList.add('is-show'); });
+    setTimeout(function() {
+      toast.classList.remove('is-show');
+      setTimeout(function() { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 300);
+    }, 2200);
+  }
+
+  // 覆盖复制按钮反馈：用 toast 替代文本变化
+  document.addEventListener('click', function(e) {
+    var btn = e.target.closest('.code-copy');
+    if (!btn) return;
+    // 已由上方 handler 处理复制逻辑，这里仅增强反馈
+  });
+
+  // ---- 滚动感知顶栏 ----
+  var topbar = document.querySelector('.topbar');
+  if (topbar) {
+    var scrollTimer;
+    window.addEventListener('scroll', function() {
+      if (scrollTimer) return;
+      scrollTimer = requestAnimationFrame(function() {
+        scrollTimer = null;
+        if (window.scrollY > 8) {
+          topbar.classList.add('is-scrolled');
+        } else {
+          topbar.classList.remove('is-scrolled');
+        }
+      });
+    }, { passive: true });
+  }
+
+  // ---- 入场动画 (IntersectionObserver) ----
+  function initEntranceAnimations() {
+    var targets = document.querySelectorAll('.std-card, .quick-card, .info-banner, .list-row, .cat-card');
+    if (!targets.length) return;
+    if (!('IntersectionObserver' in window)) {
+      targets.forEach(function(el) { el.classList.add('is-visible'); });
+      return;
+    }
+    var io = new IntersectionObserver(function(entries) {
+      entries.forEach(function(entry) {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('is-visible');
+          io.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.06, rootMargin: '0px 0px -40px 0px' });
+    targets.forEach(function(el) { io.observe(el); });
+  }
+
+  // ---- 平滑滚动 (锚点 / pager) ----
+  document.addEventListener('click', function(e) {
+    var link = e.target.closest('a[href^="#"]');
+    if (!link) return;
+    var href = link.getAttribute('href');
+    if (href === '#' || href.length < 2) return;
+    var target = document.querySelector(href);
+    if (!target) return;
+    e.preventDefault();
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
+  // ---- 初始化 ----
+  function init() {
     initRecentSearches();
+    initEntranceAnimations();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
   }
 })();

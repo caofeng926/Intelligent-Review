@@ -1,24 +1,28 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#1677ff">
-  <title>{% block title %}医保智审知识库{% endblock %}</title>
+  <meta name="theme-color" content="#0284C7">
+  <title>{% block title %}医保智审规则库{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='mobile.css') }}">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231677ff'/%3E%3Cpath d='M20 22h6v8h12v-8h6v20h-6v-8H26v8h-6z' fill='white'/%3E%3C/svg%3E">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230284C7'/%3E%3Cpath d='M22 20h6v8h12v-8h6v24h-6v-10H28v10h-6z' fill='white'/%3E%3C/svg%3E">
 </head>
 <body>
   <header class="topbar">
     <a class="brand" href="{{ url_for('home') }}">
-      <span class="brand-mark">医</span>
-      <span class="brand-text">医保智审</span>
+      <span class="brand-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L4 7v6c0 5 3.5 9 8 10 4.5-1 8-5 8-10V7l-8-5z"/><path d="M9 12h2v2h2v-2h2v-2h-2V8h-2v2H9v2z"/></svg></span>
+      <span class="brand-text">
+        <span class="brand-name">医保智审</span>
+        <span class="brand-sub">智能审核规则库</span>
+      </span>
     </a>
     <form class="topbar-search" action="{{ url_for('search_view') }}" method="get" role="search">
-      <span class="topbar-search-icon" aria-hidden="true">⌕</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
       <input name="q" type="search" inputmode="search" autocomplete="off"
-             placeholder="搜药品/项目/编码/首字母" value="{{ q|default('',true)|h }}" enterkeyhint="search">
+             placeholder="药品/项目/编码/首字母" value="{{ q|default('',true)|h }}" enterkeyhint="search">
       {% if source %}<input type="hidden" name="source" value="{{ source }}">{% endif %}
+      <kbd>Ctrl K</kbd>
     </form>
   </header>
 
@@ -28,21 +32,42 @@
 
   <nav class="bottombar" aria-label="主导航">
     <a class="bb-item {% if request.endpoint=='home' %}is-active{% endif %}" href="{{ url_for('home') }}">
-      <span class="bb-ico">⌂</span><span class="bb-label">首页</span>
+      <span class="bb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-7h-6v7H4a1 1 0 0 1-1-1V9.5z"/></svg></span><span class="bb-label">首页</span>
     </a>
     <a class="bb-item {% if request.endpoint=='search_view' %}is-active{% endif %}" href="{{ url_for('search_view') }}">
-      <span class="bb-ico">⌕</span><span class="bb-label">搜索</span>
+      <span class="bb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></span><span class="bb-label">搜索</span>
     </a>
     <a class="bb-item {% if request.endpoint in ['rules_index','rule_detail'] %}is-active{% endif %}" href="{{ url_for('rules_index') }}">
-      <span class="bb-ico">≡</span><span class="bb-label">规则</span>
+      <span class="bb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg></span><span class="bb-label">规则</span>
     </a>
-    <a class="bb-item {% if request.endpoint in ['nhsa_index','ivd_browse','yp_browse','icd_browse','ms_browse','tcm_browse','hc7_index','ivd_detail','yp_detail','icd_detail','ms_detail','tcm_detail','hc7_detail'] %}is-active{% endif %}" href="{{ url_for('nhsa_index') }}">
-      <span class="bb-ico">⊞</span><span class="bb-label">标准库</span>
+    <a class="bb-item {% if request.endpoint in ['nhsa_index','ivd_browse','yp_browse','icd_browse','ms_browse','tcm_browse','hc7_index','yp2023_browse','yp2023_detail','ivd_detail','yp_detail','icd_detail','ms_detail','tcm_detail','hc7_detail','consumables_index','consumables_l3','consumable_detail'] %}is-active{% endif %}" href="{{ url_for('nhsa_index') }}">
+      <span class="bb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span><span class="bb-label">数据库</span>
     </a>
-    <a class="bb-item" href="javascript:void(0)" onclick="alert('v1 · 只读查询工具')">
-      <span class="bb-ico">ⓘ</span><span class="bb-label">关于</span>
+    <a class="bb-item" href="#about" onclick="document.getElementById('about-modal').classList.add('is-show');return false;">
+      <span class="bb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></span><span class="bb-label">关于</span>
     </a>
   </nav>
+
+  <div class="modal" id="about-modal" role="dialog" aria-modal="true" aria-labelledby="about-title" hidden>
+    <div class="modal-mask" onclick="document.getElementById('about-modal').classList.remove('is-show')"></div>
+    <div class="modal-card">
+      <div class="modal-head">
+        <h3 class="modal-title" id="about-title">关于医保智审规则库</h3>
+        <button class="modal-close" type="button" aria-label="关闭" onclick="document.getElementById('about-modal').classList.remove('is-show')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>医保智能审核规则库 — 国家医保局发布的限适应症/限性别/限儿童等药品审核规则</p>
+        <p class="muted">数据来源：国家医保局官方发布</p>
+        <ul class="about-stats">
+          <li><strong>{{ "{:,}".format(nav_stats['kp']) }}</strong><span>知识点</span></li>
+          <li><strong>{{ "{:,}".format(nav_stats['codes']) }}</strong><span>医保编码</span></li>
+          <li><strong>{{ "{:,}".format(nav_stats['rules']) }}</strong><span>审核规则</span></li>
+        </ul>
+        <p class="muted">v2.0 · Clinical Clarity Theme</p>
+        <p class="muted">开发：cflab.top</p>
+      </div>
+    </div>
+  </div>
 
   <script src="{{ url_for('static', filename='app.js') }}"></script>
 </body>

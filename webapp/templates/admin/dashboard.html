@@ -6,9 +6,9 @@
   {{ alert("数据库连接正常 · 18 个批次 / 78 条规则已同步 · 上次同步 2026-06-30", "success", "✓") }}
 
   <div class="stat-grid">
-    {{ stat_card("审核规则", stats.rules, "≡", url=url_for('admin.rules_page')) }}
+    {{ stat_card("审核规则", stats.rules, '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>', url=url_for('admin.rules_page')) }}
     {{ stat_card("知识点", "{:,}".format(stats.kp), "✦", url=url_for('admin.knowledge_page')) }}
-    {{ stat_card("医保编码", "{:,}".format(stats.codes), "⊞", url=url_for('admin.codes_page')) }}
+    {{ stat_card("医保编码", "{:,}".format(stats.codes), '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>', url=url_for('admin.codes_page')) }}
     {{ stat_card("已同步批次", stats.batches, "↻", url=url_for('admin.sync_page')) }}
     {{ stat_card("药品编码 (YP)", "{:,}".format(counts.yp_codes or 0), "💊", url=url_for('admin.codes_yp')) }}
     {{ stat_card("耗材编码 (HC)", "{:,}".format(counts.consumable_codes or 0), "⊡", url=url_for('admin.codes_hc')) }}
@@ -122,4 +122,3 @@
     </div>
   </div>
 {% endblock %}
-

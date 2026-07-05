@@ -1,9 +1,9 @@
-﻿{% extends "base.html" %}
-{% block title %}{% if q %}搜 “{{ q }}” · 医保智审{% else %}搜索 · 医保智审{% endif %}{% endblock %}
+{% extends "base.html" %}
+{% block title %}{% if q %}搜 "{{ q }}" · 医保智审{% else %}搜索 · 医保智审{% endif %}{% endblock %}
 {% block content %}
 <section class="searchbar">
   <form class="searchbar-form" action="{% if active_tab and active_tab != 'kp' %}{{ url_for('code_search_' + active_tab) }}{% else %}{{ url_for('search_view') }}{% endif %}" method="get" role="search">
-    <span class="searchbar-icon" aria-hidden="true">⌕</span>
+    <span class="searchbar-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></span>
     <input name="q" type="search" inputmode="search" autocomplete="off" autofocus
            value="{{ q|h }}" placeholder="搜药品 / 耗材 / 项目 / 编码 / 首字母" enterkeyhint="search">
     {% if source %}<input type="hidden" name="source" value="{{ source }}">{% endif %}
@@ -11,9 +11,9 @@
   <div class="searchbar-meta">
     {% if q %}
       <span class="mode-pill mode-{{ mode }}">
-        {% if mode=='code' %}#️⃣ 编码搜索
-        {% elif mode=='initials' %}🔠 首字母搜索
-        {% else %}🔤 名字搜索
+        {% if mode=='code' %}编码搜索
+        {% elif mode=='initials' %}首字母搜索
+        {% else %}名字搜索
         {% endif %}
       </span>
       <span class="meta-total">共 <b>{{ total }}</b> 条结果</span>
@@ -130,7 +130,7 @@
 
 {% elif q %}
 <section class="empty">
-  <div class="empty-ico">∅</div>
+  <div class="empty-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><path d="M8 11h6"/></svg></div>
   <div class="empty-title">没找到结果</div>
   <div class="empty-tip">
     {% if active_tab == 'kp' %}试试首字母 <b>{{ q[:1] }}</b> 开头 · 或检查编码是否大写
@@ -141,7 +141,7 @@
 </section>
 {% else %}
 <section class="empty">
-  <div class="empty-ico">⌕</div>
+  <div class="empty-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></div>
   <div class="empty-title">输入关键词开始搜索</div>
   <div class="empty-tip">支持 名字 / 拼音首字母 / 医保编码</div>
 </section>
