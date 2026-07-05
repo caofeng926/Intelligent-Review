@@ -1,0 +1,17 @@
+[flake8]
+max-line-length = 120
+extend-ignore = E203, W503
+exclude =
+    .git,
+    __pycache__,
+    _*.py,
+    *.bak,
+    *.bak.*,
+    webapp/data/,
+    .venv,
+    venv
+per-file-ignores =
+    # 入库脚本允许长行 (PDF 解析的 SQL/正则往往较长)
+    webapp/ingest_*.py: E501
+    webapp/ingest_consumables_pdf.py: E501
+    webapp/clean_drug_detail.py: E501

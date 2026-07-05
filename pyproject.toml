@@ -1,0 +1,5 @@
+[tool.isort]
+profile = "black"
+line_length = 120
+skip_glob = ["_*.py", "webapp/data/*"]
+known_first_party = ["webapp"]

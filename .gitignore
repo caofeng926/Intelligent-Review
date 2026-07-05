@@ -68,3 +68,16 @@ _shots_mobile_redesign/
 # Python 缓存
 scripts/__pycache__/
 
+# 其它批次数据目录(原始 PDF / XLSX,体积大不入仓)
+17-*/
+18-*/
+19-*/
+2023版药品目录/
+2024版药品目录/
+
+# Codex / 临时工作目录
+.workbuddy/
+/-w
+
+# 另一项目的生成产物(不属本仓)
+hf-promo/

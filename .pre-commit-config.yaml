@@ -1,0 +1,58 @@
+repos:
+  # ── Python 语法检查 ──
+  - repo: https://github.com/PyCQA/flake8
+    rev: '7.1.1'
+    hooks:
+      - id: flake8
+        args: ['--max-line-length=120', '--extend-ignore=E203,W503']
+        exclude: '(_.*\.py|.*\.bak.*|webapp/data/|\.venv|venv)'
+
+  # ── 导入排序 ──
+  - repo: https://github.com/PyCQA/isort
+    rev: '5.13.2'
+    hooks:
+      - id: isort
+        args: ['--profile=black', '--line-length=120']
+        exclude: '(_.*\.py|webapp/data/|\.venv|venv)'
+
+  # ── 密钥泄露检测 ──
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: 'v1.5.0'
+    hooks:
+      - id: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
+        exclude: '(_.*\.py|.*\.bak.*|webapp/data/.*|\.git/.*)'
+
+  # ── 基础文件卫生 ──
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: 'v4.6.0'
+    hooks:
+      - id: trailing-whitespace
+        exclude: '(_.*|webapp/data/.*|.*\.bak.*|.*\.css)'
+      - id: end-of-file-fixer
+        exclude: '(_.*|webapp/data/.*|.*\.bak.*|.*\.min\.js|.*\.min\.css)'
+      - id: check-yaml
+      - id: check-added-large-files
+        args: ['--maxkb=500']
+        exclude: '(webapp/data/.*|原始数据/.*|.*\.db)'
+      - id: check-merge-conflict
+
+    # ── 自定义: 禁止 .bak 文件提交 ── (portable Python, no bash dep)
+  - repo: local
+    hooks:
+      - id: no-bak-files
+        name: '禁止提交 .bak 备份文件'
+        entry: python scripts/precommit_hooks.py no_bak_files
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+
+  # ── 自定义: 禁止硬编码密码 ── (portable Python)
+  - repo: local
+    hooks:
+      - id: no-hardcoded-password
+        name: '检测硬编码密码'
+        entry: python scripts/precommit_hooks.py no_hardcoded_password
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]

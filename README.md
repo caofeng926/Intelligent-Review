@@ -110,7 +110,7 @@
 
 ### 依赖
 
-- Python 3.10+ 
+- Python 3.10+
 - 推荐 `git clone` + `.venv`
 
 ```bash

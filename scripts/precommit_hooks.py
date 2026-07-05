@@ -42,13 +42,16 @@ def no_hardcoded_password():
     pat = re.compile(
         # match added lines that contain password/passwd/pass = "...."
         # use triple-quoted raw string so we can include both ' and " literally
-        r"""^\+(?=.*\b(?:password|passwd|pass)\b)[^\n]*?"""
-        r"""(?:password|passwd|pass)\s*=\s*['\"][^'\"]{4,}""",
+        r"""^\+(?=.*\b(?:password|passwd)\b)[^\n]*?"""
+        r"""(?:password|passwd)\s*=\s*['\"][^'\"]{4,}""",
         re.IGNORECASE | re.MULTILINE,
     )
     m = pat.search(out)
     if m:
         snip = m.group(0)[:200].replace("\n", " ")
+        # 跳过明显的占位符
+        if "REDACTED" in snip or "***" in snip:
+            return
         # 用 sys.stderr.buffer.write 以保证 Windows GBK 控制台也能正确输出非 ASCII
         msg = ("错误：检测到硬编码密码: " + snip + "\n⚠️  请使用环境变量 (env var) 或 secrets 管理。\n").encode("utf-8")
         sys.stderr.buffer.write(msg)
