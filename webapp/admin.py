@@ -17,6 +17,7 @@ from flask import (
 
 from . import db
 from .query_utils import fts_query
+from .query_utils import row_to_dict
 
 admin_bp = Blueprint(
     "admin",
@@ -146,8 +147,7 @@ def dashboard():
             "SELECT id, source, batch_label, rule_subject, pub_date "
             "FROM batches ORDER BY id DESC LIMIT 6"
         ).fetchall()
-        recent_batches = [dict(zip(
-            ["id", "source", "batch_label", "rule_subject", "pub_date"], r))
+        recent_batches = [row_to_dict(r, ["id", "source", "batch_label", "rule_subject", "pub_date"])
             for r in recent_batches]
         # 最新规则
         recent_rules = conn.execute(
@@ -157,8 +157,7 @@ def dashboard():
             "FROM rules r JOIN batches b ON r.batch_id = b.id "
             "ORDER BY r.id DESC LIMIT 8"
         ).fetchall()
-        recent_rules = [dict(zip(
-            ["id", "rule_subject", "batch_label", "pub_date", "kp_count"], r))
+        recent_rules = [row_to_dict(r, ["id", "rule_subject", "batch_label", "pub_date", "kp_count"])
             for r in recent_rules]
     return render_template(
         "admin/dashboard.html",
@@ -189,9 +188,8 @@ def rules_page():
             "ORDER BY r.id DESC LIMIT ? OFFSET ?",
             (page_size, (page-1)*page_size),
         ).fetchall()
-        rows = [dict(zip(
-            ["id", "rule_subject", "batch_label", "pub_date",
-             "row_count", "kp_count", "code_count"], r)) for r in rows]
+        rows = [row_to_dict(r, ["id", "rule_subject", "batch_label", "pub_date",
+             "row_count", "kp_count", "code_count"]) for r in rows]
     pages = (total + page_size - 1) // page_size
     return render_template(
         "admin/rules.html",
@@ -385,7 +383,7 @@ def codes_browse():
                 except Exception as e:
                     current_app.logger.warning("codes_browse query failed: %s", e)
                     rows, total = [], 0
-            rows = [dict(zip(col_names, r)) for r in rows]
+            rows = [row_to_dict(r, col_names) for r in rows]
         else:
             total = total_all
     pages = (total + page_size - 1) // page_size
@@ -425,9 +423,8 @@ def knowledge_page():
             "ORDER BY kp.id DESC LIMIT ? OFFSET ?",
             (page_size, (page-1)*page_size),
         ).fetchall()
-        rows = [dict(zip(
-            ["id", "subject_name", "code_count", "pinyin_initials",
-             "rule_subject", "batch_label"], r)) for r in rows]
+        rows = [row_to_dict(r, ["id", "subject_name", "code_count", "pinyin_initials",
+             "rule_subject", "batch_label"]) for r in rows]
     pages = (total + page_size - 1) // page_size
     return render_template(
         "admin/knowledge.html",
@@ -446,9 +443,8 @@ def sync_page():
             "       json_path, csv_path, record_count, sysflag "
             "FROM nhsa_batches ORDER BY ingested_at DESC"
         ).fetchall()
-        batches = [dict(zip(
-            ["rowid", "source", "batch_label", "pub_date", "ingested_at",
-             "json_path", "csv_path", "record_count", "sysflag"], b))
+        batches = [row_to_dict(b, ["rowid", "source", "batch_label", "pub_date", "ingested_at",
+             "json_path", "csv_path", "record_count", "sysflag"])
             for b in batches]
     return render_template(
         "admin/sync.html",
@@ -505,9 +501,8 @@ def batches_page():
             "        JOIN rules r ON kp.rule_id=r.id WHERE r.batch_id=b.id) AS code_count "
             "FROM batches b ORDER BY b.id DESC"
         ).fetchall()
-        rows = [dict(zip(
-            ["id", "source", "batch_label", "rule_subject", "pub_date",
-             "ann_url", "pdf_path", "rule_count", "kp_count", "code_count"], r))
+        rows = [row_to_dict(r, ["id", "source", "batch_label", "rule_subject", "pub_date",
+             "ann_url", "pdf_path", "rule_count", "kp_count", "code_count"])
             for r in rows]
     return render_template(
         "admin/batches.html",
@@ -555,7 +550,7 @@ def rule_detail(rid: int):
         keys = ["id", "rule_subject", "category", "object_type",
                 "page_start", "page_end", "xlsx_path", "row_count",
                 "batch_id", "batch_label", "pub_date", "ann_url"]
-        rule = dict(zip(keys, rule))
+        rule = row_to_dict(rule, keys)
         kps = conn.execute(
             "SELECT kp.id, kp.seq, kp.subject_name, kp.code_count, kp.pinyin_initials, "
             "       (SELECT GROUP_CONCAT(kpc.code, \'・\') FROM knowledge_point_codes kpc "
@@ -564,8 +559,7 @@ def rule_detail(rid: int):
             "WHERE kp.rule_id = ? ORDER BY kp.seq, kp.id LIMIT 200",
             (rid,)
         ).fetchall()
-        kps = [dict(zip(
-            ["id", "seq", "subject_name", "code_count", "pinyin_initials", "codes_preview"], k))
+        kps = [row_to_dict(k, ["id", "seq", "subject_name", "code_count", "pinyin_initials", "codes_preview"])
             for k in kps]
     return render_template(
         "admin/rule_detail.html",
@@ -593,7 +587,7 @@ def kp_detail(kp_id: int):
         keys = ["id", "rule_id", "seq", "subject_name", "code_count",
                 "detection_logic", "logic_basis", "codes", "remark", "pinyin_initials",
                 "rule_subject", "batch_label", "pub_date"]
-        kp = dict(zip(keys, kp))
+        kp = row_to_dict(kp, keys)
         # Split codes by "・"
         if kp["codes"]:
             kp["codes_list"] = [c.strip() for c in kp["codes"].replace("\u30fb", "・").split("・") if c.strip()]
@@ -636,9 +630,8 @@ def admin_search():
                     ).fetchone()[0]
                 except Exception:
                     rows, total = [], 0
-            rows = [dict(zip(
-                ["id", "subject_name", "code_count", "pinyin_initials",
-                 "rule_subject", "batch_label"], r)) for r in rows]
+            rows = [row_to_dict(r, ["id", "subject_name", "code_count", "pinyin_initials",
+                 "rule_subject", "batch_label"]) for r in rows]
     pages = (total + page_size - 1) // page_size
     return render_template(
         "admin/search.html",
@@ -657,4 +650,4 @@ def _nhsa_batch(source: str) -> dict:
     if not r:
         return {}
     keys = ["batch_label", "pub_date", "ingested_at", "record_count"]
-    return dict(zip(keys, r))
+    return row_to_dict(r, keys)

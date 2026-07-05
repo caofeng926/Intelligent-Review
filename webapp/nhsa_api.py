@@ -37,7 +37,7 @@ from .query_utils import fts_query as _fts_query
 
 
 def _row_to_dict(row, keys):
-    return dict(zip(keys, row)) if row else None
+    return row_to_dict(row, keys) if row else None
 
 
 def _limit(default: int = 50, max_: int = 500) -> int:
@@ -71,9 +71,8 @@ def register(app):
                     live[tbl] = 0
         return jsonify({
             "live_counts": live,
-            "batches": [dict(zip(
-                ["source", "batch_label", "pub_date", "record_count", "sysflag",
-                 "csv_path", "json_path", "ingested_at"], r)) for r in rows],
+            "batches": [row_to_dict(r, ["source", "batch_label", "pub_date", "record_count", "sysflag",
+                 "csv_path", "json_path", "ingested_at"]) for r in rows],
         })
 
     @app.get("/api/nhsa/batches")
@@ -85,9 +84,8 @@ def register(app):
                 FROM nhsa_batches ORDER BY pub_date DESC, source
             """).fetchall()
         return jsonify({
-            "batches": [dict(zip(
-                ["source", "batch_label", "pub_date", "record_count",
-                 "sysflag", "ingested_at"], r)) for r in rows],
+            "batches": [row_to_dict(r, ["source", "batch_label", "pub_date", "record_count",
+                 "sysflag", "ingested_at"]) for r in rows],
         })
 
     # ============== IVD ==============
@@ -117,7 +115,7 @@ def register(app):
                 "company_name"]
         return jsonify({
             "q": q, "count": len(rows),
-            "results": [dict(zip(keys, r)) for r in rows],
+            "results": [row_to_dict(r, keys) for r in rows],
         })
 
     @app.get("/api/nhsa/ivd/code/<code>")
@@ -162,7 +160,7 @@ def register(app):
                 "manufacturer", "approval_no"]
         return jsonify({
             "q": q, "count": len(rows),
-            "results": [dict(zip(keys, r)) for r in rows],
+            "results": [row_to_dict(r, keys) for r in rows],
         })
 
     @app.get("/api/nhsa/yp/code/<code>")
@@ -196,7 +194,7 @@ def register(app):
             return jsonify({"approval_no": no, "count": 0, "results": []})
         return jsonify({
             "approval_no": no, "count": len(rows),
-            "results": [dict(zip(keys, r)) for r in rows],
+            "results": [row_to_dict(r, keys) for r in rows],
         })
 
     # ============== ICD ==============
@@ -226,7 +224,7 @@ def register(app):
                 "subcategory_name", "diagnosis_name"]
         return jsonify({
             "q": q, "count": len(rows),
-            "results": [dict(zip(keys, r)) for r in rows],
+            "results": [row_to_dict(r, keys) for r in rows],
         })
 
     @app.get("/api/nhsa/icd/code/<code>")
@@ -271,7 +269,7 @@ def register(app):
         keys = ["code", "name", "level", "is_using", "explain"]
         return jsonify({
             "q": q, "count": len(rows),
-            "results": [dict(zip(keys, r)) for r in rows],
+            "results": [row_to_dict(r, keys) for r in rows],
         })
 
     @app.get("/api/nhsa/ms/code/<code>")
@@ -315,7 +313,7 @@ def register(app):
         keys = ["code", "name", "level", "class_name", "apply_explain"]
         return jsonify({
             "q": q, "count": len(rows),
-            "results": [dict(zip(keys, r)) for r in rows],
+            "results": [row_to_dict(r, keys) for r in rows],
         })
 
     @app.get("/api/nhsa/tcm/code/<code>")

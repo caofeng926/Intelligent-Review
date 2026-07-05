@@ -12,6 +12,7 @@ from flask import render_template, request, jsonify, redirect, url_for, abort
 
 from . import db
 from .query_utils import fts_query as _fts_query
+from .query_utils import row_to_dict
 
 
 PAGE_SIZE = 50
@@ -126,8 +127,7 @@ def register(app):
                     "ivd.html",
                     groups=[], total_codes=total_all,
                     testing_category=testing_category, query=q,
-                    rows=[dict(zip(
-                        ["code", "catalog_full_name", "testing_index", "testing_category", "company_name"], r))
+                    rows=[row_to_dict(r, ["code", "catalog_full_name", "testing_index", "testing_category", "company_name"])
                         for r in rows],
                     total=total)
             if q:
@@ -150,8 +150,7 @@ def register(app):
                     "ivd.html",
                     groups=[], total_codes=total_all,
                     testing_category="", query=q,
-                    rows=[dict(zip(
-                        ["code", "catalog_full_name", "testing_index", "testing_category", "company_name"], r))
+                    rows=[row_to_dict(r, ["code", "catalog_full_name", "testing_index", "testing_category", "company_name"])
                         for r in rows],
                     total=total)
             groups = conn.execute(
@@ -179,7 +178,7 @@ def register(app):
             keys = ["code", "cat_l1", "cat_l1_name", "cat_l2", "cat_l2_name", "cat_l3", "cat_l3_name",
                     "testing_category", "testing_index", "use_type", "check_type",
                     "company_name", "business_license", "spec_code", "catalog_full_name"]
-            data = dict(zip(keys, r)) if r else None
+            data = row_to_dict(r, keys) if r else None
             rules = _rules_for_codes(conn, [code]) if data else []
             kps = _kps_for_codes(conn, code) if data else []
         return render_template(
@@ -245,7 +244,7 @@ def register(app):
                 params + [limit],
             ).fetchall()
             keys = ["code", "reg_name", "product_name", "dosage_form", "spec", "manufacturer", "list_class"]
-            rows = [dict(zip(keys, r)) for r in rows]
+            rows = [row_to_dict(r, keys) for r in rows]
         return render_template(
             "yp.html", total_codes=total_all,
             rows=rows, total=total, query=q,
@@ -264,7 +263,7 @@ def register(app):
             keys = ["code", "reg_name", "reg_dosage_form", "reg_spec", "product_name",
                     "dosage_form", "spec", "packaging", "min_pkg_qty", "min_prep_unit",
                     "min_pkg_unit", "manufacturer", "approval_no", "base_code", "list_class"]
-            data = dict(zip(keys, r)) if r else None
+            data = row_to_dict(r, keys) if r else None
             rules = _rules_for_codes(conn, [code]) if data else []
             kps = _kps_for_codes(conn, code) if data else []
         name = (data or {}).get("reg_name") or (data or {}).get("product_name") or "医保药品"
@@ -321,8 +320,7 @@ def register(app):
                     "icd.html",
                     groups=[], total_codes=total_all,
                     chapter_no=chapter_no, chapter_name=ch_name, query=q,
-                    rows=[dict(zip(
-                        ["code", "diagnosis_code", "diagnosis_name", "category_name", "section_name"], r))
+                    rows=[row_to_dict(r, ["code", "diagnosis_code", "diagnosis_name", "category_name", "section_name"])
                         for r in rows],
                     total=total)
             if q:
@@ -345,8 +343,7 @@ def register(app):
                     "icd.html",
                     groups=[], total_codes=total_all,
                     chapter_no="", chapter_name="", query=q,
-                    rows=[dict(zip(
-                        ["code", "diagnosis_code", "diagnosis_name", "category_name", "section_name"], r))
+                    rows=[row_to_dict(r, ["code", "diagnosis_code", "diagnosis_name", "category_name", "section_name"])
                         for r in rows],
                     total=total)
             groups = conn.execute(
@@ -399,7 +396,7 @@ def register(app):
                     "section_range", "section_name", "category_code", "category_name",
                     "subcategory_code", "subcategory_name", "diagnosis_code", "diagnosis_name",
                     "_name", "_match"]
-            data = dict(zip(keys, r)) if r else None
+            data = row_to_dict(r, keys) if r else None
             if data:
                 # 显示匹配的层级名 (4 个 SELECT 各自返回该层级的名字)
                 data["display_name"] = data.pop("_name")
@@ -457,8 +454,7 @@ def register(app):
                     "ms.html",
                     groups=[], total_codes=total_all,
                     query=q, level="",
-                    rows=[dict(zip(
-                        ["code", "p_code", "level", "name", "charge_unit", "explain"], r))
+                    rows=[row_to_dict(r, ["code", "p_code", "level", "name", "charge_unit", "explain"])
                         for r in rows],
                     total=total)
             if level:
@@ -475,8 +471,7 @@ def register(app):
                     "ms.html",
                     groups=[], total_codes=total_all,
                     query="", level=level,
-                    rows=[dict(zip(
-                        ["code", "p_code", "level", "name", "charge_unit", "explain"], r))
+                    rows=[row_to_dict(r, ["code", "p_code", "level", "name", "charge_unit", "explain"])
                         for r in rows],
                     total=total)
             groups = conn.execute(
@@ -507,7 +502,7 @@ def register(app):
             keys = ["code", "p_code", "name", "level", "level_path", "pinyin_code",
                     "contains_content", "excluded_content", "charge_unit", "explain",
                     "area", "is_using"]
-            data = dict(zip(keys, r)) if r else None
+            data = row_to_dict(r, keys) if r else None
             rules = _rules_for_codes(conn, [code]) if data else []
             kps = _kps_for_codes(conn, code) if data else []
         return render_template(
@@ -559,8 +554,7 @@ def register(app):
                     "tcm.html",
                     total_codes=total_all, query=q,
                     parts=[], levels=[],
-                    rows=[dict(zip(
-                        ["code", "p_code", "level", "name", "class_name", "apply_explain"], r))
+                    rows=[row_to_dict(r, ["code", "p_code", "level", "name", "class_name", "apply_explain"])
                         for r in rows],
                     total=total, part="", level="")
             if part in ("B", "Z"):
@@ -576,8 +570,7 @@ def register(app):
                     "tcm.html",
                     total_codes=total_all, query="",
                     parts=[], levels=[],
-                    rows=[dict(zip(
-                        ["code", "p_code", "level", "name", "class_name", "apply_explain"], r))
+                    rows=[row_to_dict(r, ["code", "p_code", "level", "name", "class_name", "apply_explain"])
                         for r in rows],
                     total=total, part=part, level="")
             if level.isdigit():
@@ -594,8 +587,7 @@ def register(app):
                     "tcm.html",
                     total_codes=total_all, query="",
                     parts=[], levels=[],
-                    rows=[dict(zip(
-                        ["code", "p_code", "level", "name", "class_name", "apply_explain"], r))
+                    rows=[row_to_dict(r, ["code", "p_code", "level", "name", "class_name", "apply_explain"])
                         for r in rows],
                     total=total, part="", level=str(lv))
             parts = conn.execute(
@@ -622,7 +614,7 @@ def register(app):
             ).fetchone()
             keys = ["code", "p_code", "name", "part_code", "code_length", "level",
                     "apply_explain", "remark", "class_code", "class_name"]
-            data = dict(zip(keys, r)) if r else None
+            data = row_to_dict(r, keys) if r else None
             rules = _rules_for_codes(conn, [code]) if data else []
             kps = _kps_for_codes(conn, code) if data else []
         return render_template(
@@ -673,7 +665,7 @@ def register(app):
             keys = ["code", "cat_l1", "cat_l1_name", "cat_l2", "cat_l2_name",
                     "cat_l3", "cat_l3_name", "generic_category", "material",
                     "spec", "generic_no", "generic_name", "manufacturer"]
-            rows = [dict(zip(keys, r)) for r in rows]
+            rows = [row_to_dict(r, keys) for r in rows]
         return render_template(
             "hc7.html",
             total_codes=total_all, query=q,
@@ -691,7 +683,7 @@ def register(app):
             keys = ["code", "cat_l1", "cat_l1_name", "cat_l2", "cat_l2_name",
                     "cat_l3", "cat_l3_name", "generic_category", "material",
                     "spec", "generic_no", "generic_name", "manufacturer"]
-            data = dict(zip(keys, r)) if r else None
+            data = row_to_dict(r, keys) if r else None
             rules = _rules_for_codes(conn, [code]) if data else []
             kps = _kps_for_codes(conn, code) if data else []
         return render_template(
@@ -728,7 +720,7 @@ def register(app):
                     "FROM consumable7_codes WHERE code=? LIMIT 5",
                     (c, c),
                 ).fetchall()
-                hits = [dict(zip(["src", "code", "name", "desc"], x)) for x in rs]
+                hits = [row_to_dict(x, ["src", "code", "name", "desc"]) for x in rs]
             elif c.upper().startswith("CJ"):
                 rs = conn.execute(
                     "SELECT code, catalog_full_name, testing_category, company_name "

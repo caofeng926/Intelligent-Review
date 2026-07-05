@@ -100,6 +100,28 @@ def fts_search(
     return rows, total
 
 
+
+
+def row_to_dict(row, keys=None):
+    """Convert a SQLite row to a plain dict.
+
+    Works for:
+      - sqlite3.Row (uses row.keys() if conn.row_factory = sqlite3.Row)
+      - plain tuple + caller-supplied keys (preferred explicit form)
+
+    Returns {} for None. Returns dict(row) as a fallback for plain
+    tuples when no keys were supplied.
+    """
+    if row is None:
+        return {}
+    if keys is not None:
+        return {k: row[i] for i, k in enumerate(keys) if i < len(row)}
+    try:
+        return {k: row[k] for k in row.keys()}
+    except AttributeError:
+        return dict(row)
+
+
 # ---- Safe input conversion ---------------------------------------------
 
 def _safe_int(
