@@ -17,7 +17,7 @@ import re
 # ---- FTS5 query construction --------------------------------------------
 
 _ASCII_ONLY = re.compile(r"^[A-Za-z0-9]+$")
-_KEEP = re.compile(r"[^\\w\\u4e00-\\u9fff]+")
+_KEEP = re.compile(r"[^\w\u4e00-\u9fff]+")
 
 
 def fts_query(q: str, *, sanitize: bool = False) -> str:
@@ -116,10 +116,11 @@ def row_to_dict(row, keys=None):
         return {}
     if keys is not None:
         return {k: row[i] for i, k in enumerate(keys) if i < len(row)}
-    try:
+    if hasattr(row, 'keys'):
         return {k: row[k] for k in row.keys()}
-    except AttributeError:
-        return dict(row)
+    if isinstance(row, (list, tuple)):
+        return {i: v for i, v in enumerate(row)}
+    return dict(row)
 
 
 # ---- Safe input conversion ---------------------------------------------
