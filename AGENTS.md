@@ -53,14 +53,14 @@
 
 ## 部署
 
-- **服务器**：腾讯云 CVM `43.136.175.219:5000` (SSH `root / 2Vbrm5ah`)
+- **服务器**：腾讯云 CVM `43.136.175.219:5000` (SSH `root` / 凭据走 `$MA_SSH_PASS` 环境变量)
 - **服务**：`systemctl restart medical-audit.service`
 - **远程同步** (Paramiko / scp)：
   ```python
   import paramiko
   ssh = paramiko.SSHClient()
   ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-  ssh.connect("43.136.175.219", port=22, username="root", password="2Vbrm5ah", timeout=15)
+  ssh.connect("43.136.175.219", port=22, username="root", password=os.environ["MA_SSH_PASS"], timeout=15)
   sftp = ssh.open_sftp()
   sftp.put("local_path", "/opt/medical-audit/webapp/local_path")
   sftp.close()

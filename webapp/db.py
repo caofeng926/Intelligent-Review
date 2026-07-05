@@ -1,7 +1,9 @@
 ﻿"""SQLite schema + idempotent upsert helpers + FTS5 sync."""
 from __future__ import annotations
+
 import os
 import sqlite3
+import sys
 from contextlib import contextmanager
 from typing import Optional
 
@@ -55,7 +57,7 @@ CREATE INDEX IF NOT EXISTS idx_kp_seq  ON knowledge_points(rule_id, seq);
 
 -- One-to-many: 1 KP may have many codes (drug/consumable different mfr/spec).
 -- Sheet 1 of NHSA xlsx only declares code_count; actual codes live in sheet 2
--- and link back via seq (瀵瑰簲鐭ヨ瘑鐐瑰簭鍙?.
+-- and link back via seq (对应知识点序号?.
 CREATE TABLE IF NOT EXISTS knowledge_point_codes (
     kp_id     INTEGER NOT NULL REFERENCES knowledge_points(id) ON DELETE CASCADE,
     code_seq  INTEGER NOT NULL,
@@ -91,7 +93,7 @@ CREATE TRIGGER IF NOT EXISTS kp_au AFTER UPDATE ON knowledge_points BEGIN
 END;
 
 -- ============================================================
--- 鍖荤敤鑰楁潗浠ｇ爜搴?(from NHSA consumables PDF, May 2026 update)
+-- 医用耗材代码库?(from NHSA consumables PDF, May 2026 update)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS consumable_codes (
     id                INTEGER PRIMARY KEY,
@@ -153,7 +155,7 @@ CREATE TRIGGER IF NOT EXISTS cc_au AFTER UPDATE ON consumable_codes BEGIN
             COALESCE(new.cat_l3_name,''));
 END;
 
--- 涓€绾р啋浜岀骇鈫掍笁绾?鍒嗙被鑱氬悎瑙嗗浘
+-- 一级→二级→三级分类聚合视图
 CREATE VIEW IF NOT EXISTS consumable_categories AS
 SELECT
     cat_l1, cat_l1_name,
@@ -166,11 +168,11 @@ GROUP BY cat_l1, cat_l2, cat_l3;
 """
 
 
-# drug_detail.manufacturer 瀛楁璇存槑
-# - manufacturer:        娓呮礂鍚庣殑鍊硷紙宸叉埅鏂?鍥借嵂鍑嗗瓧/869/鍒嗗彿/绗琋椤?绛夋贩鍏ュ唴瀹癸級
-# - manufacturer_raw:    鍘熷鍊硷紙PDF 瑙ｆ瀽鐨勫垵娆＄粨鏋滐紝澶囦唤鐢級
-# - manufacturer_flag:   鏍囪鍒楋紙NULL=鉁撳共鍑€, 鈿犵┖, 鈿犺繃鐭? 鈿犺繃闀? 鈿犳贩鍏ヨ鏍硷級
-# 閲嶆柊鎵ц娓呮礂: python -m webapp.clean_drug_detail
+# drug_detail.manufacturer 字段说明
+# - manufacturer:        清洗后的值（已截断 国药准字/869/分号 等混入内容）
+# - manufacturer_raw:    原始值（PDF 解析的初始结果，备份用）
+# - manufacturer_flag:   标记列（NULL=✓干净, ⚠空, ⚠过短, ⚠过长, ⚠混入规格）
+# 重新执行清洗: python -m webapp.clean_drug_detail
 
 
 @contextmanager
@@ -199,8 +201,12 @@ def init_db(path: Optional[str] = None) -> None:
         for p in parts:
             p = p.strip()
             if not p: continue
-            try: conn.executescript(p)
-            except: pass
+            try:
+                conn.executescript(p)
+            except sqlite3.OperationalError as e:
+                # 良性: 对象已存在 (CREATE TABLE IF NOT EXISTS 的解析边界)
+                # 真错误 (SyntaxError 等) 应继续冒泡
+                print(f"init_db: skipping existing object: {e}", file=sys.stderr)
 
 
 def reset_db(path: Optional[str] = None) -> None:
@@ -322,6 +328,7 @@ def get_kp_codes(conn, kp_id: int):
 
 
 import re as _re
+
 _WS_RE = _re.compile(r"[\s\u3000]+")
 def normalize_text(v):
     """Collapse all whitespace (incl. \r\n\t, full-width space \u3000) to nothing."""
@@ -369,10 +376,10 @@ def list_rule_subjects(conn, source=None):
 
 
 # ============================================================
-# 婢堆勶拷璇茬€悰灞肩炊閹貉嗙槚妤犲矁锟芥槒銆冮敍鍫濇儕閻滐拷2026-06-28 閼惧嘲褰囬敍?
+# 额外 Schema（各 NHSA 标准库）— 2026-06-28 更新
 # ============================================================
 EXTRA_SCHEMA = r"""
--- 娴ｆ捇鍎犵拠濠冩焽鐠囨洖澧忛崚鍡欒娑撳簼鍞惍?IVD)
+-- 体外诊断试剂代码库（IVD）
 CREATE TABLE IF NOT EXISTS ivd_codes (
     id                    INTEGER PRIMARY KEY,
     code                  TEXT    UNIQUE NOT NULL,
@@ -431,7 +438,7 @@ CREATE TRIGGER IF NOT EXISTS ivd_au AFTER UPDATE ON ivd_codes BEGIN
         COALESCE(new.testing_index,''), COALESCE(new.company_name,''));
 END;
 
--- 鐞涳拷7 缁灏伴悽銊︼拷鎰拷鎰閸掑棛琚稉搴濆敩閻?HC7)
+-- 第 7 类重点高值耗材（HC7）
 CREATE TABLE IF NOT EXISTS consumable7_codes (
     id                INTEGER PRIMARY KEY,
     code              TEXT    UNIQUE NOT NULL,
@@ -449,7 +456,8 @@ CREATE INDEX IF NOT EXISTS idx_cc7_l1 ON consumable7_codes(cat_l1);
 CREATE INDEX IF NOT EXISTS idx_cc7_l2 ON consumable7_codes(cat_l1, cat_l2);
 CREATE INDEX IF NOT EXISTS idx_cc7_l3 ON consumable7_codes(cat_l1, cat_l2, cat_l3);
 
--- ICD-10 閸栨槒锟?.0 閻楀牆灏版穱婵嗗鞍閻ｆ瑥灏伴惀鍛嫲閹垮秴宸?CREATE TABLE IF NOT EXISTS icd_codes (
+-- ICD-10 2.0 版疾病诊断编码
+CREATE TABLE IF NOT EXISTS icd_codes (
     id               INTEGER PRIMARY KEY,
     code             TEXT    UNIQUE NOT NULL,
     chapter_no       TEXT,
@@ -607,5 +615,3 @@ CREATE TABLE IF NOT EXISTS nhsa_batches (
 """
 
 SCHEMA_FULL = SCHEMA + EXTRA_SCHEMA + NHSA_BATCH_SCHEMA
-
-
