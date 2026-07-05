@@ -15,7 +15,8 @@ param(
     [string] $SshHost = "132.232.152.250",
     [int]    $SshPort = 22,
     [string] $SshUser = "root",
-    [string] $SshPass = "2Vbrm5ah"
+    [string] $SshPass = $env:MA_SSH_PASS
+if (-not $SshPass) { Write-Error "MA_SSH_PASS env var required (set it before running)"; exit 1 }
 )
 
 $ErrorActionPreference = "Stop"

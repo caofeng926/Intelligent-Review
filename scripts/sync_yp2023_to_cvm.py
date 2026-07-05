@@ -9,7 +9,9 @@ import paramiko, os, hashlib, time, posixpath, sys
 
 HOST = "132.232.152.250"
 USER = "root"
-PASS = "2Vbrm5ah"
+PASS = os.environ.get("MA_SSH_PASS", "")
+if not PASS:
+    raise SystemExit("MA_SSH_PASS env var required")
 REMOTE_DIR = "/opt/medical-audit/webapp"
 
 def md5_local(p):
