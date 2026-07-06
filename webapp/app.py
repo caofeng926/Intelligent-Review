@@ -22,7 +22,7 @@ from flask import Flask, abort, jsonify, render_template, request
 
 from . import admin, db, nhsa_api, nhsa_browse, yp2023
 from .helpers import PAGE_SIZE, SOURCE_LABEL
-from .query_utils import row_to_dict
+from .query_utils import fts_search, row_to_dict
 from .search_backend import _row_to_kp_dict, detect_mode, do_search
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
@@ -182,40 +182,12 @@ def _code_counts(conn):
 
 
 def _code_search(conn, q, fts_table, table, fields, name_field, code_field, limit=50):
-    """FTS5 + LIKE fallback 搜索，返回 (rows, total)。"""
-    q = (q or "").strip()
-    if not q:
-        return [], 0
-    # unicode61 在实际数据上把整个中文短语当作一个 token
-    # 所以 q + "*" 是最稳的写法：长 query 自然变成 "阿莫西林*" 也能匹配
-    # ASCII/数字 / 短 q 都用同一规则
-    fts = q + "*"
-    cols = ", ".join(f"t.{f}" for f in fields)
-    try:
-        rows = conn.execute(
-            f"SELECT t.rowid AS __rid__, {cols} FROM {table} t "
-            f"WHERE t.rowid IN (SELECT rowid FROM {fts_table} WHERE {fts_table} MATCH ?) "
-            f"ORDER BY t.{code_field} LIMIT ?",
-            (fts, limit)
-        ).fetchall()
-        total = conn.execute(
-            f"SELECT COUNT(*) FROM {table} t "
-            f"WHERE t.rowid IN (SELECT rowid FROM {fts_table} WHERE {fts_table} MATCH ?)",
-            (fts,)
-        ).fetchone()[0]
-    except Exception:
-        like_pat = f"%{q}%"
-        wheres = " OR ".join(f"t.{f} LIKE ?" for f in fields)
-        params = [like_pat] * len(fields)
-        rows = conn.execute(
-            f"SELECT t.rowid AS __rid__, {cols} FROM {table} t WHERE {wheres} "
-            f"ORDER BY t.{code_field} LIMIT ?",
-            (*params, limit)
-        ).fetchall()
-        total = conn.execute(
-            f"SELECT COUNT(*) FROM {table} t WHERE {wheres}", params
-        ).fetchone()[0]
-    return rows, total
+    """Thin wrapper around query_utils.fts_search (TD-08 dedup, NEW-06).
+
+    Centralises FTS5 + LIKE-fallback logic in query_utils.fts_search so the
+    search query builder and LIKE fallback live in one place.
+    """
+    return fts_search(conn, q, fts_table, table, fields, name_field, code_field, limit=limit)
 
 
 @app.get("/search/yp")

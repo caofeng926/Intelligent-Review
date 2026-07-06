@@ -14,6 +14,7 @@ from . import db
 from .helpers import SOURCE_LABEL
 from .query_utils import _safe_int
 from .query_utils import fts_query as jieba_query
+from .search_backend import detect_mode
 
 # ---- 规则主题分类 ------------------------------------------------------
 # 按 rule_subject 前缀归类(覆盖现有 47 条规则)。
@@ -225,23 +226,6 @@ def register(app):
 
         categories = [category_map[c] for c in CATEGORY_ORDER if c in category_map]
         return jsonify({"categories": categories})
-
-
-# ---- helpers (also used by /rules/find) --------------------------------
-def detect_mode(q: str) -> str:
-    """根据查询字符串判断搜索模式。"""
-    import re
-    code_re = re.compile(r"^[A-Z0-9]{8,}$")
-    letters_re = re.compile(r"^[A-Za-z]+$")
-    q = (q or "").strip()
-    if not q:
-        return "name"
-    upper = q.upper()
-    if code_re.match(upper):
-        return "code"
-    if letters_re.match(q) and len(q) >= 2:
-        return "initials"
-    return "name"
 
 
 def _search_kps_grouped_by_rule(conn, q: str, mode: str, source, limit: int = 300):

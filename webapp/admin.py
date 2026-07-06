@@ -4,20 +4,17 @@ webapp/admin.py
 所有页面继承 templates/admin/base_admin.html，菜单在 base 中静态配置。
 """
 from __future__ import annotations
+
 import os
-import time
 import sqlite3
+import time
 from datetime import datetime
 from typing import Optional
 
-from flask import (
-    Blueprint, render_template, request, jsonify, abort,
-    current_app,
-)
+from flask import Blueprint, abort, current_app, jsonify, render_template, request
 
 from . import db
-from .query_utils import fts_query
-from .query_utils import row_to_dict
+from .query_utils import fts_query, row_to_dict
 
 admin_bp = Blueprint(
     "admin",
@@ -365,7 +362,7 @@ def codes_browse():
         rows = []
         total = 0
         if q:
-            fts = _admin_fts_query(q)
+            fts = fts_query(q)
             if fts:
                 try:
                     rows = conn.execute(
@@ -610,7 +607,7 @@ def admin_search():
     rows, total = [], 0
     if q:
         with db.connect() as conn:
-            fts = _admin_fts_query(q)
+            fts = fts_query(q)
             if fts:
                 try:
                     rows = conn.execute(

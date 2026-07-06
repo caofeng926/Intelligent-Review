@@ -1,4 +1,4 @@
-﻿"""SQLite schema + idempotent upsert helpers + FTS5 sync."""
+"""SQLite schema + idempotent upsert helpers + FTS5 sync."""
 from __future__ import annotations
 
 import os
@@ -57,7 +57,7 @@ CREATE INDEX IF NOT EXISTS idx_kp_seq  ON knowledge_points(rule_id, seq);
 
 -- One-to-many: 1 KP may have many codes (drug/consumable different mfr/spec).
 -- Sheet 1 of NHSA xlsx only declares code_count; actual codes live in sheet 2
--- and link back via seq (对应知识点序号?.
+-- and link back via seq (对应知识点序号).
 CREATE TABLE IF NOT EXISTS knowledge_point_codes (
     kp_id     INTEGER NOT NULL REFERENCES knowledge_points(id) ON DELETE CASCADE,
     code_seq  INTEGER NOT NULL,
@@ -93,7 +93,7 @@ CREATE TRIGGER IF NOT EXISTS kp_au AFTER UPDATE ON knowledge_points BEGIN
 END;
 
 -- ============================================================
--- 医用耗材代码库?(from NHSA consumables PDF, May 2026 update)
+-- 医用耗材代码库 (NHSA consumables PDF, May 2026 update)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS consumable_codes (
     id                INTEGER PRIMARY KEY,
@@ -207,6 +207,17 @@ def init_db(path: Optional[str] = None) -> None:
                 # 良性: 对象已存在 (CREATE TABLE IF NOT EXISTS 的解析边界)
                 # 真错误 (SyntaxError 等) 应继续冒泡
                 print(f"init_db: skipping existing object: {e}", file=sys.stderr)
+
+        # ---- 外部 SQL 文件: 陕西版医疗服务项目 schema ------------------------------
+        sn_schema_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "sn_ms_schema.sql")
+        if os.path.exists(sn_schema_path):
+            try:
+                with open(sn_schema_path, "r", encoding="utf-8") as fh:
+                    conn.executescript(fh.read())
+            except sqlite3.OperationalError as e:
+                print(f"init_db: skipping SN schema object: {e}", file=sys.stderr)
+
+
 
 
 def reset_db(path: Optional[str] = None) -> None:
@@ -510,7 +521,7 @@ CREATE TRIGGER IF NOT EXISTS icd_au AFTER UPDATE ON icd_codes BEGIN
         COALESCE(new.diagnosis_name,''));
 END;
 
--- 閸忋劌娴楅崠鑽ゆ灍閺堝秴濮熸い鍦窗
+-- 全国医疗服务项目代码库 (Medical Service Codes, NHSA MS)
 CREATE TABLE IF NOT EXISTS medical_service_codes (
     id              INTEGER PRIMARY KEY,
     code            TEXT    UNIQUE NOT NULL,
@@ -555,7 +566,7 @@ CREATE TRIGGER IF NOT EXISTS ms_au AFTER UPDATE ON medical_service_codes BEGIN
         COALESCE(new.contains_content,''), COALESCE(new.excluded_content,''));
 END;
 
--- 娑撹弓鑵戦崠鑽ゆ⒕/鐠囦椒绶?2.0 閻楋拷
+-- 中医疾病/证候医保代码库 (TCM v2.0, 2022-01-01)
 CREATE TABLE IF NOT EXISTS tcm_codes (
     id              INTEGER PRIMARY KEY,
     code            TEXT    UNIQUE NOT NULL,
