@@ -20,7 +20,7 @@ import sys
 
 from flask import Flask, abort, jsonify, render_template, request
 
-from . import admin, db, nhsa_api, nhsa_browse, yp2023
+from . import admin, db, nhsa_api, nhsa_browse, yp2025
 from .helpers import PAGE_SIZE, SOURCE_LABEL
 from .query_utils import fts_search, row_to_dict
 from .search_backend import _row_to_kp_dict, detect_mode, do_search
@@ -37,7 +37,8 @@ from . import rules  # noqa: E402, F401
 
 rules.register(app)
 nhsa_browse.register(app)
-yp2023.register(app)
+from . import yp2025  # noqa: E402, F401
+yp2025.register(app)
 app.register_blueprint(admin.admin_bp)
 app.config["JSON_AS_ASCII"] = False
 # 静态资源缓存: 本地开发可即时刷新, 生产可走 CDN/反向代理缓存
@@ -59,6 +60,13 @@ def inject_stats():
     return {"nav_stats": stats}
 
 
+
+
+def _safe_count(conn, table):
+    try:
+        return conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+    except Exception:
+        return 0
 @app.get("/")
 def home():
     with db.connect() as conn:
@@ -70,6 +78,9 @@ def home():
             "pdf": conn.execute("SELECT COUNT(*) FROM rules WHERE source='pdf_2025'").fetchone()[0],
             "batches": conn.execute("SELECT COUNT(*) FROM batches").fetchone()[0],
             "consumables": conn.execute("SELECT COUNT(*) FROM consumable_codes").fetchone()[0],
+            "yp_catalog_2025": _safe_count(conn, "yp_catalog_2025"),
+            "sn_ms": _safe_count(conn, "sn_ms_codes"),
+            "sn_ms_material": _safe_count(conn, "sn_ms_material_codes"),
         }
         recent = conn.execute("""
             SELECT kp.id, kp.subject_name, r.rule_subject, b.batch_label, b.pub_date

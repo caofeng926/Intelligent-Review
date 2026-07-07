@@ -12,6 +12,12 @@
   {% if query %}<span class="bread-sep">›</span> <span class="bread-cur">搜索：{{ query }}</span>{% endif %}
 </nav>
 
+
+<div class="ms-tabs">
+  <span class="ms-tab is-active">国家版</span>
+  <a class="ms-tab" href="{{ url_for('sn_ms_index') }}">陕西版（2021）</a>
+</div>
+
 <form action="{{ url_for('ms_browse') }}" method="get" class="hero-search" style="margin-bottom: var(--s-4);">
   <svg class="hero-search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
   <input name="q" type="search" value="{{ query|default('',true) }}" placeholder="输入项目名称 / 拼音首字母 / 项目编码" enterkeyhint="search">

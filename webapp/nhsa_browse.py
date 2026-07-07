@@ -91,6 +91,74 @@ def _kps_for_codes(conn, code):
 
 
 # ============================================================
+# Shaanxi Medical Service 2021 helpers
+# ============================================================
+def _sn_ms_search(conn, q, limit):
+    """FTS5 + LIKE fallback search for SN-MS code/name/content."""
+    from .query_utils import fts_query as _q_fts
+    fts = _q_fts(q)
+    if not fts:
+        return [], 0
+    try:
+        rows = conn.execute(
+            "SELECT code, p_code, name, level, sheet_name, fin_class, unit, "
+            "       price_l1, price_l2, price_l3 "
+            "FROM sn_ms_codes "
+            "WHERE id IN (SELECT rowid FROM sn_ms_codes_fts WHERE sn_ms_codes_fts MATCH ?) "
+            "ORDER BY sheet_name, code LIMIT ?",
+            (fts, limit),
+        ).fetchall()
+        total = conn.execute(
+            "SELECT COUNT(*) FROM sn_ms_codes "
+            "WHERE id IN (SELECT rowid FROM sn_ms_codes_fts WHERE sn_ms_codes_fts MATCH ?)",
+            (fts,),
+        ).fetchone()[0]
+        keys = ["code", "p_code", "name", "level", "sheet_name", "fin_class",
+                "unit", "price_l1", "price_l2", "price_l3"]
+        return [row_to_dict(r, keys) for r in rows], total
+    except Exception:
+        like = "%" + q.strip() + "%"
+        rows = conn.execute(
+            "SELECT code, p_code, name, level, sheet_name, fin_class, unit, "
+            "       price_l1, price_l2, price_l3 "
+            "FROM sn_ms_codes "
+            "WHERE name LIKE ? OR code LIKE ? OR content LIKE ? "
+            "ORDER BY sheet_name, code LIMIT ?",
+            (like, like, like, limit),
+        ).fetchall()
+        keys = ["code", "p_code", "name", "level", "sheet_name", "fin_class",
+                "unit", "price_l1", "price_l2", "price_l3"]
+        return [row_to_dict(r, keys) for r in rows], len(rows)
+
+
+def _sn_ms_ancestors(conn, sheet, parent_digits):
+    """Build breadcrumb (sheet, ancestors at L2/L4/L6) for a given parent code."""
+    items = []
+    if not parent_digits:
+        return items
+    n = len(parent_digits)
+    cuts = [2, 4, 6]
+    for c in cuts:
+        if c > n:
+            break
+        d = parent_digits[:c]
+        row = conn.execute(
+            "SELECT code, name FROM sn_ms_codes WHERE sheet_name=? AND code=?",
+            (sheet, d),
+        ).fetchone()
+        if row:
+            items.append({"code": row[0], "name": row[1]})
+    return items
+
+
+def _has_l4(conn, sheet):
+    return conn.execute(
+        "SELECT 1 FROM sn_ms_codes WHERE sheet_name=? AND level=4 LIMIT 1",
+        (sheet,),
+    ).fetchone() is not None
+
+
+# ============================================================
 # registration
 # ============================================================
 def register(app):
@@ -703,6 +771,154 @@ def register(app):
                 "generic_name": "通用名",
                 "manufacturer": "生产企业",
             })
+
+
+    # ==================== Shaanxi Medical Service Pricing 2021 ====================
+    # 数据源: xlsx with 8 sheets. Levels: L1=sheet, L2=2-digit, L3=4-digit,
+    # L4=6-digit, L5=9-digit +/- alpha suffix.
+    # =============================================================================
+
+    @app.get("/nhsa/sn_ms/")
+    @app.get("/nhsa/sn_ms")
+    def sn_ms_index():
+        """入口: 列出 8 个 sheet 卡片 + 总数 + 简易搜索."""
+        q = (request.args.get("q") or "").strip()
+        limit = _limit()
+        with db.connect() as conn:
+            total = conn.execute("SELECT COUNT(*) FROM sn_ms_codes").fetchone()[0]
+            sheets_raw = conn.execute(
+                "SELECT sheet_name, sheet_title, COUNT(*) AS cnt, "
+                "       SUM(CASE WHEN level=2 THEN 1 ELSE 0 END) AS l2, "
+                "       SUM(CASE WHEN level=3 THEN 1 ELSE 0 END) AS l3, "
+                "       SUM(CASE WHEN level=4 THEN 1 ELSE 0 END) AS l4, "
+                "       SUM(CASE WHEN level=5 THEN 1 ELSE 0 END) AS l5 "
+                "FROM sn_ms_codes GROUP BY sheet_name, sheet_title ORDER BY sheet_name"
+            ).fetchall()
+            sheet_stats = [
+                {
+                    "sheet_name": s[0], "sheet_title": s[1], "total": s[2],
+                    "l2": s[3] or 0, "l3": s[4] or 0, "l4": s[5] or 0, "l5": s[6] or 0,
+                }
+                for s in sheets_raw
+            ]
+            if q:
+                rows, total_q = _sn_ms_search(conn, q, limit)
+                return render_template(
+                    "sn_ms.html", mode="search",
+                    query=q, total_codes=total,
+                    sheets=sheet_stats, rows=rows, total=total_q,
+                )
+        return render_template(
+            "sn_ms.html", mode="index",
+            query="", total_codes=total,
+            sheets=sheet_stats, rows=[], total=0,
+        )
+
+    @app.get("/nhsa/sn_ms/sheet/<sheet>")
+    @app.get("/nhsa/sn_ms/sheet/<sheet>/<parent_code>")
+    def sn_ms_browse(sheet, parent_code=""):
+        """4 级下钻: 一级 → 二级(L2) → 三级(L3/L4) → 四级(L4/L5) → 五级(L5 明细)."""
+        limit = _limit()
+        import re as _re
+        m = _re.match(r"\\d+", parent_code or "")
+        parent_digits = m.group(1) if m else ""
+        with db.connect() as conn:
+            total = conn.execute("SELECT COUNT(*) FROM sn_ms_codes").fetchone()[0]
+            ancestors = _sn_ms_ancestors(conn, sheet, parent_digits)
+            title_row = conn.execute(
+                "SELECT sheet_title FROM sn_ms_codes WHERE sheet_name=? LIMIT 1",
+                (sheet,),
+            ).fetchone()
+            sheet_title = title_row[0] if title_row else sheet
+
+            if not parent_digits:
+                current_level = 2
+                where = "sheet_name=? AND level=2"
+                params = [sheet]
+            else:
+                L = len(parent_digits)
+                if L == 2:
+                    child_level = 3
+                elif L == 4:
+                    child_level = 4 if _has_l4(conn, sheet) else 5
+                elif L == 6:
+                    child_level = 5
+                else:
+                    child_level = 5
+                current_level = child_level
+                where = "sheet_name=? AND level=? AND code LIKE ?"
+                params = [sheet, child_level, parent_digits + "%"]
+
+            rows = conn.execute(
+                "SELECT code, p_code, name, level, fin_class, unit, "
+                "       price_l1, price_l2, price_l3 "
+                f"FROM sn_ms_codes WHERE {where} ORDER BY code LIMIT ?",
+                (*params, limit),
+            ).fetchall()
+            keys = ["code", "p_code", "name", "level", "fin_class",
+                    "unit", "price_l1", "price_l2", "price_l3"]
+            items = [row_to_dict(r, keys) for r in rows]
+            count_total = conn.execute(
+                f"SELECT COUNT(*) FROM sn_ms_codes WHERE {where}",
+                params,
+            ).fetchone()[0]
+        return render_template(
+            "sn_ms.html", mode="browse",
+            sheet_name=sheet, sheet_title=sheet_title,
+            parent_code=parent_digits, parents=ancestors,
+            current_level=current_level,
+            items=items, total=count_total,
+            query="", total_codes=total,
+            sheets=[], rows=[],
+        )
+
+    @app.get("/nhsa/sn_ms/code/<code>")
+    def sn_ms_detail(code):
+        import re as _re
+        with db.connect() as conn:
+            r = conn.execute(
+                "SELECT code, p_code, name, level, sheet_name, sheet_title, "
+                "       level_path, fin_class, unit, "
+                "       price_l1, price_l2, price_l3, "
+                "       content, exclude, remark "
+                "FROM sn_ms_codes WHERE code=?",
+                (code,),
+            ).fetchone()
+            keys = ["code", "p_code", "name", "level", "sheet_name", "sheet_title",
+                    "level_path", "fin_class", "unit",
+                    "price_l1", "price_l2", "price_l3",
+                    "content", "exclude", "remark"]
+            d = row_to_dict(r, keys) if r else None
+            if not d:
+                abort(404)
+            ancestors = []
+            cur = d.get("p_code")
+            for _ in range(8):
+                if not cur:
+                    break
+                row = conn.execute(
+                    "SELECT name, p_code FROM sn_ms_codes WHERE code=? AND sheet_name=?",
+                    (cur, d["sheet_name"]),
+                ).fetchone()
+                if not row:
+                    break
+                ancestors.insert(0, {"code": cur, "name": row[0]})
+                cur = row[1]
+            siblings = []
+            if d.get("p_code"):
+                rows = conn.execute(
+                    "SELECT code, name FROM sn_ms_codes "
+                    "WHERE sheet_name=? AND p_code=? AND code<>? "
+                    "ORDER BY code LIMIT 50",
+                    (d["sheet_name"], d["p_code"], d["code"]),
+                ).fetchall()
+                siblings = [row_to_dict(x, ["code", "name"]) for x in rows]
+        return render_template(
+            "sn_ms_detail.html",
+            d=d, ancestors=ancestors, siblings=siblings,
+            title="陕西版医疗服务",
+            index_url=url_for("sn_ms_index"),
+        )
 
     # ==================== Cross-table reverse lookup ====================
     @app.get("/api/code2/<code>")

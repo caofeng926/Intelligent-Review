@@ -1,0 +1,144 @@
+﻿{% extends "base.html" %}
+{% block title %}陕西版医疗服务项目 · 医保标准库 · 医保智审{% endblock %}
+{% block content %}
+<section class="page-head">
+  <h1 class="page-title">医疗服务项目 <span class="page-sub-inline">· 陕西版（2021）</span></h1>
+  <p class="page-sub">陕西省医疗服务项目价格（2021版）· {{ total_codes }} 条 · 共 8 个一级分类</p>
+</section>
+
+<nav class="bread">
+  <a href="{{ url_for('nhsa_index') }}">标准数据库</a> <span class="bread-sep">›</span>
+  <a href="{{ url_for('ms_browse') }}">医疗服务项目</a> <span class="bread-sep">›</span>
+  <span class="bread-cur">陕西版（2021）</span>
+  {% if query %}<span class="bread-sep">›</span> <span class="bread-cur">搜索：{{ query }}</span>{% endif %}
+  {% if mode == 'browse' %}<span class="bread-sep">›</span>
+    <a href="{{ url_for('sn_ms_index') }}">一级</a>
+    <span class="bread-sep">›</span>
+    <a href="{{ url_for('sn_ms_browse', sheet=sheet_name) }}">{{ sheet_name }}</a>
+    {% for p in parents %}
+      <span class="bread-sep">›</span>
+      {% if not loop.last %}
+        <a href="{{ url_for('sn_ms_browse', sheet=sheet_name, parent_code=p.code) }}">{{ p.name }}</a>
+      {% else %}
+        <span class="bread-cur">{{ p.name }}</span>
+      {% endif %}
+    {% endfor %}
+  {% endif %}
+</nav>
+
+<form action="{{ url_for('sn_ms_index') }}" method="get" class="hero-search" style="margin-bottom: var(--s-4);">
+  <svg class="hero-search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+  <input name="q" type="search" value="{{ query|default('',true) }}" placeholder="输入项目名称 / 项目编码（陕西版）" enterkeyhint="search">
+  <button class="hero-search-btn" type="submit">搜索</button>
+</form>
+
+{# ---- Tab Switch ---- #}
+<div class="ms-tabs">
+  <a class="ms-tab" href="{{ url_for('ms_browse') }}">国家版</a>
+  <span class="ms-tab is-active">陕西版（2021）</span>
+</div>
+
+{# ---- INDEX: 8 个 sheet 卡片 ---- #}
+{% if mode == 'index' %}
+<section class="sn-sheet-grid">
+  {% for s in sheets %}
+  <a class="sn-sheet-card" href="{{ url_for('sn_ms_browse', sheet=s.sheet_name) }}">
+    <div class="sn-sheet-ico">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M3 7h18M3 12h18M3 17h18"/>
+      </svg>
+    </div>
+    <div class="sn-sheet-main">
+      <div class="sn-sheet-name">{{ s.sheet_name }}</div>
+      <div class="sn-sheet-title">{{ s.sheet_title }}</div>
+      <div class="sn-sheet-lvls">
+        <span class="sn-lvl-pill">二 {{ s.l2 }}</span>
+        <span class="sn-lvl-pill">三 {{ s.l3 }}</span>
+        {% if s.l4 %}<span class="sn-lvl-pill">四 {{ s.l4 }}</span>{% endif %}
+        <span class="sn-lvl-pill">五 {{ s.l5 }}</span>
+      </div>
+    </div>
+    <div class="sn-sheet-total">
+      <div class="sn-total-num">{{ "{:,}".format(s.total) }}</div>
+      <div class="sn-total-label">条</div>
+    </div>
+    <div class="sn-sheet-arrow">›</div>
+  </a>
+  {% endfor %}
+</section>
+<section class="info-banner">
+  <svg class="info-banner-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+  <div class="info-banner-body">
+    <div class="info-banner-title">关于陕西版</div>
+    <div class="info-banner-text">陕西（2021版）医疗服务项目按 <b>5 级</b> 组织：一级 = 8 个分类（综合类 / 医技类 / 临床诊疗 / 临床介入 / 临床手术 / 临床康复 / 中医类 / 材料库），二级 = L2 编码（如 11, 21, 31, 41），三级 = L4 编码（4 位），四级 = L6 编码（6 位），五级 = L9 编码 + 字母后缀（9 位，明细收费项）。一级用 sheet 名，二/三/四/五级按表内编码层级逐级下钻。支持按名称/编码搜索及浏览下钻。</div>
+  </div>
+</section>
+
+{# ---- BROWSE: 当前层的子项列表 ---- #}
+{% elif mode == 'browse' %}
+<section class="page-head" style="margin-bottom: var(--s-3);">
+  <h2 class="page-title-sm">{{ sheet_title }} <span class="muted-text">· 第 {{ current_level }} 级</span></h2>
+  <p class="page-sub">当前页 {{ items|length }} / 总 {{ total }} 条</p>
+</section>
+<section class="list-card">
+  {% for it in items %}
+  {% if current_level < 5 %}
+    <a class="list-row" href="{{ url_for('sn_ms_browse', sheet=sheet_name, parent_code=it.code) }}">
+  {% else %}
+    <a class="list-row" href="{{ url_for('sn_ms_detail', code=it.code) }}">
+  {% endif %}
+    <div class="list-main">
+      <div class="list-code">{{ it.code }}{% if it.fin_class %} · {{ it.fin_class }}{% endif %}{% if it.unit %} · {{ it.unit }}{% endif %}</div>
+      <div class="list-name">{{ it.name }}</div>
+      {% if it.price_l3 or it.price_l2 or it.price_l1 %}
+      <div class="list-meta">
+        {% if it.price_l3 %}三级 {{ it.price_l3 }}元{% endif %}
+        {% if it.price_l2 %} · 二级 {{ it.price_l2 }}元{% endif %}
+        {% if it.price_l1 %} · 一级 {{ it.price_l1 }}元{% endif %}
+      </div>
+      {% endif %}
+    </div>
+    <div class="list-arrow">›</div>
+  </a>
+  {% else %}
+  <div class="empty">
+    <svg class="empty-ico" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
+    <div class="empty-title">无子项</div>
+    <div class="empty-tip">当前层级没有更多明细</div>
+  </div>
+  {% endfor %}
+</section>
+<div class="pager">
+  <span class="pager-info">共 {{ total }} 条 · 显示 {{ items|length }}</span>
+</div>
+
+{# ---- SEARCH: 全局搜索结果 ---- #}
+{% elif mode == 'search' %}
+<section class="list-card">
+  {% for r in rows %}
+  <a class="list-row" href="{{ url_for('sn_ms_detail', code=r.code) }}">
+    <div class="list-main">
+      <div class="list-code">{{ r.code }} · {{ r.sheet_name }}{% if r.fin_class %} · {{ r.fin_class }}{% endif %}{% if r.unit %} · {{ r.unit }}{% endif %}</div>
+      <div class="list-name">{{ r.name }}</div>
+      <div class="list-meta">
+        L{{ r.level }}
+        {% if r.price_l3 %} · 三级 {{ r.price_l3 }}元{% endif %}
+        {% if r.price_l2 %} · 二级 {{ r.price_l2 }}元{% endif %}
+        {% if r.price_l1 %} · 一级 {{ r.price_l1 }}元{% endif %}
+      </div>
+    </div>
+    <div class="list-arrow">›</div>
+  </a>
+  {% else %}
+  <div class="empty">
+    <svg class="empty-ico" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
+    <div class="empty-title">无匹配</div>
+    <div class="empty-tip">没有找到与「{{ query }}」相关的陕西版项目</div>
+  </div>
+  {% endfor %}
+</section>
+<div class="pager">
+  <span class="pager-info">共 {{ total }} 条 · 显示 {{ rows|length }}</span>
+</div>
+{% endif %}
+{% endblock %}

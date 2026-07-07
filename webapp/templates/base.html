@@ -40,7 +40,7 @@
     <a class="bb-item {% if request.endpoint in ['rules_index','rule_detail'] %}is-active{% endif %}" href="{{ url_for('rules_index') }}">
       <span class="bb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg></span><span class="bb-label">规则</span>
     </a>
-    <a class="bb-item {% if request.endpoint in ['nhsa_index','ivd_browse','yp_browse','icd_browse','ms_browse','tcm_browse','hc7_index','yp2023_browse','yp2023_detail','ivd_detail','yp_detail','icd_detail','ms_detail','tcm_detail','hc7_detail','consumables_index','consumables_l3','consumable_detail'] %}is-active{% endif %}" href="{{ url_for('nhsa_index') }}">
+    <a class="bb-item {% if request.endpoint in ['nhsa_index','ivd_browse','yp_browse','yp2025_browse','yp2025_detail','icd_browse','ms_browse','tcm_browse','hc7_index','ivd_detail','yp_detail','icd_detail','ms_detail','tcm_detail','hc7_detail','consumables_index','consumables_l3','consumable_detail'] %}is-active{% endif %}" href="{{ url_for('nhsa_index') }}">
       <span class="bb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span><span class="bb-label">数据库</span>
     </a>
     <a class="bb-item" href="#about" onclick="document.getElementById('about-modal').classList.add('is-show');return false;">

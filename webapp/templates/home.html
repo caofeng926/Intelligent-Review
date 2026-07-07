@@ -76,16 +76,17 @@
     </div>
   </a>
 
-  <a class="quick-card qc-drug" href="{{ url_for('yp2023_browse') }}">
+
+  <a class="quick-card qc-snms" href="{{ url_for('sn_ms_index') }}">
     <div class="quick-card-header">
-      <div class="quick-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 2v6h2V2h-2zM7 8h10l-1 12H8L7 8z"/><path d="M10 13h4"/></svg></div>
+      <div class="quick-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18M3 12h18M3 17h18"/><path d="M9 4v16M15 4v16"/></svg></div>
       <div>
-        <div class="quick-title">2023 版药品目录</div>
-        <div class="quick-sub">西药 / 中成药 / 谈判 / 饮片</div>
+        <div class="quick-title">陕版医疗服务价格</div>
+        <div class="quick-sub">医疗服务项目 · 2021 版 · 7 大类逐级下钻</div>
       </div>
     </div>
     <div class="quick-footer">
-      <span class="quick-count">完整目录</span>
+      <span class="quick-count">{{ "{:,}".format(stats.get('sn_ms', 0)) }} 条</span>
       <span class="quick-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
     </div>
   </a>
@@ -120,6 +121,13 @@
         <div class="std-count">260,692 条</div>
       </div>
     </a>
+    <a class="std-card" href="{{ url_for('yp2025_browse') }}" style="--std-color: #0d9488; --std-shadow: rgba(13,148,136,.25);">
+      <div class="std-icon" style="background: #0d9488;">YP25</div>
+      <div class="std-info">
+        <div class="std-name">2025 版药品目录</div>
+        <div class="std-count">{{ "{:,}".format(stats.get('yp_catalog_2025', 4783)) }} 条</div>
+      </div>
+    </a>
     <a class="std-card" href="{{ url_for('ms_browse') }}" style="--std-color: var(--cat-ms); --std-shadow: rgba(217,119,6,.25);">
       <div class="std-icon" style="background: var(--cat-ms);">MS</div>
       <div class="std-info">
@@ -148,13 +156,7 @@
         <div class="std-count">5,670 条</div>
       </div>
     </a>
-    <a class="std-card" href="{{ url_for('yp2023_browse') }}" style="--std-color: var(--cat-yp); --std-shadow: rgba(5,150,105,.18);">
-      <div class="std-icon" style="background: linear-gradient(135deg, var(--cat-yp), #10B981);">YP23</div>
-      <div class="std-info">
-        <div class="std-name">2023 版药品目录</div>
-        <div class="std-count">约 344 条</div>
-      </div>
-    </a>
+
   </div>
 </section>
 
@@ -217,7 +219,7 @@
   <div class="info-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></div>
   <div class="info-body">
     <div class="info-title">使用提示</div>
-    <div class="info-text">本系统收录国家医保局发布的全量审核规则与 8 类标准数据库编码 + 药品详情库 + 2023 版药品目录，支持名称/编码/拼音首字母搜索。</div>
+    <div class="info-text">本系统收录国家医保局发布的全量审核规则与 8 类标准数据库编码 + 药品详情库 (2025 版)，支持名称/编码/拼音首字母搜索。</div>
   </div>
 </div>
 

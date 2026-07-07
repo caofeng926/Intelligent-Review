@@ -52,6 +52,7 @@
   --grad-code:    linear-gradient(135deg, #0369A1 0%, #0284C7 100%);
   --grad-drug:    linear-gradient(135deg, #047857 0%, #059669 100%);
   --grad-consum:  linear-gradient(135deg, #6D28D9 0%, #7C3AED 100%);
+  --grad-ms:      linear-gradient(135deg, #B45309 0%, #D97706 100%);
 
   /* ---- Typography ---- */
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
@@ -103,6 +104,7 @@
   --shadow-violet:  0 8px 24px rgba(124,58,237,.18), 0 2px 8px rgba(124,58,237,.08);
   --shadow-green:   0 8px 24px rgba(5,150,105,.18), 0 2px 8px rgba(5,150,105,.08);
   --shadow-indigo:  0 8px 24px rgba(99,102,241,.18), 0 2px 8px rgba(99,102,241,.08);
+  --shadow-amber:   0 8px 24px rgba(217,119,6,.18), 0 2px 8px rgba(217,119,6,.08);
 
   /* ---- Transition ---- */
   --t-fast:   150ms cubic-bezier(.4,0,.2,1);
@@ -545,20 +547,20 @@ svg { display: block; }
    ============================================================ */
 .quick-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--sp-3);
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-2);
   margin-bottom: var(--sp-8);
 }
 .quick-card {
   position: relative;
   background: var(--c-surface);
   border-radius: var(--r-lg);
-  padding: var(--sp-5);
+  padding: var(--sp-3);
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--c-border-2);
   transition: transform var(--t-normal), box-shadow var(--t-normal), border-color var(--t-fast);
   overflow: hidden;
-  display: flex; flex-direction: column; gap: var(--sp-4);
+  display: flex; flex-direction: column; gap: var(--sp-3);
   animation: fadeInUp .5s ease-out both;
 }
 .quick-card:nth-child(1) { animation-delay: .1s; }
@@ -589,7 +591,7 @@ svg { display: block; }
   position: relative; z-index: 1;
 }
 .quick-icon {
-  width: 48px; height: 48px;
+  width: 36px; height: 36px;
   border-radius: var(--r-md);
   display: grid; place-items: center;
   flex-shrink: 0;
@@ -599,14 +601,14 @@ svg { display: block; }
   transition: transform var(--t-bounce);
 }
 .quick-card:hover .quick-icon { transform: scale(1.1) rotate(-5deg); }
-.quick-icon svg { width: 24px; height: 24px; }
+.quick-icon svg { width: 20px; height: 20px; }
 .quick-title {
   font-size: var(--fs-md); font-weight: var(--fw-bold);
   color: var(--c-text); line-height: 1.3; letter-spacing: -.1px;
 }
 .quick-sub {
-  font-size: var(--fs-xs); color: var(--c-text-3);
-  margin-top: 3px; line-height: 1.4;
+  font-size: 11px; color: var(--c-text-3);
+  margin-top: 2px; line-height: 1.3;
 }
 .quick-footer {
   display: flex; align-items: center; justify-content: space-between;
@@ -623,7 +625,7 @@ svg { display: block; }
   background: var(--card-color, var(--c-primary)); opacity: .6;
 }
 .quick-arrow {
-  width: 32px; height: 32px; border-radius: 50%;
+  width: 26px; height: 26px; border-radius: 50%;
   background: var(--c-bg-alt);
   display: grid; place-items: center;
   color: var(--c-text-3);
@@ -634,7 +636,7 @@ svg { display: block; }
   color: #fff; transform: rotate(-45deg);
   box-shadow: var(--icon-shadow, var(--shadow-blue));
 }
-.quick-arrow svg { width: 14px; height: 14px; }
+.quick-arrow svg { width: 12px; height: 12px; }
 .qc-rule  { --card-color: var(--cat-rule);  --card-grad: var(--grad-rule);    --icon-grad: var(--grad-rule);   --icon-shadow: var(--shadow-indigo); }
 .qc-code  { --card-color: var(--cat-hc);    --card-grad: var(--grad-code);    --icon-grad: var(--grad-code);   --icon-shadow: var(--shadow-blue); }
 .qc-drug  { --card-color: var(--cat-yp);    --card-grad: var(--grad-drug);    --icon-grad: var(--grad-drug);   --icon-shadow: var(--shadow-green); }
@@ -651,6 +653,10 @@ svg { display: block; }
 .qc-code:hover { box-shadow: var(--shadow-blue); }
 .qc-drug:hover { box-shadow: var(--shadow-green); }
 .qc-consumable:hover { box-shadow: var(--shadow-violet); }
+.qc-snms   { --card-color: var(--cat-ms);    --card-grad: var(--grad-ms);       --icon-grad: var(--grad-ms);      --icon-shadow: var(--shadow-amber);  }
+.qc-snms .quick-icon { background: var(--cat-ms); color: #fff; }
+.qc-snms { background: linear-gradient(135deg, rgba(217,119,6,.06) 0%, var(--c-surface) 70%); }
+.qc-snms:hover { box-shadow: var(--shadow-amber); }
 
 /* ============================================================
    Standard Library Grid
@@ -1531,7 +1537,7 @@ svg { display: block; }
 .tabbar-sub { margin-top: calc(-1 * var(--sp-2)); }
 
 /* ============================================================
-   List Rows (yp2023, hc7)
+   List Rows (NHSA databases)
    ============================================================ */
 .list, .list-card { display: flex; flex-direction: column; gap: var(--sp-2); }
 .list-row {
@@ -1583,7 +1589,7 @@ svg { display: block; }
 .badge-info { background: var(--c-primary-50); color: var(--c-primary-dark); }
 
 /* ============================================================
-   Stat Grid (yp2023)
+   Stat Grid (NHSA)
    ============================================================ */
 .stat-grid, .stats, .stats-3col {
   display: grid; grid-template-columns: repeat(3, 1fr);
@@ -1781,12 +1787,12 @@ svg { display: block; }
   .hero-search-btn { height: 48px; padding: 0 var(--sp-6); font-size: var(--fs-md); }
   .hero-stats { gap: var(--sp-3); padding: var(--sp-4); }
   .hero-stat-num { font-size: var(--fs-2xl); }
-  .quick-grid { grid-template-columns: repeat(4, 1fr); gap: var(--sp-4); }
-  .quick-card { padding: var(--sp-5); }
-  .quick-icon { width: 52px; height: 52px; }
-  .quick-icon svg { width: 28px; height: 28px; }
-  .quick-title { font-size: var(--fs-lg); }
-  .quick-sub { font-size: var(--fs-sm); }
+  .quick-grid { grid-template-columns: repeat(2, 1fr); gap: var(--sp-3); }
+  .quick-card { padding: var(--sp-4); }
+  .quick-icon { width: 40px; height: 40px; }
+  .quick-icon svg { width: 22px; height: 22px; }
+  .quick-title { font-size: var(--fs-md); }
+  .quick-sub { font-size: var(--fs-xs); }
   .std-grid { grid-template-columns: repeat(4, 1fr); gap: var(--sp-3); }
   .nhsa-grid { grid-template-columns: repeat(4, 1fr); }
   .stat-grid, .stats, .stats-3col { grid-template-columns: repeat(6, 1fr); }
@@ -1804,10 +1810,10 @@ svg { display: block; }
   .quick-grid { grid-template-columns: repeat(4, 1fr); }
 }
 
-@media (max-width: 360px) {
+@media (max-width: 400px) {
   .hero-title { font-size: var(--fs-xl); }
   .hero-stat-num { font-size: var(--fs-base); }
-  .quick-grid { gap: var(--sp-2); }
+  .quick-grid { grid-template-columns: 1fr; gap: var(--sp-2); }
   .quick-card { padding: var(--sp-4); }
   .nhsa-grid { grid-template-columns: 1fr; }
 }
@@ -2154,4 +2160,267 @@ svg { display: block; }
   .code-kv { grid-template-columns: 1fr; gap: 4px var(--sp-3); }
   .code-kv-key { text-align: left; }
   .code-path-step { max-width: 180px; font-size: var(--fs-xs); }
+}
+
+/* ============================================================
+   Shaanxi MS Tabs + Sheet Cards + Detail
+   /nhsa/sn_ms (陕西版医疗服务项目 2021)
+   ============================================================ */
+
+.ms-tabs {
+  display: inline-flex; gap: 4px;
+  background: var(--c-bg-alt);
+  border-radius: var(--r-md);
+  padding: 4px;
+  margin-bottom: var(--sp-4);
+  border: 1px solid var(--c-border-2);
+}
+.ms-tab {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 6px 14px;
+  border-radius: var(--r-sm);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  color: var(--c-text-2);
+  text-decoration: none;
+  transition: all var(--t-fast);
+}
+.ms-tab:hover:not(.is-active) {
+  background: var(--c-surface);
+  color: var(--c-text);
+}
+.ms-tab.is-active {
+  background: var(--c-surface);
+  color: var(--c-primary-dark);
+  box-shadow: var(--shadow-xs);
+  font-weight: var(--fw-semi);
+}
+
+.sn-sheet-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-5);
+  animation: fadeInUp .3s ease-out both;
+}
+@media (min-width: 720px) {
+  .sn-sheet-grid { grid-template-columns: repeat(4, 1fr); gap: var(--sp-4); }
+}
+@media (min-width: 1024px) {
+  .sn-sheet-grid { grid-template-columns: repeat(4, 1fr); gap: var(--sp-5); }
+}
+
+.sn-sheet-card {
+  display: flex; align-items: stretch; gap: var(--sp-3);
+  background: var(--c-surface); border-radius: var(--r-lg);
+  padding: var(--sp-3) var(--sp-4);
+  border: 1px solid var(--c-border-2); box-shadow: var(--shadow-xs);
+  text-decoration: none; color: inherit;
+  transition: all var(--t-normal);
+}
+.sn-sheet-card:hover {
+  transform: translateY(-2px); box-shadow: var(--shadow-md);
+  border-color: var(--c-primary-100);
+}
+.sn-sheet-card:hover .sn-sheet-arrow { color: var(--c-primary); transform: translateX(3px); }
+
+.sn-sheet-ico {
+  width: 36px; height: 36px;
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, var(--c-primary-50), #F5F3FF);
+  color: var(--c-primary-dark);
+  border-radius: var(--r-md);
+}
+.sn-sheet-main {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.sn-sheet-name {
+  font-weight: var(--fw-semi); font-size: var(--fs-base);
+  color: var(--c-text);
+}
+.sn-sheet-title {
+  font-size: var(--fs-xs); color: var(--c-text-3);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.sn-sheet-lvls { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.sn-lvl-pill {
+  display: inline-flex; align-items: center;
+  font-size: 11px; color: var(--c-text-3);
+  background: var(--c-bg-alt);
+  padding: 1px 6px; border-radius: var(--r-sm);
+  font-variant-numeric: tabular-nums;
+}
+.sn-sheet-total {
+  flex-shrink: 0;
+  text-align: right;
+  display: flex; flex-direction: column; justify-content: center;
+}
+.sn-total-num {
+  font-size: var(--fs-lg); font-weight: var(--fw-semi);
+  color: var(--c-primary-dark);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+.sn-total-label { font-size: 11px; color: var(--c-text-3); }
+.sn-sheet-arrow {
+  align-self: center; flex-shrink: 0;
+  color: var(--c-text-3); font-size: 18px;
+  transition: all var(--t-fast);
+}
+
+.detail-card {
+  display: flex; flex-direction: column; gap: var(--sp-5);
+  animation: fadeInUp .35s ease-out both;
+}
+.detail-fields {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--sp-3);
+  background: var(--c-surface);
+  border-radius: var(--r-lg);
+  padding: var(--sp-4);
+  border: 1px solid var(--c-border-2);
+}
+@media (min-width: 640px) {
+  .detail-fields {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--sp-4) var(--sp-5);
+  }
+}
+.detail-label {
+  font-size: var(--fs-xs); color: var(--c-text-3);
+  margin-bottom: 2px;
+}
+.detail-value {
+  font-size: var(--fs-base); color: var(--c-text);
+  word-break: break-word;
+}
+.detail-value.mono {
+  font-family: var(--font-mono); font-size: var(--fs-sm);
+}
+
+.detail-prices {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-3);
+}
+.detail-price-card {
+  border-radius: var(--r-md);
+  padding: var(--sp-3) var(--sp-4);
+  border: 1px solid var(--c-border-2);
+  background: var(--c-surface);
+}
+.detail-price-l1 { background: linear-gradient(160deg, #F0FDF4 0%, #ECFDF5 100%); border-color: #BBF7D0; }
+.detail-price-l2 { background: linear-gradient(160deg, #FEF3C7 0%, #FFFBEB 100%); border-color: #FDE68A; }
+.detail-price-l3 { background: linear-gradient(160deg, #FEE2E2 0%, #FEF2F2 100%); border-color: #FECACA; }
+.detail-price-label { font-size: var(--fs-xs); color: var(--c-text-2); margin-bottom: 4px; }
+.detail-price-value {
+  font-size: var(--fs-xl); font-weight: var(--fw-semi);
+  color: var(--c-text);
+  font-variant-numeric: tabular-nums;
+}
+.detail-price-unit { font-size: var(--fs-xs); font-weight: var(--fw-normal); color: var(--c-text-3); margin-left: 4px; }
+
+.detail-block {
+  background: var(--c-surface);
+  border-radius: var(--r-lg);
+  padding: var(--sp-4);
+  border: 1px solid var(--c-border-2);
+}
+.detail-block-title { font-size: var(--fs-sm); font-weight: var(--fw-semi); color: var(--c-text); margin-bottom: var(--sp-2); }
+.detail-block-body { font-size: var(--fs-sm); color: var(--c-text-2); white-space: pre-wrap; word-break: break-word; line-height: 1.6; }
+
+.list-card-head {
+  padding: var(--sp-3) var(--sp-4);
+  font-size: var(--fs-sm); font-weight: var(--fw-semi);
+  color: var(--c-text-2);
+  background: var(--c-bg-alt);
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  border-bottom: 1px solid var(--c-border-2);
+}
+.muted-text { color: var(--c-text-3); font-weight: var(--fw-normal); }
+.page-sub-inline { font-size: var(--fs-base); color: var(--c-text-3); font-weight: var(--fw-normal); }
+.page-title-sm { font-size: var(--fs-xl); font-weight: var(--fw-semi); color: var(--c-text); margin: 0 0 var(--sp-1); }
+
+/* === 2025 版药品目录 === */
+.yp25-cats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-4);
+}
+.yp25-cat {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--c-surface-2, rgba(0,0,0,.04));
+  color: var(--c-text-2);
+  font-size: var(--fs-sm, 14px);
+  font-weight: var(--fw-medium, 500);
+  text-decoration: none;
+  border: 1px solid var(--c-border-2, transparent);
+  transition: background 0.15s, color 0.15s;
+}
+.yp25-cat:hover { background: var(--c-surface-3, rgba(0,0,0,.07)); }
+.yp25-cat.is-active {
+  background: var(--cat-yp, #059669);
+  color: #fff;
+  border-color: transparent;
+}
+.yp25-count { font-size: 12px; opacity: 0.85; }
+
+.yp25-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: var(--fw-semi, 600);
+  color: #fff;
+  margin-right: 4px;
+}
+.yp25-badge-西药 { background: #2563eb; }
+.yp25-badge-中成药 { background: #059669; }
+.yp25-badge-谈判西药 { background: #7c3aed; }
+.yp25-badge-谈判中成药 { background: #db2777; }
+.yp25-badge-中药饮片 { background: #d97706; }
+
+.yp25-class {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: var(--fw-semi, 600);
+  margin-right: 4px;
+}
+.yp25-class-甲 { background: #fef3c7; color: #b45309; }
+.yp25-class-乙 { background: #dbeafe; color: #1d4ed8; }
+.yp25-class-中药饮片支付 { background: #d1fae5; color: #047857; }
+.yp25-class-中药饮片不得支付 { background: #fee2e2; color: #b91c1c; }
+
+.yp25-no {
+  font-family: var(--ff-mono, monospace);
+  font-size: 13px;
+  color: var(--c-text-2);
+  margin-right: 6px;
+}
+.yp25-catcode {
+  font-family: var(--ff-mono, monospace);
+  font-size: 11px;
+  color: var(--c-text-3);
+  background: var(--c-surface-2, rgba(0,0,0,.04));
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+.yp25-form { color: var(--c-text-3); font-size: 13px; font-weight: var(--fw-normal, 400); }
+.yp25-price { color: #b45309; font-weight: var(--fw-semi, 600); }
+.yp25-validity { color: var(--c-text-3); font-size: 12px; }
+.yp25-remark {
+  font-size: 12px;
+  color: var(--c-text-3);
+  margin-top: 2px;
+  line-height: 1.4;
 }
