@@ -84,8 +84,9 @@ $smallFiles = @(
     "nhsa_api.py",
     "nhsa_browse.py",
     "qa.py",
-    "yp2023.py",
-    "ingest_yp_2023.py",
+    "yp2025.py",
+    "parse_yp_2025.py",
+    "ingest_yp_2025.py",
     "requirements.txt"
 )
 foreach ($name in $smallFiles) {
