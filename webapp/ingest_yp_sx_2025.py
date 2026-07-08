@@ -257,12 +257,23 @@ def rebuild_category_tree(conn: sqlite3.Connection):
     conn.commit()
 
     # 更新 drug_count
+    # level=2: 精确匹配 (sub-code 出现在表中)
+    # level=1: LIKE 前缀累加 (顶层 code 不出现在表中, 只出现在 sub-code 前缀)
     conn.execute("""
         UPDATE yp25sx_category_tree SET drug_count = (
             SELECT COUNT(*) FROM yp_catalog_sx_2025 d
             WHERE d.category = yp25sx_category_tree.category
               AND d.category_code = yp25sx_category_tree.code
         )
+        WHERE level = 2
+    """)
+    conn.execute("""
+        UPDATE yp25sx_category_tree SET drug_count = (
+            SELECT COUNT(*) FROM yp_catalog_sx_2025 d
+            WHERE d.category = yp25sx_category_tree.category
+              AND d.category_code LIKE yp25sx_category_tree.code || '%'
+        )
+        WHERE level = 1
     """)
     conn.commit()
 
