@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}{{ cur_sub.name }} · 陕版药品目录 2025{% endblock %}
+{% block content %}
+<section class="page-head">
+  <h1 class="page-title">
+    <span class="yp25-catcode-large">{{ cur_sub.code }}</span>
+    {{ cur_sub.name }}
+  </h1>
+  <p class="page-sub">
+    {% if cur_category %}<span class="yp25-badge yp25-badge-{{ cur_category }}">{{ cur_category }}</span> · {% endif %}
+    {{ "{:,}".format(total) }} 条药品
+  </p>
+</section>
+
+<nav class="bread">
+  <a href="{{ url_for("nhsa_index") }}">标准数据库</a>
+  <span class="bread-sep">›</span>
+  <a href="{{ url_for("yp2025_sx_browse") }}">陕版药品目录 2025</a>
+  {% if cur_category %}
+  <span class="bread-sep">›</span>
+  <a href="{{ url_for("yp2025_sx_browse", cat=cur_category) }}">{{ cur_category }}</a>
+  <span class="bread-sep">›</span>
+  <a href="{{ url_for("yp2025_sx_browse", cat=cur_category, top=cur_top_code) }}">{{ cur_top_code }}</a>
+  {% endif %}
+  <span class="bread-sep">›</span>
+  <span class="bread-cur">{{ cur_sub.code }} · {{ cur_sub.name }}</span>
+</nav>
+
+{% if cur_category %}
+<div class="yp25-cats">
+  <a class="yp25-cat {% if not cur_sub %}is-active{% endif %}" href="{{ url_for("yp2025_sx_browse") }}">
+    全部 <span class="yp25-count">{{ "{:,}".format(stats.get("总计", 0)) }}</span>
+  </a>
+  {% for c in categories %}
+  <a class="yp25-cat {% if cur_category == c %}is-active{% endif %}" href="{{ url_for("yp2025_sx_browse", cat=c) }}">
+    {{ c }} <span class="yp25-count">{{ "{:,}".format(stats.get(c, 0)) }}</span>
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if cur_q %}
+<form action="{% if cur_category %}{{ url_for("yp2025_sx_browse", cat=cur_category, top=cur_top_code, sub=cur_sub.code) }}{% else %}{{ url_for("yp2025_sx_browse") }}{% endif %}" method="get" class="hero-search" style="margin-bottom: var(--s-3);">
+  <svg class="hero-search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+  <input name="q" type="search" value="{{ cur_q }}" placeholder="搜索 名称 / 编码 / 剂型 / 备注" enterkeyhint="search">
+  <button class="hero-search-btn" type="submit">搜索</button>
+</form>
+{% endif %}
+
+{# 表格视图: 编码 / 甲乙类 / 名称 / 剂型 / 备注 #}
+{% if drugs %}
+<div class="yp25-table-wrap">
+  <table class="yp25-table">
+    <thead>
+      <tr>
+        <th>编码</th>
+        <th>甲乙类</th>
+        <th>名称</th>
+        <th>剂型</th>
+        <th>备注</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for d in drugs %}
+      <tr>
+        <td><code class="yp25-code">{{ d.category_code }}</code> <span class="yp25-no-sm">{{ d.list_no }}</span></td>
+        <td>{% if d.list_class %}<span class="yp25-class yp25-class-{{ d.list_class }}">{{ d.list_class }}</span>{% endif %}</td>
+        <td>
+          <a class="yp25-drug-link" href="{{ url_for("yp2025_sx_detail", list_no=d.list_no|urlencode) }}">
+            {{ d.name }}
+          </a>
+          {% if d.category %}<span class="yp25-cat-mini">{{ d.category }}</span>{% endif %}
+          {% if d.payment_standard %}<div class="yp25-price-sm">医保支付标准: {{ d.payment_standard }}{% if d.payment_validity %} · {{ d.payment_validity }}{% endif %}</div>{% endif %}
+        </td>
+        <td>{{ d.dosage_form or "—" }}</td>
+        <td class="yp25-remark-cell">{{ d.remark or "—" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% if total_pages > 1 %}
+<div class="pager">
+  <span class="pager-info">共 {{ total }} 条 · 第 {{ page }}/{{ total_pages }} 页</span>
+  <div class="pager-nav">
+    {% if page > 1 %}
+    <a class="pager-btn" href="{% if cur_category %}{{ url_for("yp2025_sx_browse", cat=cur_category, top=cur_top_code, sub=cur_sub.code, q=cur_q, page=page-1) }}{% else %}{{ url_for("yp2025_sx_browse", q=cur_q, page=page-1) }}{% endif %}">上一页</a>
+    {% endif %}
+    {% if page < total_pages %}
+    <a class="pager-btn" href="{% if cur_category %}{{ url_for("yp2025_sx_browse", cat=cur_category, top=cur_top_code, sub=cur_sub.code, q=cur_q, page=page+1) }}{% else %}{{ url_for("yp2025_sx_browse", q=cur_q, page=page+1) }}{% endif %}">下一页</a>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+{% else %}
+<div class="empty">
+  <svg class="empty-ico" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
+  <div class="empty-title">无药品</div>
+  <div class="empty-tip">该分类暂无药品</div>
+</div>
+{% endif %}
+
+<div class="back-row">
+  {% if cur_category %}
+  <a class="back-link" href="{{ url_for("yp2025_sx_browse", cat=cur_category, top=cur_top_code) }}">‹ 返回 {{ cur_top_code }} 子分类</a>
+  {% else %}
+  <a class="back-link" href="{{ url_for("yp2025_sx_browse") }}">‹ 返回陕版药品目录 2025</a>
+  {% endif %}
+</div>
+{% endblock %}

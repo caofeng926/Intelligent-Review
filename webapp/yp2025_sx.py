@@ -1,18 +1,18 @@
 # -*- coding: utf-8 -*-
-"""2025 版国家医保药品目录浏览页面.
+"""2025 版陕西省医保药品目录浏览页面.
 
-数据源: yp_catalog_2025 (4,783 条) + yp25_category_tree (49 顶层 + 622 子分类)
+数据源: yp_catalog_sx_2025 (4,783 条) + yp25sx_category_tree (顶层 + 子分类)
 
 路由:
-  GET /yp2025                                  - 5 大类入口
-  GET /yp2025?cat=<category>                   - 单大类: 顶层分类列表
-  GET /yp2025?cat=<cat>&top=<code>             - 顶层: 子分类列表
-  GET /yp2025?cat=<cat>&top=<code>&sub=<code>  - 子分类: 药品列表
-  GET /yp2025?q=<keyword>                      - 搜索 (FTS5)
-  GET /yp2025/<list_no>                        - 单药品详情
-  GET /api/yp2025/search                       - FTS5 JSON
-  GET /api/yp2025/stats                        - 统计 JSON
-  GET /api/yp2025/tree                         - 分类树 JSON
+  GET /yp2025_sx                                  - 5 大类入口
+  GET /yp2025_sx?cat=<category>                   - 单大类: 顶层分类列表
+  GET /yp2025_sx?cat=<cat>&top=<code>             - 顶层: 子分类列表
+  GET /yp2025_sx?cat=<cat>&top=<code>&sub=<code>  - 子分类: 药品列表
+  GET /yp2025_sx?q=<keyword>                      - 搜索 (FTS5)
+  GET /yp2025_sx/<list_no>                        - 单药品详情
+  GET /api/yp2025_sx/search                       - FTS5 JSON
+  GET /api/yp2025_sx/stats                        - 统计 JSON
+  GET /api/yp2025_sx/tree                         - 分类树 JSON
 
 查询结果表格列: 编码 / 甲乙类 / 名称 / 剂型 / 备注
 """
@@ -46,9 +46,9 @@ def _safe_fts_query(q: str) -> str:
 
 
 def register(app):
-    @app.get("/yp2025/")
-    @app.get("/yp2025")
-    def yp2025_browse():
+    @app.get("/yp2025_sx/")
+    @app.get("/yp2025_sx")
+    def yp2025_sx_browse():
         category = request.args.get("cat") or None
         top = (request.args.get("top") or "").strip() or None
         sub = (request.args.get("sub") or "").strip() or None
@@ -64,34 +64,35 @@ def register(app):
             stats = {}
             for cat in ALL_CATEGORIES:
                 n = conn.execute(
-                    "SELECT COUNT(*) FROM yp_catalog_2025 WHERE category = ?",
+                    "SELECT COUNT(*) FROM yp_catalog_sx_2025 WHERE category = ?",
                     (cat,),
                 ).fetchone()[0]
                 stats[cat] = n
             stats["总计"] = sum(stats.values())
 
-            # 视图选择: tree 模式 (cat+top+sub 路径), list 模式 (默认/搜索)
+            # 视图选择: tree 模式 (cat+top+sub 路径), 全局搜索, 默认入口
             if category and category in ALL_CATEGORIES:
                 if sub:
-                    # 子分类页: 药品列表 (表格)
                     return _render_sub_drugs(conn, category, top, sub, q, page, limit, offset, stats)
                 if top:
-                    # 顶层页: 子分类列表
                     return _render_top_subs(conn, category, top, q, stats)
-                # 大类页: 顶层分类列表
                 return _render_category_tops(conn, category, q, stats)
 
-            # 默认入口: 5 大类卡片
+            # 全局搜索: 有 q 无 cat -> 跨大类查询结果页
+            if q and not category:
+                return _render_search(conn, q, page, limit, offset, stats)
+
+            # 默认入口
             return _render_entry(conn, q, stats)
 
-    @app.get("/yp2025/<list_no>")
-    def yp2025_detail(list_no):
+    @app.get("/yp2025_sx/<list_no>")
+    def yp2025_sx_detail(list_no):
         from urllib.parse import unquote
         list_no_decoded = unquote(list_no)
         with db.connect() as conn:
             conn.row_factory = sqlite3.Row
             rows = conn.execute(
-                """SELECT * FROM yp_catalog_2025
+                """SELECT * FROM yp_catalog_sx_2025
                    WHERE list_no = ? ORDER BY category, dosage_form""",
                 (list_no_decoded,),
             ).fetchall()
@@ -104,21 +105,21 @@ def register(app):
                 related = [
                     dict(r) for r in conn.execute(
                         """SELECT list_no, name, dosage_form, list_class
-                           FROM yp_catalog_2025
+                           FROM yp_catalog_sx_2025
                            WHERE category = ? AND category_code = ?
                            ORDER BY list_no LIMIT 20""",
                         (item["category"], item["category_code"]),
                     ).fetchall()
                 ]
         return render_template(
-            "yp2025_detail.html",
+            "yp2025_sx_detail.html",
             item=item,
             variants=variants,
             related=related,
         )
 
-    @app.get("/api/yp2025/search")
-    def api_yp2025_search():
+    @app.get("/api/yp2025_sx/search")
+    def api_yp2025_sx_search():
         q = (request.args.get("q") or "").strip()
         limit = _page_size(default=20, max_=100)
         if not q:
@@ -131,9 +132,9 @@ def register(app):
                     """SELECT d.id, d.list_no, d.name, d.category, d.list_class,
                               d.category_code, d.category_name, d.dosage_form,
                               d.remark, d.payment_standard
-                       FROM yp_catalog_2025_fts f
-                       JOIN yp_catalog_2025 d ON d.id = f.rowid
-                       WHERE yp_catalog_2025_fts MATCH ?
+                       FROM yp_catalog_sx_2025_fts f
+                       JOIN yp_catalog_sx_2025 d ON d.id = f.rowid
+                       WHERE yp_catalog_sx_2025_fts MATCH ?
                        ORDER BY rank LIMIT ?""",
                     (fts_q, limit),
                 ).fetchall()
@@ -143,7 +144,7 @@ def register(app):
                     """SELECT id, list_no, name, category, list_class,
                               category_code, category_name, dosage_form,
                               remark, payment_standard
-                       FROM yp_catalog_2025
+                       FROM yp_catalog_sx_2025
                        WHERE name LIKE ? OR remark LIKE ?
                        ORDER BY name LIMIT ?""",
                     (like, like, limit),
@@ -154,21 +155,21 @@ def register(app):
             "q": q,
         })
 
-    @app.get("/api/yp2025/stats")
-    def api_yp2025_stats():
+    @app.get("/api/yp2025_sx/stats")
+    def api_yp2025_sx_stats():
         with db.connect() as conn:
-            total = conn.execute("SELECT COUNT(*) FROM yp_catalog_2025").fetchone()[0]
+            total = conn.execute("SELECT COUNT(*) FROM yp_catalog_sx_2025").fetchone()[0]
             by_cat = conn.execute(
-                "SELECT category, COUNT(*) FROM yp_catalog_2025 GROUP BY category ORDER BY category"
+                "SELECT category, COUNT(*) FROM yp_catalog_sx_2025 GROUP BY category ORDER BY category"
             ).fetchall()
             by_class = conn.execute(
                 """SELECT category, list_class, COUNT(*)
-                   FROM yp_catalog_2025 GROUP BY category, list_class
+                   FROM yp_catalog_sx_2025 GROUP BY category, list_class
                    ORDER BY category, list_class"""
             ).fetchall()
             tree = conn.execute(
                 """SELECT category, code, name, level, parent_code, drug_count
-                   FROM yp25_category_tree ORDER BY category, level, code"""
+                   FROM yp25sx_category_tree ORDER BY category, level, code"""
             ).fetchall()
         return jsonify({
             "total": total,
@@ -179,21 +180,21 @@ def register(app):
                      for r in tree],
         })
 
-    @app.get("/api/yp2025/tree")
-    def api_yp2025_tree():
+    @app.get("/api/yp2025_sx/tree")
+    def api_yp2025_sx_tree():
         cat = (request.args.get("cat") or "").strip()
         with db.connect() as conn:
             conn.row_factory = sqlite3.Row
             if cat:
                 rows = conn.execute(
                     """SELECT code, name, level, parent_code, drug_count
-                       FROM yp25_category_tree WHERE category = ?
+                       FROM yp25sx_category_tree WHERE category = ?
                        ORDER BY level, code""", (cat,)
                 ).fetchall()
             else:
                 rows = conn.execute(
                     """SELECT category, code, name, level, parent_code, drug_count
-                       FROM yp25_category_tree ORDER BY category, level, code"""
+                       FROM yp25sx_category_tree ORDER BY category, level, code"""
                 ).fetchall()
         return jsonify({"nodes": [dict(r) for r in rows]})
 
@@ -203,7 +204,7 @@ def register(app):
 def _render_entry(conn, q, stats):
     """默认入口: 5 大类卡片."""
     return render_template(
-        "yp2025_entry.html",
+        "yp2025_sx_entry.html",
         stats=stats,
         categories=ALL_CATEGORIES,
         cur_q=q,
@@ -214,12 +215,12 @@ def _render_category_tops(conn, category, q, stats):
     """单大类: 顶层分类列表."""
     tops = conn.execute(
         """SELECT code, name, drug_count
-           FROM yp25_category_tree
+           FROM yp25sx_category_tree
            WHERE category = ? AND level = 1
            ORDER BY code""", (category,)
     ).fetchall()
     return render_template(
-        "yp2025_top.html",
+        "yp2025_sx_top.html",
         stats=stats,
         categories=ALL_CATEGORIES,
         cur_category=category,
@@ -231,7 +232,7 @@ def _render_category_tops(conn, category, q, stats):
 def _render_top_subs(conn, category, top, q, stats):
     """顶层: 子分类列表."""
     top_node = conn.execute(
-        """SELECT code, name, drug_count FROM yp25_category_tree
+        """SELECT code, name, drug_count FROM yp25sx_category_tree
            WHERE category = ? AND level = 1 AND code = ?""",
         (category, top),
     ).fetchone()
@@ -239,12 +240,12 @@ def _render_top_subs(conn, category, top, q, stats):
         abort(404)
     subs = conn.execute(
         """SELECT code, name, drug_count
-           FROM yp25_category_tree
+           FROM yp25sx_category_tree
            WHERE category = ? AND level = 2 AND parent_code = ?
            ORDER BY code""", (category, top)
     ).fetchall()
     return render_template(
-        "yp2025_sub.html",
+        "yp2025_sx_sub.html",
         stats=stats,
         categories=ALL_CATEGORIES,
         cur_category=category,
@@ -257,7 +258,7 @@ def _render_top_subs(conn, category, top, q, stats):
 def _render_sub_drugs(conn, category, top, sub, q, page, limit, offset, stats):
     """子分类: 药品列表 (表格: 编码 / 甲乙类 / 名称 / 剂型 / 备注)."""
     sub_node = conn.execute(
-        """SELECT code, name FROM yp25_category_tree
+        """SELECT code, name FROM yp25sx_category_tree
            WHERE category = ? AND level = 2 AND parent_code = ? AND code = ?""",
         (category, top, sub),
     ).fetchone()
@@ -275,12 +276,12 @@ def _render_sub_drugs(conn, category, top, sub, q, page, limit, offset, stats):
     where = " AND ".join(where_parts)
 
     total = conn.execute(
-        f"SELECT COUNT(*) FROM yp_catalog_2025 WHERE {where}", params
+        f"SELECT COUNT(*) FROM yp_catalog_sx_2025 WHERE {where}", params
     ).fetchone()[0]
     rows = conn.execute(
         f"""SELECT category_code, list_class, name, dosage_form, remark,
                    list_no, payment_standard, payment_validity, category
-            FROM yp_catalog_2025
+            FROM yp_catalog_sx_2025
             WHERE {where}
             ORDER BY list_no, name, dosage_form
             LIMIT ? OFFSET ?""",
@@ -289,7 +290,7 @@ def _render_sub_drugs(conn, category, top, sub, q, page, limit, offset, stats):
 
     total_pages = max(1, (total + limit - 1) // limit)
     return render_template(
-        "yp2025_drugs.html",
+        "yp2025_sx_drugs.html",
         stats=stats,
         categories=ALL_CATEGORIES,
         cur_category=category,
@@ -301,4 +302,60 @@ def _render_sub_drugs(conn, category, top, sub, q, page, limit, offset, stats):
         total_pages=total_pages,
         limit=limit,
         cur_q=q,
+    )
+
+def _render_search(conn, q, page, limit, offset, stats):
+    """全局搜索结果页: 跨 5 大类, 表格 5 列."""
+    fts_q = _safe_fts_query(q)
+    try:
+        total = conn.execute(
+            "SELECT COUNT(*) FROM yp_catalog_sx_2025_fts WHERE yp_catalog_sx_2025_fts MATCH ?",
+            (fts_q,),
+        ).fetchone()[0]
+    except Exception:
+        total = 0
+    if total:
+        rows = conn.execute(
+            """SELECT d.category_code, d.list_class, d.name, d.dosage_form, d.remark,
+                      d.list_no, d.payment_standard, d.payment_validity, d.category
+               FROM yp_catalog_sx_2025_fts f
+               JOIN yp_catalog_sx_2025 d ON d.id = f.rowid
+               WHERE yp_catalog_sx_2025_fts MATCH ?
+               ORDER BY rank LIMIT ? OFFSET ?""",
+            (fts_q, limit, offset),
+        ).fetchall()
+        drugs = [dict(r) for r in rows]
+    else:
+        # fallback: LIKE
+        like = f"%{q}%"
+        total = conn.execute(
+            """SELECT COUNT(*) FROM yp_catalog_sx_2025
+               WHERE name LIKE ? OR dosage_form LIKE ? OR remark LIKE ? OR category_name LIKE ?""",
+            (like, like, like, like),
+        ).fetchone()[0]
+        rows = conn.execute(
+            """SELECT category_code, list_class, name, dosage_form, remark,
+                      list_no, payment_standard, payment_validity, category
+               FROM yp_catalog_sx_2025
+               WHERE name LIKE ? OR dosage_form LIKE ? OR remark LIKE ? OR category_name LIKE ?
+               ORDER BY list_no, name LIMIT ? OFFSET ?""",
+            (like, like, like, like, limit, offset),
+        ).fetchall()
+        drugs = [dict(r) for r in rows]
+
+    total_pages = max(1, (total + limit - 1) // limit)
+    return render_template(
+        "yp2025_sx_drugs.html",
+        stats=stats,
+        categories=ALL_CATEGORIES,
+        cur_category=None,
+        cur_top_code=None,
+        cur_sub={"code": "全局搜索", "name": f"搜索: {q}"},
+        drugs=drugs,
+        total=total,
+        page=page,
+        total_pages=total_pages,
+        limit=limit,
+        cur_q=q,
+        search_mode=True,
     )

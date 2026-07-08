@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}{{ item.name }} · 陕版药品目录 2025 · 医保智审{% endblock %}
+{% block content %}
+<section class="page-head">
+  <h1 class="page-title">{{ item.name }}</h1>
+  <p class="page-sub">
+    <span class="yp25-badge yp25-badge-{{ item.category }}">{{ item.category }}</span>
+    {% if item.list_class %}<span class="yp25-class yp25-class-{{ item.list_class }}">{{ item.list_class }}类</span>{% endif %}
+    {% if item.dosage_form %} · {{ item.dosage_form }}{% endif %}
+    {% if item.list_no %} · 编号 {{ item.list_no }}{% endif %}
+  </p>
+</section>
+
+<nav class="bread">
+  <a href="{{ url_for('nhsa_index') }}">标准数据库</a> <span class="bread-sep">›</span>
+  <a href="{{ url_for('yp2025_sx_browse') }}">陕版药品目录 2025</a> <span class="bread-sep">›</span>
+  {% if item.category %}
+  <a href="{{ url_for('yp2025_sx_browse', cat=item.category) }}">{{ item.category }}</a>
+  <span class="bread-sep">›</span>
+  {% endif %}
+  <span class="bread-cur">{{ item.name }}</span>
+</nav>
+
+<section class="detail-card">
+  <dl class="detail-list">
+    {% if item.category_code %}
+    <dt>分类代码</dt>
+    <dd><code>{{ item.category_code }}</code> · {{ item.category_name or '—' }}</dd>
+    {% endif %}
+
+    {% if item.dosage_form %}
+    <dt>剂型</dt>
+    <dd>{{ item.dosage_form }}</dd>
+    {% endif %}
+
+    {% if item.payment_standard %}
+    <dt>医保支付标准</dt>
+    <dd class="yp25-price">{{ item.payment_standard }}</dd>
+    {% endif %}
+
+    {% if item.payment_validity %}
+    <dt>协议有效期</dt>
+    <dd>{{ item.payment_validity }}</dd>
+    {% endif %}
+
+    {% if item.remark %}
+    <dt>备注 / 限制</dt>
+    <dd class="yp25-remark">{{ item.remark }}</dd>
+    {% endif %}
+
+    <dt>来源</dt>
+    <dd>《基本医保药品目录》PDF 第 {{ item.page_no or '—' }} 页</dd>
+
+    {% if item.star_ref %}
+    <dt>引用</dt>
+    <dd>
+      本条目引用编号 <a href="{{ url_for('yp2025_sx_detail', list_no=item.star_ref|urlencode) }}">{{ item.star_ref }}</a>
+      (其他剂型)
+    </dd>
+    {% endif %}
+  </dl>
+</section>
+
+{% if variants %}
+<section class="section-block">
+  <h2 class="section-title">同编号的其他剂型</h2>
+  <section class="list-card">
+    {% for r in variants %}
+    <a class="list-row" href="{{ url_for('yp2025_sx_detail', list_no=r.list_no|urlencode) }}">
+      <div class="list-main">
+        <div class="list-name">
+          {{ r.dosage_form or '(剂型未列)' }}
+          {% if r.remark %}<span class="yp25-remark"> · {{ r.remark|truncate2(80) }}</span>{% endif %}
+        </div>
+      </div>
+      <div class="list-arrow">›</div>
+    </a>
+    {% endfor %}
+  </section>
+</section>
+{% endif %}
+
+{% if related %}
+<section class="section-block">
+  <h2 class="section-title">同分类 ({{ item.category_code }} · {{ item.category_name }}) 下其他药品</h2>
+  <section class="list-card">
+    {% for r in related %}
+    <a class="list-row" href="{{ url_for('yp2025_sx_detail', list_no=r.list_no|urlencode) }}">
+      <div class="list-main">
+        <div class="list-code">
+          <span class="yp25-class yp25-class-{{ r.list_class }}">{{ r.list_class }}</span>
+          <span class="yp25-no">{{ r.list_no }}</span>
+        </div>
+        <div class="list-name">{{ r.name }}{% if r.dosage_form %} · {{ r.dosage_form }}{% endif %}</div>
+      </div>
+      <div class="list-arrow">›</div>
+    </a>
+    {% endfor %}
+  </section>
+</section>
+{% endif %}
+
+<div class="back-row">
+  <a class="back-link" href="{{ url_for('yp2025_sx_browse', cat=item.category) }}">‹ 返回 {{ item.category }}</a>
+</div>
+{% endblock %}

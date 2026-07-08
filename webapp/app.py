@@ -20,7 +20,7 @@ import sys
 
 from flask import Flask, abort, jsonify, render_template, request
 
-from . import admin, db, nhsa_api, nhsa_browse, yp2025
+from . import admin, db, nhsa_api, nhsa_browse, yp2025, yp2025_sx
 from .helpers import PAGE_SIZE, SOURCE_LABEL
 from .query_utils import fts_search, row_to_dict
 from .search_backend import _row_to_kp_dict, detect_mode, do_search
@@ -39,6 +39,8 @@ rules.register(app)
 nhsa_browse.register(app)
 from . import yp2025  # noqa: E402, F401
 yp2025.register(app)
+from . import yp2025_sx  # noqa: E402, F401
+yp2025_sx.register(app)
 app.register_blueprint(admin.admin_bp)
 app.config["JSON_AS_ASCII"] = False
 # 静态资源缓存: 本地开发可即时刷新, 生产可走 CDN/反向代理缓存
@@ -79,6 +81,7 @@ def home():
             "batches": conn.execute("SELECT COUNT(*) FROM batches").fetchone()[0],
             "consumables": conn.execute("SELECT COUNT(*) FROM consumable_codes").fetchone()[0],
             "yp_catalog_2025": _safe_count(conn, "yp_catalog_2025"),
+            "yp_catalog_sx_2025": _safe_count(conn, "yp_catalog_sx_2025"),
             "sn_ms": _safe_count(conn, "sn_ms_codes"),
             "sn_ms_material": _safe_count(conn, "sn_ms_material_codes"),
         }

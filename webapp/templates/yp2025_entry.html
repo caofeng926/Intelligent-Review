@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}2025 版国家医保药品目录 · 医保智审{% endblock %}
+{% block content %}
+<section class="page-head">
+  <h1 class="page-title">2025 版国家医保药品目录</h1>
+  <p class="page-sub">{{ "{:,}".format(stats.get("总计", 0)) }} 条 · 西药 / 中成药 / 谈判药品 / 中药饮片</p>
+</section>
+
+<nav class="bread">
+  <a href="{{ url_for("nhsa_index") }}">标准数据库</a>
+  <span class="bread-sep">›</span>
+  <span class="bread-cur">2025 版药品目录</span>
+</nav>
+
+<form action="{{ url_for("yp2025_browse") }}" method="get" class="hero-search" style="margin-bottom: var(--s-4);">
+  <svg class="hero-search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+  <input name="q" type="search" value="{{ cur_q|default("",true) }}" placeholder="输入药品名称 / 编码 / 剂型 / 备注" enterkeyhint="search">
+  <button class="hero-search-btn" type="submit">搜索</button>
+</form>
+
+<section class="yp25-grid">
+  {% for c in categories %}
+  <a class="yp25-tile" href="{{ url_for("yp2025_browse", cat=c) }}">
+    <div class="yp25-tile-name">{{ c }}</div>
+    <div class="yp25-tile-count">{{ "{:,}".format(stats.get(c, 0)) }} <span>条</span></div>
+    <div class="yp25-tile-arrow">›</div>
+  </a>
+  {% endfor %}
+</section>
+
+<section class="info-banner">
+  <svg class="info-banner-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+  <div class="info-banner-body">
+    <div class="info-banner-title">关于 2025 版国家医保药品目录</div>
+    <div class="info-banner-text">
+      数据来源：国家医保局《基本医疗保险、生育保险和工伤保险药品目录》(2026-07-06 维护)。
+      含西药 / 中成药 / 协议期内谈判药品 / 中药饮片 4 大部分, 共 {{ "{:,}".format(stats.get("总计", 0)) }} 条。
+      支持名称 / 编码 / 剂型 / 备注 FTS5 搜索。
+    </div>
+  </div>
+</section>
+{% endblock %}

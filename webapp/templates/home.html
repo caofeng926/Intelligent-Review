@@ -43,7 +43,7 @@
   </div>
 </section>
 
-<!-- ============== 快速入口 (3 个) ============== -->
+<!-- ============== 快速入口 (4 个) ============== -->
 <section class="sec-head">
   <h2 class="sec-title"><span class="sec-title-bar"></span>快速入口</h2>
 </section>
@@ -90,6 +90,20 @@
       <span class="quick-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
     </div>
   </a>
+  <a class="quick-card qc-yp-sx" href="{{ url_for('yp2025_sx_browse') }}">
+    <div class="quick-card-header">
+      <div class="quick-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 20.5 10.5 16a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v4.5"/><path d="M3.5 16h7"/><path d="M3.5 13.5h7"/><path d="M3.5 11h7"/><path d="M3.5 8.5h7"/><path d="M3.5 6h7"/><path d="M13.5 22h7v-9.5a2 2 0 0 0-2-2"/><circle cx="16" cy="11.5" r="2.5"/><path d="M16 9V6.5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2V20.5"/></svg></div>
+      <div>
+        <div class="quick-title">陕版药品目录 2025 版</div>
+        <div class="quick-sub">西药 / 中成药 / 谈判 / 中药饮片 · 逐级分类</div>
+      </div>
+    </div>
+    <div class="quick-footer">
+      <span class="quick-count">{{ "{:,}".format(stats.get('yp_catalog_sx_2025', 0)) }} 条</span>
+      <span class="quick-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
+    </div>
+  </a>
+
 
 </section>
 
@@ -124,7 +138,7 @@
     <a class="std-card" href="{{ url_for('yp2025_browse') }}" style="--std-color: #0d9488; --std-shadow: rgba(13,148,136,.25);">
       <div class="std-icon" style="background: #0d9488;">YP25</div>
       <div class="std-info">
-        <div class="std-name">2025 版药品目录</div>
+        <div class="std-name">国家版药品目录 2025 版</div>
         <div class="std-count">{{ "{:,}".format(stats.get('yp_catalog_2025', 4783)) }} 条</div>
       </div>
     </a>
