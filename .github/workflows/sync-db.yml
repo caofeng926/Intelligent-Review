@@ -1,0 +1,60 @@
+name: Sync kp.db (manual)
+
+# Manual-trigger only. kp.db is ~434 MB; do NOT run on every push.
+# Use the Actions tab -> "Run workflow" after pulling a fresh build locally.
+on:
+  workflow_dispatch:
+    inputs:
+      note:
+        description: '本次同步说明 (optional)'
+        required: false
+        default: ''
+
+jobs:
+  sync-db:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Confirm kp.db exists in working tree
+        run: |
+          if [ ! -f webapp/data/kp.db ]; then
+            echo "::error::webapp/data/kp.db not found in repo (likely gitignored)"
+            exit 1
+          fi
+          ls -lh webapp/data/kp.db
+
+      - name: Upload kp.db to /opt/medical-audit/webapp/data/kp.db.bak.new
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          password: ${{ secrets.SSH_PASS }}
+          source: "webapp/data/kp.db"
+          target: "/opt/medical-audit/webapp/data/kp.db.bak.new"
+          strip_components: 0
+          overwrite: true
+
+      - name: Atomic swap + restart
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          password: ${{ secrets.SSH_PASS }}
+          script: |
+            set -e
+            cd /opt/medical-audit/webapp/data
+            if [ ! -f kp.db.bak.new ]; then
+              echo "::error::kp.db.bak.new missing on remote"
+              exit 1
+            fi
+            if [ -f kp.db ]; then
+              mv kp.db kp.db.bak.$(date +%Y%m%d_%H%M%S)
+            fi
+            mv kp.db.bak.new kp.db
+            ls -lh kp.db kp.db.bak.* 2>/dev/null || true
+            systemctl restart medical-audit.service
+            sleep 5
+            curl -fsS http://127.0.0.1:5000/ >/dev/null && echo "OK healthcheck passed" || (echo "FAIL healthcheck"; exit 1)
