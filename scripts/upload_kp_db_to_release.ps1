@@ -62,7 +62,8 @@ param(
 $ErrorActionPreference = 'Stop'
 $ProgressPreference    = 'SilentlyContinue'
 
-# Prompt for PAT if not provided
+# Prompt for PAT if not provided (use Marshal instead of ConvertFrom-SecureString -AsPlainText
+# to stay compatible with Windows PowerShell 5.1)
 if ([string]::IsNullOrWhiteSpace($Pat)) {
     $secure = Read-Host "GitHub PAT (public_repo + workflow scopes)" -AsSecureString
     $bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
@@ -124,7 +125,8 @@ try {
     # 3. Upload kp.db as asset (GitHub supports up to 2 GB)
     Write-Host "[3/4] Uploading kp.db ($dbSizeMb MB)... this can take a while on slow links"
     $uploadUrl = $release.upload_url -replace '\{.*\}$', ''
-    $assetUrl = "$uploadUrl?name=kp.db"
+    # NB: use + for concatenation; "$uploadUrl?name" gets parsed as a nullable variable scope in PS
+    $assetUrl = $uploadUrl + '?name=kp.db'
     $sw = [System.Diagnostics.Stopwatch]::StartNew()
     try {
         Invoke-RestMethod -Uri $assetUrl -Headers $hdrBin -Method Post -InFile $dbFull -ContentType 'application/octet-stream' | Out-Null
