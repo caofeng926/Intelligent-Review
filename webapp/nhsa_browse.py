@@ -820,7 +820,7 @@ def register(app):
         """4 级下钻: 一级 → 二级(L2) → 三级(L3/L4) → 四级(L4/L5) → 五级(L5 明细)."""
         limit = _limit()
         import re as _re
-        m = _re.match(r"\\d+", parent_code or "")
+        m = _re.match(r"(\d+)", parent_code or "")
         parent_digits = m.group(1) if m else ""
         with db.connect() as conn:
             total = conn.execute("SELECT COUNT(*) FROM sn_ms_codes").fetchone()[0]
