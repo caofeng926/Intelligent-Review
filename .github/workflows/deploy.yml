@@ -14,6 +14,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Sanity-check secrets
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PASS: ${{ secrets.SSH_PASS }}
+        run: |
+          for k in SSH_HOST SSH_USER SSH_PASS; do
+            v="${!k}"
+            if [ -z "$v" ]; then
+              echo "$k: <MISSING or empty>"
+            else
+              echo "$k: <set, length ${#v}>"
+            fi
+          done
+
       - name: Sync webapp/ to CVM (small files only)
         uses: appleboy/scp-action@v0.1.7
         with:

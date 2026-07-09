@@ -23,6 +23,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Sanity-check secrets
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PASS: ${{ secrets.SSH_PASS }}
+        run: |
+          for k in SSH_HOST SSH_USER SSH_PASS; do
+            v="${!k}"
+            if [ -z "$v" ]; then
+              echo "$k: <MISSING or empty>"
+            else
+              echo "$k: <set, length ${#v}>"
+            fi
+          done
+
       - name: Download kp.db from release
         env:
           RELEASE_TAG: ${{ github.event.inputs.release_tag }}
