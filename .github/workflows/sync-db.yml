@@ -1,14 +1,19 @@
-name: Sync kp.db (manual)
+﻿name: Sync kp.db (manual)
 
-# Manual-trigger only. kp.db is ~434 MB; do NOT run on every push.
-# Use the Actions tab -> "Run workflow" after pulling a fresh build locally.
+# Manual-trigger only. kp.db is ~373 MB; do NOT run on every push.
+# Use the Actions tab -> "Run workflow" after uploading kp.db to a release
+# (see scripts/upload_kp_db_to_release.ps1).
+#
+# The DB is .gitignored, so we cannot read it from the working tree.
+# Instead, the runner downloads it from a GitHub release asset and
+# uploads to the CVM, where an atomic swap + restart is performed.
 on:
   workflow_dispatch:
     inputs:
-      note:
-        description: '本次同步说明 (optional)'
+      release_tag:
+        description: 'GitHub release tag containing kp.db asset (default: kp-db-latest)'
         required: false
-        default: ''
+        default: 'kp-db-latest'
 
 jobs:
   sync-db:
@@ -18,13 +23,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Confirm kp.db exists in working tree
+      - name: Download kp.db from release
+        env:
+          RELEASE_TAG: ${{ github.event.inputs.release_tag }}
         run: |
-          if [ ! -f webapp/data/kp.db ]; then
-            echo "::error::webapp/data/kp.db not found in repo (likely gitignored)"
-            exit 1
-          fi
-          ls -lh webapp/data/kp.db
+          set -e
+          echo "Downloading kp.db from release: ${RELEASE_TAG}"
+          URL="https://github.com/caofeng926/Intelligent-Review/releases/download/${RELEASE_TAG}/kp.db"
+          echo "URL: $URL"
+          curl -fSL --retry 3 -o kp.db "$URL"
+          ls -lh kp.db
+          md5sum kp.db
 
       - name: Upload kp.db to /opt/medical-audit/webapp/data/kp.db.bak.new
         uses: appleboy/scp-action@v0.1.7
@@ -32,7 +41,7 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           password: ${{ secrets.SSH_PASS }}
-          source: "webapp/data/kp.db"
+          source: "kp.db"
           target: "/opt/medical-audit/webapp/data/kp.db.bak.new"
           strip_components: 0
           overwrite: true
