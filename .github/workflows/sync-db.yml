@@ -42,13 +42,13 @@ jobs:
           HOST=${{ secrets.SSH_HOST }}
           USER=${{ secrets.SSH_USER }}
           echo "=== test 1: sshpass with -o PreferredAuthentications=password,keyboard-interactive ==="
-          sshpass -e ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+          sshpass -e ssh -p 2222 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
             -o PreferredAuthentications=password,keyboard-interactive \
             -o PubkeyAuthentication=no \
             ${USER}@${HOST} "echo PASSWORD_AUTH_OK" 2>&1 | head -5
           echo ""
           echo "=== test 2: ssh -v, grep auth methods ==="
-          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+          ssh -p 2222 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
             -o PreferredAuthentications=password \
             -o PubkeyAuthentication=no \
             -o ConnectTimeout=10 \
