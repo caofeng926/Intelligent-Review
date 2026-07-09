@@ -1,12 +1,8 @@
-﻿name: Sync kp.db (manual)
+name: Sync kp.db (manual)
 
 # Manual-trigger only. kp.db is ~373 MB; do NOT run on every push.
-# Use the Actions tab -> "Run workflow" after uploading kp.db to a release
-# (see scripts/upload_kp_db_to_release.ps1).
-#
-# The DB is .gitignored, so we cannot read it from the working tree.
-# Instead, the runner downloads it from a GitHub release asset and
-# uploads to the CVM, where an atomic swap + restart is performed.
+# The DB is .gitignored, so the runner downloads it from a GitHub release
+# and SCPs it to the CVM, then performs an atomic swap + restart.
 on:
   workflow_dispatch:
     inputs:
@@ -50,35 +46,43 @@ jobs:
           ls -lh kp.db
           md5sum kp.db
 
-      - name: Upload kp.db to /opt/medical-audit/webapp/data/kp.db.bak.new
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          password: ${{ secrets.SSH_PASS }}
-          source: "kp.db"
-          target: "/opt/medical-audit/webapp/data/kp.db.bak.new"
-          strip_components: 0
-          overwrite: true
+      - name: Install sshpass
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y sshpass
 
-      - name: Atomic swap + restart
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          password: ${{ secrets.SSH_PASS }}
-          script: |
-            set -e
-            cd /opt/medical-audit/webapp/data
-            if [ ! -f kp.db.bak.new ]; then
-              echo "::error::kp.db.bak.new missing on remote"
-              exit 1
-            fi
-            if [ -f kp.db ]; then
-              mv kp.db kp.db.bak.$(date +%Y%m%d_%H%M%S)
-            fi
-            mv kp.db.bak.new kp.db
-            ls -lh kp.db kp.db.bak.* 2>/dev/null || true
-            systemctl restart medical-audit.service
-            sleep 5
-            curl -fsS http://127.0.0.1:5000/ >/dev/null && echo "OK healthcheck passed" || (echo "FAIL healthcheck"; exit 1)
+      - name: Upload kp.db to CVM
+        env:
+          SSHPASS: ${{ secrets.SSH_PASS }}
+        run: |
+          set -e
+          HOST=${{ secrets.SSH_HOST }}
+          USER=${{ secrets.SSH_USER }}
+          REMOTE=/opt/medical-audit/webapp/data
+          echo "Uploading kp.db to ${USER}@${HOST}:${REMOTE}/kp.db.bak.new ..."
+          sshpass -e scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+            kp.db ${USER}@${HOST}:${REMOTE}/kp.db.bak.new
+
+      - name: Atomic swap + restart + healthcheck
+        env:
+          SSHPASS: ${{ secrets.SSH_PASS }}
+        run: |
+          set -e
+          HOST=${{ secrets.SSH_HOST }}
+          USER=${{ secrets.SSH_USER }}
+          sshpass -e ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+            ${USER}@${HOST} \
+            'set -e
+             cd /opt/medical-audit/webapp/data
+             if [ ! -f kp.db.bak.new ]; then
+               echo "::error::kp.db.bak.new missing on remote"
+               exit 1
+             fi
+             if [ -f kp.db ]; then
+               mv kp.db kp.db.bak.$(date +%Y%m%d_%H%M%S)
+             fi
+             mv kp.db.bak.new kp.db
+             ls -lh kp.db kp.db.bak.* 2>/dev/null || true
+             systemctl restart medical-audit.service
+             sleep 5
+             curl -fsS http://127.0.0.1:5000/ >/dev/null && echo "OK healthcheck passed" || (echo "FAIL healthcheck"; exit 1)'
