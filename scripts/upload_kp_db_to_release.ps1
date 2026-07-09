@@ -20,8 +20,9 @@
   PAT scope required: public_repo (or full repo) plus workflow (if -Trigger).
 
 .PARAMETER Pat
-  GitHub Personal Access Token. Used for Authorization header and
-  discarded from memory after the script exits.
+  GitHub Personal Access Token. If omitted, the script prompts for it
+  (typed input is masked). The token is held in a local string variable
+  and overwritten with spaces at end of script.
 
 .PARAMETER Tag
   Release tag. Default: kp-db-latest. If a release with this tag already
@@ -38,16 +39,15 @@
   the run URL. Requires workflow PAT scope.
 
 .EXAMPLE
-  # Upload + trigger (one-shot, needs public_repo + workflow scopes)
-  .\scripts\upload_kp_db_to_release.ps1 -Pat ghp_xxxxxxx -Trigger
+  # One-shot: prompts for PAT, uploads, then triggers sync-db
+  .\scripts\upload_kp_db_to_release.ps1 -Trigger
 
 .EXAMPLE
-  # Upload only; trigger the workflow manually from the web UI
-  .\scripts\upload_kp_db_to_release.ps1 -Pat ghp_xxxxxxx
+  # Pass PAT inline (less secure -- visible in shell history)
+  .\scripts\upload_kp_db_to_release.ps1 -Pat ghp_xxxxxxx -Trigger
 #>
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory = $true)]
     [string] $Pat,
 
     [string] $Tag = 'kp-db-latest',
@@ -61,6 +61,20 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $ProgressPreference    = 'SilentlyContinue'
+
+# Prompt for PAT if not provided
+if ([string]::IsNullOrWhiteSpace($Pat)) {
+    $secure = Read-Host "GitHub PAT (public_repo + workflow scopes)" -AsSecureString
+    $bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
+    try {
+        $Pat = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr)
+    } finally {
+        [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
+    }
+}
+if ([string]::IsNullOrWhiteSpace($Pat)) {
+    throw "PAT is required"
+}
 
 # Resolve DB path
 $projectRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
@@ -79,70 +93,75 @@ $apiBase = "https://api.github.com/repos/$Repo"
 $hdrJson = @{ Authorization = "Bearer $Pat"; Accept = 'application/vnd.github+json'; 'X-GitHub-Api-Version' = '2022-11-28' }
 $hdrBin  = @{ Authorization = "Bearer $Pat"; Accept = 'application/vnd.github+json'; 'Content-Type' = 'application/octet-stream' }
 
-# 1. Check if release with this tag already exists
-Write-Host "`n[1/4] Checking if release '$Tag' exists..."
-$existing = $null
 try {
-    $existing = Invoke-RestMethod -Uri "$apiBase/releases/tags/$Tag" -Headers $hdrJson -Method Get
-} catch {
-    if ($_.Exception.Response.StatusCode -ne 404) { throw }
-}
-if ($existing) {
-    Write-Host "  found existing release id=$($existing.id) -- deleting for clean re-upload"
-    Invoke-RestMethod -Uri "$apiBase/releases/$($existing.id)" -Headers $hdrJson -Method Delete | Out-Null
-}
-
-# 2. Create new release
-Write-Host "[2/4] Creating release '$Tag'..."
-$body = @{
-    tag_name               = $Tag
-    target_commitish       = 'main'
-    name                   = "kp.db snapshot $Tag"
-    body                   = "Automated kp.db upload.`nSize: $dbSizeMb MB`nDate: $(Get-Date -Format 'u')"
-    draft                  = $false
-    prerelease             = $true
-    generate_release_notes = $false
-} | ConvertTo-Json -Depth 5
-$release = Invoke-RestMethod -Uri "$apiBase/releases" -Headers $hdrJson -Method Post -Body $body -ContentType 'application/json'
-Write-Host "  created id=$($release.id) url=$($release.html_url)"
-
-# 3. Upload kp.db as asset (GitHub supports up to 2 GB)
-Write-Host "[3/4] Uploading kp.db ($dbSizeMb MB)... this can take a while on slow links"
-$uploadUrl = $release.upload_url -replace '\{.*\}$', ''
-$assetUrl = "$uploadUrl?name=kp.db"
-$sw = [System.Diagnostics.Stopwatch]::StartNew()
-try {
-    Invoke-RestMethod -Uri $assetUrl -Headers $hdrBin -Method Post -InFile $dbFull -ContentType 'application/octet-stream' | Out-Null
-} catch {
-    Write-Error "Upload failed: $_"
-    throw
-}
-$sw.Stop()
-$mbps = [math]::Round(($dbSize / 1MB) / [math]::Max($sw.Elapsed.TotalSeconds, 1), 2)
-Write-Host ("  upload done in {0:N1}s ({1} MB/s)" -f $sw.Elapsed.TotalSeconds, $mbps)
-
-# 4. Verify
-Write-Host "[4/4] Verifying..."
-$assets = Invoke-RestMethod -Uri "$apiBase/releases/$($release.id)/assets" -Headers $hdrJson -Method Get
-$kpAsset = $assets | Where-Object { $_.name -eq 'kp.db' } | Select-Object -First 1
-if (-not $kpAsset) {
-    throw "kp.db asset not found on release"
-}
-Write-Host "  kp.db asset: $($kpAsset.browser_download_url) ($([math]::Round($kpAsset.size/1MB,1)) MB)"
-
-# 5. Optionally trigger sync-db workflow
-if ($Trigger) {
-    Write-Host "`n[5/5] Triggering sync-db workflow..."
-    $dispBody = @{ ref = 'main'; inputs = @{ release_tag = $Tag } } | ConvertTo-Json -Depth 5
+    # 1. Check if release with this tag already exists
+    Write-Host "`n[1/4] Checking if release '$Tag' exists..."
+    $existing = $null
     try {
-        Invoke-RestMethod -Uri "$apiBase/actions/workflows/sync-db.yml/dispatches" -Headers $hdrJson -Method Post -Body $dispBody -ContentType 'application/json' | Out-Null
+        $existing = Invoke-RestMethod -Uri "$apiBase/releases/tags/$Tag" -Headers $hdrJson -Method Get
     } catch {
-        Write-Warning "Trigger failed (you can still trigger manually): $_"
+        if ($_.Exception.Response.StatusCode -ne 404) { throw }
     }
-    Write-Host "  trigger accepted. Monitor at:"
-    Write-Host "    https://github.com/$Repo/actions/workflows/sync-db.yml"
-} else {
-    Write-Host "`nDone. Now trigger the sync-db workflow manually:"
-    Write-Host "  https://github.com/$Repo/actions/workflows/sync-db.yml"
-    Write-Host "  Tag: $Tag (default)"
+    if ($existing) {
+        Write-Host "  found existing release id=$($existing.id) -- deleting for clean re-upload"
+        Invoke-RestMethod -Uri "$apiBase/releases/$($existing.id)" -Headers $hdrJson -Method Delete | Out-Null
+    }
+
+    # 2. Create new release
+    Write-Host "[2/4] Creating release '$Tag'..."
+    $body = @{
+        tag_name               = $Tag
+        target_commitish       = 'main'
+        name                   = "kp.db snapshot $Tag"
+        body                   = "Automated kp.db upload.`nSize: $dbSizeMb MB`nDate: $(Get-Date -Format 'u')"
+        draft                  = $false
+        prerelease             = $true
+        generate_release_notes = $false
+    } | ConvertTo-Json -Depth 5
+    $release = Invoke-RestMethod -Uri "$apiBase/releases" -Headers $hdrJson -Method Post -Body $body -ContentType 'application/json'
+    Write-Host "  created id=$($release.id) url=$($release.html_url)"
+
+    # 3. Upload kp.db as asset (GitHub supports up to 2 GB)
+    Write-Host "[3/4] Uploading kp.db ($dbSizeMb MB)... this can take a while on slow links"
+    $uploadUrl = $release.upload_url -replace '\{.*\}$', ''
+    $assetUrl = "$uploadUrl?name=kp.db"
+    $sw = [System.Diagnostics.Stopwatch]::StartNew()
+    try {
+        Invoke-RestMethod -Uri $assetUrl -Headers $hdrBin -Method Post -InFile $dbFull -ContentType 'application/octet-stream' | Out-Null
+    } catch {
+        Write-Error "Upload failed: $_"
+        throw
+    }
+    $sw.Stop()
+    $mbps = [math]::Round(($dbSize / 1MB) / [math]::Max($sw.Elapsed.TotalSeconds, 1), 2)
+    Write-Host ("  upload done in {0:N1}s ({1} MB/s)" -f $sw.Elapsed.TotalSeconds, $mbps)
+
+    # 4. Verify
+    Write-Host "[4/4] Verifying..."
+    $assets = Invoke-RestMethod -Uri "$apiBase/releases/$($release.id)/assets" -Headers $hdrJson -Method Get
+    $kpAsset = $assets | Where-Object { $_.name -eq 'kp.db' } | Select-Object -First 1
+    if (-not $kpAsset) {
+        throw "kp.db asset not found on release"
+    }
+    Write-Host "  kp.db asset: $($kpAsset.browser_download_url) ($([math]::Round($kpAsset.size/1MB,1)) MB)"
+
+    # 5. Optionally trigger sync-db workflow
+    if ($Trigger) {
+        Write-Host "`n[5/5] Triggering sync-db workflow..."
+        $dispBody = @{ ref = 'main'; inputs = @{ release_tag = $Tag } } | ConvertTo-Json -Depth 5
+        try {
+            Invoke-RestMethod -Uri "$apiBase/actions/workflows/sync-db.yml/dispatches" -Headers $hdrJson -Method Post -Body $dispBody -ContentType 'application/json' | Out-Null
+        } catch {
+            Write-Warning "Trigger failed (you can still trigger manually): $_"
+        }
+        Write-Host "  trigger accepted. Monitor at:"
+        Write-Host "    https://github.com/$Repo/actions/workflows/sync-db.yml"
+    } else {
+        Write-Host "`nDone. Now trigger the sync-db workflow manually:"
+        Write-Host "  https://github.com/$Repo/actions/workflows/sync-db.yml"
+        Write-Host "  Tag: $Tag (default)"
+    }
+} finally {
+    # Best-effort PAT scrub
+    $Pat = ' ' * $Pat.Length
 }
