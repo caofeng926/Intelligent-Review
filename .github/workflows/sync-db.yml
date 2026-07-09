@@ -80,7 +80,7 @@ jobs:
           USER=${{ secrets.SSH_USER }}
           REMOTE=/opt/medical-audit/webapp/data
           echo "Uploading kp.db to ${USER}@${HOST}:${REMOTE}/kp.db.bak.new ..."
-          sshpass -e scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o PreferredAuthentications=password -o PubkeyAuthentication=no \
+          sshpass -e scp -P 2222 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o PreferredAuthentications=password -o PubkeyAuthentication=no \
             kp.db ${USER}@${HOST}:${REMOTE}/kp.db.bak.new
 
       - name: Atomic swap + restart + healthcheck
@@ -90,7 +90,7 @@ jobs:
           set -e
           HOST=${{ secrets.SSH_HOST }}
           USER=${{ secrets.SSH_USER }}
-          sshpass -e ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o PreferredAuthentications=password -o PubkeyAuthentication=no \
+          sshpass -e ssh -p 2222 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o PreferredAuthentications=password -o PubkeyAuthentication=no \
             ${USER}@${HOST} \
             'set -e
              cd /opt/medical-audit/webapp/data
