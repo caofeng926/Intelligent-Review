@@ -1,3 +1,4 @@
+# trigger-deploy: re-trigger deploy Action on 8c781ba so debug step is included
 """Flask web app for the 医保智审 knowledge base.
 
 Endpoints
