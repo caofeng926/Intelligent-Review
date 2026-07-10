@@ -103,6 +103,6 @@ jobs:
              fi
              mv kp.db.bak.new kp.db
              ls -lh kp.db kp.db.bak.* 2>/dev/null || true
-             systemctl restart medical-audit.service
+             sudo -S -p "" systemctl restart medical-audit.service <<< "$SSHPASS" >/dev/null 2>&1
              sleep 5
              curl -fsS http://127.0.0.1:5000/ >/dev/null && echo "OK healthcheck passed" || (echo "FAIL healthcheck"; exit 1)'

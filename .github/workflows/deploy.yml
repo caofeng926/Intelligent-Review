@@ -87,5 +87,4 @@ jobs:
           USER=${{ secrets.SSH_USER }}
           sshpass -e ssh -p 2222 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o PreferredAuthentications=password -o PubkeyAuthentication=no \
             ${USER}@${HOST} \
-            'systemctl restart medical-audit.service && sleep 5 && \
-             curl -fsS http://127.0.0.1:5000/ >/dev/null && echo "OK healthcheck passed" || (echo "FAIL healthcheck"; exit 1)'
+            'sudo -S -p "" systemctl restart medical-audit.service <<< "$SSHPASS" >/dev/null 2>&1 && sleep 5 && curl -fsS http://127.0.0.1:5000/ >/dev/null && echo "OK healthcheck passed" || (echo "FAIL healthcheck"; exit 1)'
