@@ -28,7 +28,7 @@ from typing import Optional
 from flask import jsonify, request
 
 from . import db
-from .query_utils import fts_query as _fts_query
+from .query_utils import fts_query as _fts_query, row_to_dict
 
 
 # ============================================================
