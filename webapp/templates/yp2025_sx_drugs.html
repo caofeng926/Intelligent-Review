@@ -63,7 +63,7 @@
     <tbody>
       {% for d in drugs %}
       <tr>
-        <td><code class="yp25-code">{{ d.category_code }}</code> <span class="yp25-no-sm">{{ d.list_no }}</span></td>
+        <td><code class="yp25-code">{{ d.category_code }}{{ d.list_no }}</code></td>
         <td>{% if d.list_class %}<span class="yp25-class yp25-class-{{ d.list_class }}">{{ d.list_class }}</span>{% endif %}</td>
         <td>
           <a class="yp25-drug-link" href="{{ url_for("yp2025_sx_detail", list_no=d.list_no|urlencode) }}">
