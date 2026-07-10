@@ -69,7 +69,7 @@
           <a class="yp25-drug-link" href="{{ url_for("yp2025_sx_detail", list_no=d.list_no|urlencode) }}">
             {{ d.name }}
           </a>
-          {% if d.category %}<span class="yp25-cat-mini">{{ d.category }}</span>{% endif %}
+          {% if d.category and not cur_category %}<span class="yp25-cat-mini">{{ d.category }}</span>{% endif %}
           {% if d.payment_standard %}<div class="yp25-price-sm">医保支付标准: {{ d.payment_standard }}{% if d.payment_validity %} · {{ d.payment_validity }}{% endif %}</div>{% endif %}
         </td>
         <td>{{ d.dosage_form or "—" }}</td>
