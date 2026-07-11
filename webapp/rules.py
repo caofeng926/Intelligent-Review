@@ -41,6 +41,73 @@ def _categorize_subject(subject: str) -> str:
     return DEFAULT_CATEGORY
 
 
+# ---- 规则数据 -> 分类/主题二维结构 --------------------
+def _build_categories():
+    """从 rules + kp 统计构造二维结构(分类 -> 同名主题 -> 规则行)。
+
+    返回结构:
+      [
+        { "name": "医疗服务项目",
+          "subjects": [ {"name": "...", "rules": [{...}], "total_kp": N, "rule_count": N}, ... ],
+          "total_kp": ..., "rule_count": ..., "subject_count": ...
+        }, ...
+      ]
+    """
+    with db.connect() as conn:
+        rows = conn.execute("""
+            SELECT r.id, r.rule_subject, r.source, b.batch_label,
+                   COUNT(kp.id) AS kp_count
+            FROM rules r
+            JOIN batches b ON b.id = r.batch_id
+            LEFT JOIN knowledge_points kp ON kp.rule_id = r.id
+            GROUP BY r.id
+            ORDER BY r.rule_subject
+        """).fetchall()
+
+    category_map = {}
+    for r in rows:
+        cat = _categorize_subject(r[1])
+        bucket = category_map.setdefault(cat, {
+            "name": cat, "subjects_map": {}, "rules": [],
+            "total_kp": 0, "rule_count": 0,
+        })
+        subject = r[1]
+        rule = {
+            "id": r[0], "subject": r[1], "source": r[2],
+            "batch_label": r[3], "kp_count": r[4],
+        }
+        subj = bucket["subjects_map"].setdefault(subject, {
+            "name": subject, "rules": [],
+            "total_kp": 0, "rule_count": 0,
+        })
+        subj["rules"].append(rule)
+        bucket["rules"].append(rule)
+        subj["total_kp"] += r[4]
+        subj["rule_count"] += 1
+        bucket["total_kp"] += r[4]
+        bucket["rule_count"] += 1
+
+    categories = []
+    for c in CATEGORY_ORDER:
+        if c not in category_map:
+            continue
+        bucket = category_map[c]
+        # 同主题多行的排在前面，再按 KP 总数降序，名字升序
+        subjects = sorted(
+            bucket["subjects_map"].values(),
+            key=lambda s: (-s["rule_count"], -s["total_kp"], s["name"]),
+        )
+        categories.append({
+            "name": c,
+            "subjects": subjects,
+            "rules": bucket["rules"],
+            "total_kp": bucket["total_kp"],
+            "rule_count": bucket["rule_count"],
+            "subject_count": len(subjects),
+        })
+    return categories
+
+
 # ---- /rules 路由 -------------------------------------------------------
 def register(app):
     """挂载规则路由到 app。"""
@@ -52,32 +119,12 @@ def register(app):
 
     @app.get("/rules/category")
     def rules_category():
-        """按规则分类查询：按主题(药品/医疗服务项目/中药饮片/医用耗材/诊断/手术/其他)聚合展示。"""
-        with db.connect() as conn:
-            rows = conn.execute("""
-                SELECT r.id, r.rule_subject, r.source, b.batch_label,
-                       COUNT(kp.id) AS kp_count
-                FROM rules r
-                JOIN batches b ON b.id = r.batch_id
-                LEFT JOIN knowledge_points kp ON kp.rule_id = r.id
-                GROUP BY r.id
-                ORDER BY r.rule_subject
-            """).fetchall()
+        """按规则分类查询。
 
-        category_map: dict = {}
-        for r in rows:
-            cat = _categorize_subject(r[1])
-            bucket = category_map.setdefault(cat, {
-                "name": cat, "rules": [], "total_kp": 0, "rule_count": 0,
-            })
-            bucket["rules"].append({
-                "id": r[0], "subject": r[1], "source": r[2],
-                "batch_label": r[3], "kp_count": r[4],
-            })
-            bucket["total_kp"] += r[4]
-            bucket["rule_count"] += 1
-
-        categories = [category_map[c] for c in CATEGORY_ORDER if c in category_map]
+        一级按 CATEGORY_PREFIXES 划分大类（药品 / 服务项目 / 中药饮片 / 耗材 / 诊断 / 手术 / 其他），
+        二级按 rule_subject 名字分组，同名规则以 <details> 折叠展示。
+        """
+        categories = _build_categories()
         return render_template("rules_category.html",
                                categories=categories, source_label=SOURCE_LABEL)
 
@@ -200,31 +247,7 @@ def register(app):
     @app.get("/api/rule-categories")
     def api_rule_categories():
         """返回按规则类型分类的数据,用于小程序规则浏览页。"""
-        with db.connect() as conn:
-            rules = conn.execute("""
-                SELECT r.id, r.rule_subject, r.source, b.batch_label,
-                       COUNT(kp.id) as kp_count
-                FROM rules r
-                JOIN batches b ON b.id = r.batch_id
-                LEFT JOIN knowledge_points kp ON kp.rule_id = r.id
-                GROUP BY r.id
-                ORDER BY r.rule_subject
-            """).fetchall()
-
-        category_map: dict = {}
-        for r in rules:
-            category = _categorize_subject(r[1])
-            bucket = category_map.setdefault(category, {
-                "name": category, "rules": [], "total_kp": 0, "rule_count": 0,
-            })
-            bucket["rules"].append({
-                "id": r[0], "subject": r[1], "source": r[2],
-                "batch_label": r[3], "kp_count": r[4],
-            })
-            bucket["total_kp"] += r[4]
-            bucket["rule_count"] += 1
-
-        categories = [category_map[c] for c in CATEGORY_ORDER if c in category_map]
+        categories = _build_categories()
         return jsonify({"categories": categories})
 
 

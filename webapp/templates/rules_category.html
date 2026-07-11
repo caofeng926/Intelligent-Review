@@ -11,47 +11,96 @@
 
 <section class="page-head">
   <h1 class="page-title">按规则分类查询</h1>
-  <p class="page-sub">按主题(药品 / 医疗服务项目 / 中药饮片 / 医用耗材 / 诊断 / 手术操作)聚合展示全部审核规则</p>
+  <p class="page-sub">按大类(药品 / 医疗服务项目 / 中药饮片 / 医用耗材 / 诊断 / 手术操作)聚合展示。同名规则以 <code>&lt;details&gt;</code> 折叠展开各批次行。</p>
 </section>
 
 <nav class="rules-subnav" role="tablist" aria-label="规则浏览方式">
-  <a class="rules-subnav-item" href="{{ url_for('rules_find') }}" role="tab">
-    <span class="subnav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></span>
-    <span class="subnav-label">按知识点查询</span>
-  </a>
   <a class="rules-subnav-item is-active" href="{{ url_for('rules_category') }}" role="tab" aria-selected="true">
     <span class="subnav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span>
     <span class="subnav-label">按规则分类查询</span>
   </a>
+  <a class="rules-subnav-item" href="{{ url_for('rules_find') }}" role="tab">
+    <span class="subnav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></span>
+    <span class="subnav-label">按知识点查询</span>
+  </a>
 </nav>
 
 {% if categories %}
-  {% for cat in categories %}
-  <section class="category-block">
-    <h2 class="category-head">
+<div class="category-toolbar">
+  <button type="button" class="btn-toggle" data-action="expand-all">全部展开</button>
+  <button type="button" class="btn-toggle" data-action="collapse-all">全部折叠</button>
+  <span class="category-toolbar-hint">同名规则默认折叠。单主题(只有 1 个批次)默认展开。</span>
+</div>
+
+{% for cat in categories %}
+<section class="category-block">
+  <header class="category-head">
+    <h2 class="category-head-title">
       <span class="cat-name">{{ cat.name }}</span>
-      <span class="cat-cnt">{{ cat.rule_count }} 条规则 · {{ "{:,}".format(cat.total_kp) }} 个知识点</span>
+      <span class="cat-cnt">
+        {{ cat.subject_count }} 个主题 ·
+        {{ cat.rule_count }} 条规则 ·
+        {{ "{:,}".format(cat.total_kp) }} 个知识点
+      </span>
     </h2>
-    <ul class="rule-group-list">
-      {% for r in cat.rules %}
-      <li class="rule-group">
-        <a class="rule-group-head" href="{{ url_for('rule_detail', rid=r.id) }}">
-          <div class="rule-group-main">
-            <div class="rule-group-title">
-              <span class="tag tag-source">{{ source_label[r.source] }}</span>
-              <span class="rule-group-name">{{ r.subject|h }}</span>
+  </header>
+
+  <div class="subject-groups">
+    {% for subj in cat.subjects %}
+    {% set is_multi = (subj.rule_count > 1) %}
+    <details class="subject-group" {% if not is_multi %}open{% endif %}>
+      <summary class="subject-summary">
+        <span class="subject-caret" aria-hidden="true">▸</span>
+        <span class="subject-name">{{ subj.name }}</span>
+        <span class="subject-meta">
+          {% if is_multi %}<span class="subject-meta-batch">{{ subj.rule_count }} 个批次 · </span>{% endif %}
+          {{ "{:,}".format(subj.total_kp) }} 个知识点
+        </span>
+      </summary>
+      <ul class="rule-group-list">
+        {% for r in subj.rules %}
+        <li class="rule-group">
+          <a class="rule-group-head" href="{{ url_for('rule_detail', rid=r.id) }}">
+            <div class="rule-group-main">
+              <div class="rule-group-title">
+                <span class="tag tag-source">{{ source_label[r.source] }}</span>
+                <span class="rule-group-name">{{ (r.batch_label or '—')|h }}</span>
+              </div>
+              <div class="rule-group-meta">
+                {% if r.batch_label %}<span class="meta-k">批次</span> {{ r.batch_label|h }} · {% endif %}
+                <span class="meta-k">知识点</span> {{ r.kp_count }}
+              </div>
             </div>
-            <div class="rule-group-meta">
-              {% if r.batch_label %}<span class="meta-k">批次</span> {{ r.batch_label|h }} · {% endif %}
-              <span class="meta-k">知识点</span> {{ r.kp_count }}
+            <div class="rule-group-count">
+              <span class="count-num">{{ r.kp_count }}</span>
+              <span class="count-label">KP</span>
             </div>
-          </div>
-        </a>
-      </li>
-      {% endfor %}
-    </ul>
-  </section>
-  {% endfor %}
+          </a>
+        </li>
+        {% endfor %}
+      </ul>
+    </details>
+    {% endfor %}
+  </div>
+</section>
+{% endfor %}
+
+<script>
+(function () {
+  var blocks = document.querySelectorAll(".subject-group");
+  document.querySelectorAll('[data-action="expand-all"]').forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      blocks.forEach(function (d) { d.open = true; });
+    });
+  });
+  document.querySelectorAll('[data-action="collapse-all"]').forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      blocks.forEach(function (d) { d.open = false; });
+    });
+  });
+})();
+</script>
+
 {% else %}
 <div class="empty">暂无规则分类数据</div>
 {% endif %}
