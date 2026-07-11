@@ -1,6 +1,20 @@
 {% extends "base.html" %}
 {% block title %}按规则分类查询 · 医保智审{% endblock %}
 {% block content %}
+{% set _cat_key = {
+  '药品': 'yp', '医疗服务项目': 'ms', '中药饮片': 'tcm',
+  '医用耗材': 'hc', '诊断': 'icd', '手术': 'ivd', '其他': 'other'
+} %}
+{% set _cat_desc = {
+  '药品': '西药 / 中成药 / 协议期内谈判药品 / 中药饮片',
+  '医疗服务项目': '诊疗项目 / 手术 / 检查 / 治疗',
+  '中药饮片': '中药饮片目录',
+  '医用耗材': '7 类医用耗材 / 19 位 C-code',
+  '诊断': 'ICD-10 医保版 / 妊娠期 / 老年 / 重复开药',
+  '手术': '围手术期用药 / 手术操作',
+  '其他': '其他规则'
+} %}
+
 <nav class="crumb">
   <a href="{{ url_for('home') }}">首页</a>
   <span class="crumb-sep">›</span>
@@ -11,7 +25,7 @@
 
 <section class="page-head">
   <h1 class="page-title">按规则分类查询</h1>
-  <p class="page-sub">按大类(药品 / 医疗服务项目 / 中药饮片 / 医用耗材 / 诊断 / 手术操作)聚合展示。一级大类与同名主题均以 <code>&lt;details&gt;</code> 折叠,默认收起。</p>
+  <p class="page-sub">按大类(药品 / 医疗服务项目 / 中药饮片 / 医用耗材 / 诊断 / 手术操作)聚合展示。一级大类与同名主题均以折叠块形式收起。</p>
 </section>
 
 <nav class="rules-subnav" role="tablist" aria-label="规则浏览方式">
@@ -26,55 +40,111 @@
 </nav>
 
 {% if categories %}
-<div class="category-toolbar">
-  <button type="button" class="btn-toggle" data-action="expand-all">全部展开</button>
-  <button type="button" class="btn-toggle" data-action="collapse-all">全部折叠</button>
-  <span class="category-toolbar-hint">一级 / 二级均默认折叠。单主题 (只有 1 条规则) 默认展开。</span>
+<div class="cat-toolbar">
+  <button type="button" class="btn-toggle" data-action="expand-all" aria-label="展开全部">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 13 12 18 17 13"/><polyline points="7 6 12 11 17 6"/></svg>
+    <span>全部展开</span>
+  </button>
+  <button type="button" class="btn-toggle" data-action="collapse-all" aria-label="折叠全部">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 11 12 6 17 11"/><polyline points="7 18 12 13 17 18"/></svg>
+    <span>全部折叠</span>
+  </button>
+  <span class="cat-toolbar-hint">一级 / 二级均默认折叠。单主题 (只有 1 条规则) 默认展开。</span>
 </div>
 
 {% for cat in categories %}
-<details class="category-block">
-  <summary class="category-summary">
-    <span class="category-caret" aria-hidden="true">▸</span>
-    <span class="cat-name">{{ cat.name }}</span>
-    <span class="cat-cnt">
-      {{ cat.subject_count }} 个主题 ·
-      {{ cat.rule_count }} 条规则 ·
-      {{ "{:,}".format(cat.total_kp) }} 个知识点
+{% set _ck = _cat_key.get(cat.name, 'other') %}
+<details class="cat-block cat-block-{{ _ck }}">
+  <summary class="cat-summary">
+    <span class="cat-icon" aria-hidden="true">
+      {% if _ck == 'yp' %}
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 20.5a7 7 0 1 1 0-14 7 7 0 0 0 0 14Z"/><path d="M13.5 3.5a7 7 0 1 1 0 14 7 7 0 0 0 0-14Z"/></svg>
+      {% elif _ck == 'ms' %}
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-9 4 18 3-9h4"/></svg>
+      {% elif _ck == 'tcm' %}
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19.2 2.5c1 1.5.5 7-2 9.5-1.5 1.5-3.5 2.5-6 3a7 7 0 0 1-.2 5Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6"/></svg>
+      {% elif _ck == 'hc' %}
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+      {% elif _ck == 'icd' %}
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><line x1="3.5" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="20.5" y2="12"/><line x1="12" y1="3.5" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="20.5"/></svg>
+      {% elif _ck == 'ivd' %}
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 10v6m11-11h-6M7 12H1m17.4-7.4-4.2 4.2M9.8 14.2l-4.2 4.2m12.8 0-4.2-4.2M9.8 9.8 5.6 5.6"/></svg>
+      {% else %}
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+      {% endif %}
+    </span>
+    <span class="cat-info">
+      <span class="cat-name">{{ cat.name }}</span>
+      <span class="cat-desc">{{ _cat_desc.get(cat.name, '') }}</span>
+    </span>
+    <span class="cat-stats" aria-label="分类统计">
+      <span class="cat-stat"><b>{{ cat.subject_count }}</b><span>主题</span></span>
+      <span class="cat-stat"><b>{{ cat.rule_count }}</b><span>规则</span></span>
+      <span class="cat-stat"><b>{{ "{:,}".format(cat.total_kp) }}</b><span>知识点</span></span>
+    </span>
+    <span class="cat-caret" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
     </span>
   </summary>
-  <div class="subject-groups">
+  <div class="cat-body">
     {% for subj in cat.subjects %}
     {% set is_multi = (subj.rule_count > 1) %}
-    <details class="subject-group" {% if not is_multi %}open{% endif %}>
-      <summary class="subject-summary">
-        <span class="subject-caret" aria-hidden="true">▸</span>
-        <span class="subject-name">{{ subj.name }}</span>
-        <span class="subject-meta">
-          {% if is_multi %}<span class="subject-meta-batch">{{ subj.rule_count }} 条规则 · </span>{% endif %}
-          {{ "{:,}".format(subj.total_kp) }} 个知识点
+    <details class="subj-block" {% if not is_multi %}open{% endif %}>
+      <summary class="subj-summary">
+        <span class="subj-icon" aria-hidden="true">
+          {% if _ck == 'yp' %}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 20.5a7 7 0 1 1 0-14 7 7 0 0 0 0 14Z"/><path d="M13.5 3.5a7 7 0 1 1 0 14 7 7 0 0 0 0-14Z"/></svg>
+          {% elif _ck == 'ms' %}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M7 12h10"/></svg>
+          {% elif _ck == 'tcm' %}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19.2 2.5c1 1.5.5 7-2 9.5-1.5 1.5-3.5 2.5-6 3a7 7 0 0 1-.2 5Z"/></svg>
+          {% elif _ck == 'hc' %}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+          {% elif _ck == 'icd' %}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 12h6M12 9v6"/></svg>
+          {% elif _ck == 'ivd' %}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          {% else %}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          {% endif %}
+        </span>
+        <span class="subj-info">
+          <span class="subj-name">{{ subj.name }}</span>
+        </span>
+        <span class="subj-meta">
+          {% if is_multi %}<span class="subj-chip subj-chip-rule">{{ subj.rule_count }} 条规则</span>{% endif %}
+          <span class="subj-chip subj-chip-kp">{{ "{:,}".format(subj.total_kp) }} 知识点</span>
+        </span>
+        <span class="subj-caret" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>
         </span>
       </summary>
       <ul class="kp-list">
         {% for kp in subj.kps %}
         <li class="kp-row">
           <a class="kp-row-link" href="{{ url_for('kp_detail', kp_id=kp.id) }}">
-            <div class="kp-row-main">
-              <div class="kp-row-name">{{ kp.name|h }}</div>
-              <div class="kp-row-meta">
-                {% if kp.pinyin_initials %}<span class="kp-mini">{{ kp.pinyin_initials }}</span>{% endif %}
-                {% if kp.code_count %}<span class="kp-mini">{{ kp.code_count }} 编码</span>{% endif %}
-                {% if kp.seq %}<span class="kp-mini">#{{ kp.seq }}</span>{% endif %}
-              </div>
-            </div>
-            <div class="kp-row-arrow">›</div>
+            <span class="kp-row-ico" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><circle cx="6" cy="6" r="2"/><circle cx="18" cy="6" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/><line x1="7.6" y1="7.6" x2="9.5" y2="9.5"/><line x1="14.5" y1="9.5" x2="16.4" y2="7.6"/><line x1="16.4" y1="16.4" x2="14.5" y2="14.5"/><line x1="9.5" y1="14.5" x2="7.6" y2="16.4"/></svg>
+            </span>
+            <span class="kp-row-main">
+              <span class="kp-row-name">{{ kp.name|h }}</span>
+              <span class="kp-row-meta">
+                {% if kp.pinyin_initials %}<span class="kp-mini" title="拼音首字母">{{ kp.pinyin_initials }}</span>{% endif %}
+                {% if kp.code_count %}<span class="kp-mini" title="医保编码数">{{ kp.code_count }} 编码</span>{% endif %}
+                {% if kp.seq %}<span class="kp-mini" title="序号">#{{ kp.seq }}</span>{% endif %}
+              </span>
+            </span>
+            <span class="kp-row-arrow" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>
+            </span>
           </a>
         </li>
         {% endfor %}
         {% if subj.kp_total > subj.kps|length %}
         <li class="kp-row-more">
           <a href="{{ url_for('rules_find') }}?q={{ subj.name|urlencode }}">
-            查看该主题全部 {{ "{:,}".format(subj.kp_total) }} 个知识点 →
+            <span>查看该主题全部 {{ "{:,}".format(subj.kp_total) }} 个知识点</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
           </a>
         </li>
         {% endif %}
@@ -87,17 +157,12 @@
 
 <script>
 (function () {
-  // 一级 category + 二级 subject 都能被工具栏控制
-  var blocks = document.querySelectorAll(".category-block, .subject-group");
+  var blocks = document.querySelectorAll(".cat-block, .subj-block");
   document.querySelectorAll('[data-action="expand-all"]').forEach(function (btn) {
-    btn.addEventListener("click", function () {
-      blocks.forEach(function (d) { d.open = true; });
-    });
+    btn.addEventListener("click", function () { blocks.forEach(function (d) { d.open = true; }); });
   });
   document.querySelectorAll('[data-action="collapse-all"]').forEach(function (btn) {
-    btn.addEventListener("click", function () {
-      blocks.forEach(function (d) { d.open = false; });
-    });
+    btn.addEventListener("click", function () { blocks.forEach(function (d) { d.open = false; }); });
   });
 })();
 </script>
