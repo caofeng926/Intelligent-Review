@@ -465,6 +465,34 @@ def parse_herbal_pieces(reader) -> List[Drug]:
     return drugs
 
 
+
+# 脱敏过滤: 价格保密药品的支付标准 + 备注
+# 命中条件: remark 含 "价格保密"/"阶梯价格"/"阶梯单价"/"计算举例"
+REDACTION_MARK = "[内容因企业申请价格保密已屏蔽]"
+
+def _is_price_confidential(drug: "Drug") -> bool:
+    r = drug.remark or ""
+    return any(kw in r for kw in (
+        "价格保密", "阶梯价格", "阶梯单价", "计算举例",
+        "支付阶梯价格方案", "企业申请价格保密",
+    ))
+
+
+def sanitize_price_confidential(drugs: List["Drug"]) -> List["Drug"]:
+    """对价格保密药品做脱敏: payment_standard -> '*', remark -> 屏蔽标记.
+    payment_validity 是公开的协议有效期, 保留.
+    与 NHSA 官方 PDF 中其他价格保密药品(如注射用全氟丙烷人血白蛋白微球)
+    的处理方式一致 (payment_standard='*')."""
+    n = 0
+    for d in drugs:
+        if _is_price_confidential(d):
+            d.payment_standard = "*"
+            d.remark = REDACTION_MARK
+            n += 1
+    if n:
+        print(f"[sanitize] redacted {n} price-confidential drugs")
+    return drugs
+
 def parse_pdf(path) -> List[Drug]:
     path = Path(path)
     reader = pypdf.PdfReader(str(path))
@@ -473,6 +501,7 @@ def parse_pdf(path) -> List[Drug]:
     all_drugs.extend(parse_tcm_patent(reader))
     all_drugs.extend(parse_negotiated(reader))
     all_drugs.extend(parse_herbal_pieces(reader))
+    sanitize_price_confidential(all_drugs)
     return all_drugs
 
 

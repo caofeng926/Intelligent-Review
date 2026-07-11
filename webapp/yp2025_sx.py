@@ -45,6 +45,34 @@ def _safe_fts_query(q: str) -> str:
     return " ".join(t + "*" for t in re.split(r"\s+", q.strip()) if t)
 
 
+
+# ============= 价格保密脱敏 (defense in depth) =============
+# 即便 DB 里残留价格保密内容,API 层也屏蔽掉. 与 parse_yp_2025.sanitize_price_confidential
+# 保持一致逻辑.
+_PRICE_CONF_KEYWORDS = (
+    "价格保密", "阶梯价格", "阶梯单价", "计算举例",
+    "支付阶梯价格方案", "企业申请价格保密",
+)
+_REDACTION_MARK = "[内容因企业申请价格保密已屏蔽]"
+
+
+def _is_price_conf_row(row: dict) -> bool:
+    r = row.get("remark") or ""
+    return any(kw in r for kw in _PRICE_CONF_KEYWORDS)
+
+
+def _scrub_row(row: dict) -> dict:
+    """对价格保密药品行做脱敏: payment_standard='*', remark=屏蔽标记. payment_validity 保留."""
+    if _is_price_conf_row(row):
+        row["payment_standard"] = "*"
+        row["remark"] = _REDACTION_MARK
+    return row
+
+
+def _scrub_rows(rows) -> list:
+    return [_scrub_row(dict(r)) for r in rows]
+
+
 def register(app):
     @app.get("/yp2025_sx/")
     @app.get("/yp2025_sx")
@@ -98,12 +126,11 @@ def register(app):
             ).fetchall()
             if not rows:
                 abort(404)
-            item = dict(rows[0])
-            variants = [dict(r) for r in rows[1:]] if len(rows) > 1 else []
+            item = _scrub_row(dict(rows[0]))
+            variants = [_scrub_row(dict(r)) for r in rows[1:]] if len(rows) > 1 else []
             related = []
             if item.get("category_code"):
-                related = [
-                    dict(r) for r in conn.execute(
+                related = [_scrub_row(dict(r)) for r in conn.execute(
                         """SELECT list_no, name, dosage_form, list_class
                            FROM yp_catalog_sx_2025
                            WHERE category = ? AND category_code = ?
@@ -150,7 +177,7 @@ def register(app):
                     (like, like, limit),
                 ).fetchall()
         return jsonify({
-            "items": [dict(r) for r in rows],
+            "items": [_scrub_row(dict(r)) for r in rows],
             "total": len(rows),
             "q": q,
         })
@@ -196,7 +223,7 @@ def register(app):
                     """SELECT category, code, name, level, parent_code, drug_count
                        FROM yp25sx_category_tree ORDER BY category, level, code"""
                 ).fetchall()
-        return jsonify({"nodes": [dict(r) for r in rows]})
+        return jsonify({"nodes": [_scrub_row(dict(r)) for r in rows]})
 
 
 # ---- view helpers ----
@@ -224,7 +251,7 @@ def _render_category_tops(conn, category, q, stats):
         stats=stats,
         categories=ALL_CATEGORIES,
         cur_category=category,
-        tops=[dict(r) for r in tops],
+        tops=[_scrub_row(dict(r)) for r in tops],
         cur_q=q,
     )
 
@@ -250,7 +277,7 @@ def _render_top_subs(conn, category, top, q, stats):
         categories=ALL_CATEGORIES,
         cur_category=category,
         cur_top=dict(top_node),
-        subs=[dict(r) for r in subs],
+        subs=[_scrub_row(dict(r)) for r in subs],
         cur_q=q,
     )
 
@@ -296,7 +323,7 @@ def _render_sub_drugs(conn, category, top, sub, q, page, limit, offset, stats):
         cur_category=category,
         cur_top_code=top,
         cur_sub=dict(sub_node),
-        drugs=[dict(r) for r in rows],
+        drugs=[_scrub_row(dict(r)) for r in rows],
         total=total,
         page=page,
         total_pages=total_pages,
@@ -324,7 +351,7 @@ def _render_search(conn, q, page, limit, offset, stats):
                ORDER BY rank LIMIT ? OFFSET ?""",
             (fts_q, limit, offset),
         ).fetchall()
-        drugs = [dict(r) for r in rows]
+        drugs = [_scrub_row(dict(r)) for r in rows]
     else:
         # fallback: LIKE
         like = f"%{q}%"
@@ -341,7 +368,7 @@ def _render_search(conn, q, page, limit, offset, stats):
                ORDER BY list_no, name LIMIT ? OFFSET ?""",
             (like, like, like, like, limit, offset),
         ).fetchall()
-        drugs = [dict(r) for r in rows]
+        drugs = [_scrub_row(dict(r)) for r in rows]
 
     total_pages = max(1, (total + limit - 1) // limit)
     return render_template(
