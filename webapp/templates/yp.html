@@ -59,12 +59,12 @@
 </div>
 {% endif %}
 
-{% if not query and not list_class %}
+{% if not query and (not list_class or list_class == '全部') %}
 <section class="info-banner">
-  <svg class="info-banner-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
-  <div class="info-banner-body">
-    <div class="info-banner-title">关于医保药品</div>
-    <div class="info-banner-text">来源：国家医保局 2026-06-25 版医保药品。共 {{ total_codes }} 条，按目录分类（甲类 / 乙类 / 商保 / 未分类）。点击药品可查看规格、生产企业、批准文号等详情。</div>
+  <div class="info-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></div>
+  <div class="info-body">
+    <div class="info-title">关于医保药品</div>
+    <div class="info-text">来源：国家医保局 2026-06-25 版医保药品。共 {{ total_codes }} 条，按目录分类（甲类 / 乙类 / 商保 / 未分类）。点击药品可查看规格、生产企业、批准文号等详情。</div>
   </div>
 </section>
 {% endif %}

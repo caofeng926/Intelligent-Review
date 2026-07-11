@@ -30,7 +30,7 @@
             {% endfor %}
             <li class="menu-group{% if item.group %} is-divider{% endif %}{% if not _ns.has_active %} is-collapsed{% endif %}" data-group-key="{{ item.key }}">
               <div class="menu-group-label" role="button" tabindex="0" aria-expanded="{{ 'true' if _has_active else 'false' }}">
-                <span class="ico">{{ item.icon }}</span>
+                <span class="ico">{{ item.icon|safe }}</span>
                 <span class="label-text">{{ item.label }}</span>
                 <span class="arrow" aria-hidden="true">▾</span>
               </div>
@@ -47,7 +47,7 @@
           <li>
             <a href="{{ url_for(item.endpoint) }}"
                class="{% if _active == item.key or _active == item.key|replace('_page','') %}is-active{% endif %}">
-              <span class="ico">{{ item.icon }}</span>
+              <span class="ico">{{ item.icon|safe }}</span>
               <span>{{ item.label }}</span>
               {% if item.badge and counts.get(item.badge) %}
                 <span class="badge">{{ "{:,}".format(counts[item.badge]) }}</span>

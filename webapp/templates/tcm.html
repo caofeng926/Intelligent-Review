@@ -53,7 +53,7 @@
   <a class="cat-card" href="{{ url_for('tcm_browse', part=p.part_code) }}">
     <div class="cat-main">
       <div class="cat-code">{{ p.part_code }} 部</div>
-      <div class="cat-name">{% if p.part_code == 'B' %}疾病术语（外感病、内伤病、妇科病…）{% elif p.part_code == 'Z' %}证候术语（寒热虚实、表里阴阳…）{% else %}其他部位{% endif %}</div>
+      <div class="cat-name">{% if p.part_code == 'A' %}疾病术语（外感病、内伤病、妇科病…）{% elif p.part_code == 'B' %}证候术语（寒热虚实、表里阴阳…）{% else %}其他部位{% endif %}</div>
     </div>
     <div class="cat-count">{{ "{:,}".format(p.count) }} 条</div>
     <div class="cat-arrow">›</div>
@@ -74,10 +74,10 @@
   {% endfor %}
 </section>
 <section class="info-banner">
-  <svg class="info-banner-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
-  <div class="info-banner-body">
-    <div class="info-banner-title">关于中医病证术语</div>
-    <div class="info-banner-text">国家医保局发布的中医病证分类与代码：B = 疾病术语（7 级树状），Z = 证候术语。支持按名称 / 拼音 / 编码搜索，或按部位 / 层级浏览。</div>
+  <div class="info-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></div>
+  <div class="info-body">
+    <div class="info-title">关于中医病证术语</div>
+    <div class="info-text">国家医保局发布的中医病证分类与代码：A 部 = 疾病术语（7 级树状，代码以 A 开头），B 部 = 证候术语（代码以 B 开头）。支持按名称 / 拼音 / 编码搜索，或按部位 / 层级浏览。</div>
   </div>
 </section>
 {% endif %}

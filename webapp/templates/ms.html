@@ -9,7 +9,7 @@
 <nav class="bread">
   <a href="{{ url_for('nhsa_index') }}">标准数据库</a> <span class="bread-sep">›</span>
   <span class="bread-cur">医疗服务项目</span>
-  {% if query %}<span class="bread-sep">›</span> <span class="bread-cur">搜索：{{ query }}</span>{% endif %}
+  {% if query or level %}<span class="bread-sep">›</span> <span class="bread-cur">搜索：{{ query }}</span>{% endif %}
 </nav>
 
 
@@ -24,12 +24,12 @@
   <button class="hero-search-btn" type="submit">搜索</button>
 </form>
 
-{% if query %}
+{% if query or level %}
 <section class="list-card">
   {% for r in rows %}
   <a class="list-row" href="{{ url_for('ms_detail', code=r.code) }}">
     <div class="list-main">
-      <div class="list-code">{{ r.code }}{% if r.p_code %} · 父 {{ r.p_code }}{% endif %}{% if r.level %} · L{{ r.level }}{% endif %}</div>
+      <div class="list-code">{{ r.code }}{% if r.p_code %} · 父 {{ r.p_code }}{% endif %}{% if r.real_level is defined %} · L{{ r.real_level }}{% endif %}</div>
       <div class="list-name">{{ r.name }}</div>
       <div class="list-meta">
         {% if r.charge_unit %}计价单位: {{ r.charge_unit }}{% endif %}
@@ -51,22 +51,22 @@
 </div>
 {% else %}
 <section class="cat-list">
-  {% for g in groups %}
-  <a class="cat-card" href="{{ url_for('ms_browse', level=g.level) }}">
+  {% for t in tops %}
+  <a class="cat-card" href="{{ url_for('ms_browse', level=t.real_level+1) }}">
     <div class="cat-main">
-      <div class="cat-code">第 {{ g.level }} 级</div>
-      <div class="cat-name">{{ g.p_code }} · {{ g.p_name or '顶级' }}</div>
+      <div class="cat-code">{{ t.code }}</div>
+      <div class="cat-name">{{ t.name }}</div>
     </div>
-    <div class="cat-count">{{ "{:,}".format(g.code_count) }} 条</div>
+    <div class="cat-count">下辖 {{ "{:,}".format(t.child_count) }} 条</div>
     <div class="cat-arrow">›</div>
   </a>
   {% endfor %}
 </section>
 <section class="info-banner">
-  <svg class="info-banner-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
-  <div class="info-banner-body">
-    <div class="info-banner-title">关于医疗服务项目</div>
-    <div class="info-banner-text">国家医保局发布的医疗服务项目分类与代码，按 4 级树状组织（顶级 → 大类 → 中类 → 项目）。支持按名称 / 拼音首字母 / 项目编码搜索。</div>
+  <div class="info-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></div>
+  <div class="info-body">
+    <div class="info-title">关于医疗服务项目</div>
+    <div class="info-text">国家医保局发布的医疗服务项目分类与代码，按 5 级树状组织（顶级 → 大类 → 中类 → 细类 → 项目）。支持按名称 / 拼音首字母 / 项目编码搜索。</div>
   </div>
 </section>
 {% endif %}
