@@ -11,7 +11,7 @@
 
 <section class="page-head">
   <h1 class="page-title">按规则分类查询</h1>
-  <p class="page-sub">按大类(药品 / 医疗服务项目 / 中药饮片 / 医用耗材 / 诊断 / 手术操作)聚合展示。同名规则以 <code>&lt;details&gt;</code> 折叠展开各批次行。</p>
+  <p class="page-sub">按大类(药品 / 医疗服务项目 / 中药饮片 / 医用耗材 / 诊断 / 手术操作)聚合展示。一级大类与同名主题均以 <code>&lt;details&gt;</code> 折叠,默认收起。</p>
 </section>
 
 <nav class="rules-subnav" role="tablist" aria-label="规则浏览方式">
@@ -29,22 +29,20 @@
 <div class="category-toolbar">
   <button type="button" class="btn-toggle" data-action="expand-all">全部展开</button>
   <button type="button" class="btn-toggle" data-action="collapse-all">全部折叠</button>
-  <span class="category-toolbar-hint">同名规则默认折叠。单主题(只有 1 个批次)默认展开。</span>
+  <span class="category-toolbar-hint">一级 / 二级均默认折叠。单主题 (只有 1 条规则) 默认展开。</span>
 </div>
 
 {% for cat in categories %}
-<section class="category-block">
-  <header class="category-head">
-    <h2 class="category-head-title">
-      <span class="cat-name">{{ cat.name }}</span>
-      <span class="cat-cnt">
-        {{ cat.subject_count }} 个主题 ·
-        {{ cat.rule_count }} 条规则 ·
-        {{ "{:,}".format(cat.total_kp) }} 个知识点
-      </span>
-    </h2>
-  </header>
-
+<details class="category-block">
+  <summary class="category-summary">
+    <span class="category-caret" aria-hidden="true">▸</span>
+    <span class="cat-name">{{ cat.name }}</span>
+    <span class="cat-cnt">
+      {{ cat.subject_count }} 个主题 ·
+      {{ cat.rule_count }} 条规则 ·
+      {{ "{:,}".format(cat.total_kp) }} 个知识点
+    </span>
+  </summary>
   <div class="subject-groups">
     {% for subj in cat.subjects %}
     {% set is_multi = (subj.rule_count > 1) %}
@@ -53,41 +51,44 @@
         <span class="subject-caret" aria-hidden="true">▸</span>
         <span class="subject-name">{{ subj.name }}</span>
         <span class="subject-meta">
-          {% if is_multi %}<span class="subject-meta-batch">{{ subj.rule_count }} 个批次 · </span>{% endif %}
+          {% if is_multi %}<span class="subject-meta-batch">{{ subj.rule_count }} 条规则 · </span>{% endif %}
           {{ "{:,}".format(subj.total_kp) }} 个知识点
         </span>
       </summary>
-      <ul class="rule-group-list">
-        {% for r in subj.rules %}
-        <li class="rule-group">
-          <a class="rule-group-head" href="{{ url_for('rule_detail', rid=r.id) }}">
-            <div class="rule-group-main">
-              <div class="rule-group-title">
-                <span class="tag tag-source">{{ source_label[r.source] }}</span>
-                <span class="rule-group-name">{{ (r.batch_label or '—')|h }}</span>
-              </div>
-              <div class="rule-group-meta">
-                {% if r.batch_label %}<span class="meta-k">批次</span> {{ r.batch_label|h }} · {% endif %}
-                <span class="meta-k">知识点</span> {{ r.kp_count }}
+      <ul class="kp-list">
+        {% for kp in subj.kps %}
+        <li class="kp-row">
+          <a class="kp-row-link" href="{{ url_for('kp_detail', kp_id=kp.id) }}">
+            <div class="kp-row-main">
+              <div class="kp-row-name">{{ kp.name|h }}</div>
+              <div class="kp-row-meta">
+                {% if kp.pinyin_initials %}<span class="kp-mini">{{ kp.pinyin_initials }}</span>{% endif %}
+                {% if kp.code_count %}<span class="kp-mini">{{ kp.code_count }} 编码</span>{% endif %}
+                {% if kp.seq %}<span class="kp-mini">#{{ kp.seq }}</span>{% endif %}
               </div>
             </div>
-            <div class="rule-group-count">
-              <span class="count-num">{{ r.kp_count }}</span>
-              <span class="count-label">KP</span>
-            </div>
+            <div class="kp-row-arrow">›</div>
           </a>
         </li>
         {% endfor %}
+        {% if subj.kp_total > subj.kps|length %}
+        <li class="kp-row-more">
+          <a href="{{ url_for('rules_find') }}?q={{ subj.name|urlencode }}">
+            查看该主题全部 {{ "{:,}".format(subj.kp_total) }} 个知识点 →
+          </a>
+        </li>
+        {% endif %}
       </ul>
     </details>
     {% endfor %}
   </div>
-</section>
+</details>
 {% endfor %}
 
 <script>
 (function () {
-  var blocks = document.querySelectorAll(".subject-group");
+  // 一级 category + 二级 subject 都能被工具栏控制
+  var blocks = document.querySelectorAll(".category-block, .subject-group");
   document.querySelectorAll('[data-action="expand-all"]').forEach(function (btn) {
     btn.addEventListener("click", function () {
       blocks.forEach(function (d) { d.open = true; });

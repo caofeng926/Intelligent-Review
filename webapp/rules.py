@@ -42,18 +42,24 @@ def _categorize_subject(subject: str) -> str:
 
 
 # ---- 规则数据 -> 分类/主题二维结构 --------------------
-def _build_categories():
-    """从 rules + kp 统计构造二维结构(分类 -> 同名主题 -> 规则行)。
+def _build_categories(kp_limit_per_subject=100):
+    """从 rules + kp 构造三维结构(分类 -> 同名主题 -> KP 列表)。
 
     返回结构:
       [
         { "name": "医疗服务项目",
-          "subjects": [ {"name": "...", "rules": [{...}], "total_kp": N, "rule_count": N}, ... ],
+          "subjects": [ {"name": "...", "kps": [{...}], "kp_total": N,
+                         "rules": [{...}], "total_kp": N, "rule_count": N}, ... ],
           "total_kp": ..., "rule_count": ..., "subject_count": ...
         }, ...
       ]
+
+    每个 subject.kps 是该主题下所有 rule 的 KP 列表 (无去重,保留每个 KP row 的 id)。
+    subject.kp_total 是该主题下 KP 的全量计数。
+    kp_limit_per_subject 控制模板展示的 KPs 上限,避免超长页面。
     """
     with db.connect() as conn:
+        # 所有 rule 行,按 subject + batch 聚合
         rows = conn.execute("""
             SELECT r.id, r.rule_subject, r.source, b.batch_label,
                    COUNT(kp.id) AS kp_count
@@ -63,6 +69,23 @@ def _build_categories():
             GROUP BY r.id
             ORDER BY r.rule_subject
         """).fetchall()
+
+        # 所有 KP,按 rule_subject 分组 + 按 seq 排序
+        kp_rows = conn.execute("""
+            SELECT kp.id, kp.seq, kp.subject_name, kp.pinyin_initials,
+                   kp.code_count, r.rule_subject
+            FROM knowledge_points kp
+            JOIN rules r ON r.id = kp.rule_id
+            ORDER BY r.rule_subject, kp.seq IS NULL, kp.seq, kp.id
+        """).fetchall()
+
+    # 按 rule_subject 分组 KP(无去重,每个 KP row 都是独立条目)
+    kp_by_subject = {}
+    for kp_id, seq, name, initials, code_count, subject in kp_rows:
+        kp_by_subject.setdefault(subject, []).append({
+            "id": kp_id, "seq": seq, "name": name,
+            "pinyin_initials": initials, "code_count": code_count or 0,
+        })
 
     category_map = {}
     for r in rows:
@@ -77,8 +100,8 @@ def _build_categories():
             "batch_label": r[3], "kp_count": r[4],
         }
         subj = bucket["subjects_map"].setdefault(subject, {
-            "name": subject, "rules": [],
-            "total_kp": 0, "rule_count": 0,
+            "name": subject, "rules": [], "kps": [],
+            "kp_total": 0, "total_kp": 0, "rule_count": 0,
         })
         subj["rules"].append(rule)
         bucket["rules"].append(rule)
@@ -92,6 +115,11 @@ def _build_categories():
         if c not in category_map:
             continue
         bucket = category_map[c]
+        # 给每个 subject 挂上 KP 全量 + 截断后的展示列表
+        for subj in bucket["subjects_map"].values():
+            all_kps = kp_by_subject.get(subj["name"], [])
+            subj["kp_total"] = len(all_kps)
+            subj["kps"] = all_kps[:kp_limit_per_subject]
         # 同主题多行的排在前面，再按 KP 总数降序，名字升序
         subjects = sorted(
             bucket["subjects_map"].values(),
