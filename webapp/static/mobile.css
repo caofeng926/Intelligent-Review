@@ -1504,6 +1504,9 @@ svg { display: block; }
   display: inline-block; margin-bottom: 4px; font-weight: var(--fw-semi);
 }
 .cat-name { font-size: var(--fs-sm); font-weight: var(--fw-medium); color: var(--c-text); }
+/* IVD card: small label on top + big value below */
+.cat-label { font-size: var(--fs-xs); color: var(--c-text-3); font-weight: var(--fw-medium); letter-spacing: 0.02em; margin-bottom: 2px; }
+.cat-value { font-size: var(--fs-lg); font-weight: var(--fw-bold); color: var(--c-text); line-height: 1.25; }
 .cat-count {
   font-size: var(--fs-sm); color: var(--c-text-3); font-variant-numeric: tabular-nums;
   flex-shrink: 0;

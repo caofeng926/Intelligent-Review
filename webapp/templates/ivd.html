@@ -74,8 +74,8 @@
   {% for g in groups %}
   <a class="cat-card" href="{{ url_for('ivd_browse', testing_category=g.testing_category) }}">
     <div class="cat-main">
-      <div class="cat-code">{{ g.testing_category }}</div>
-      <div class="cat-name">检测类别</div>
+      <div class="cat-label">检测类别</div>
+      <div class="cat-value">{{ g.testing_category }}</div>
     </div>
     <div class="cat-count">{{ "{:,}".format(g.code_count) }} 条</div>
     <div class="cat-arrow">›</div>
