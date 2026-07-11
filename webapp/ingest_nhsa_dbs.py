@@ -34,6 +34,19 @@ def _split_code_name(v: str) -> tuple[str, str]:
     return "", v.strip()
 
 
+def _ms_level_from_path(level_path) -> int:
+    """据 NHSA 医疗服务项目 levelPath 反推真实层级。
+
+    NHSA 源 JSON 字段 ``level`` 在血制品类（顶级分类 5）下属子项中经常
+    漏填/填错，与 ``levelPath`` 不一致。``levelPath`` 形如
+    ``0.5.51.5101.510101.005101010010000``，其中的 ``.`` 段数 -1
+    正好等于真实层级（顶级=0、大类=1、中类=2、细类=3、项目=4）。
+    """
+    if not level_path or not isinstance(level_path, str):
+        return 0
+    n = level_path.count(".")
+    return max(0, n - 1)
+
 # -------------------- IVD --------------------
 def ingest_ivd(conn: sqlite3.Connection, csv_path: str, sysflag: str, batch_label: str, pub_date: str) -> int:
     rows = []
@@ -154,7 +167,7 @@ def ingest_ms(conn: sqlite3.Connection, json_path: str, sysflag: str, batch_labe
             item.get("msCode", "").strip() if isinstance(item.get("msCode"), str) else str(item.get("msCode", "")),
             item.get("msPid", "") if item.get("msPid") else "",
             item.get("msName", ""),
-            int(item.get("level", 0) or 0),
+            _ms_level_from_path(item.get("levelPath", "")),
             item.get("levelPath", ""),
             "",
             item.get("containsContent", ""),

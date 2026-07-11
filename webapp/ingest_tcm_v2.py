@@ -1,6 +1,10 @@
-﻿"""Ingest NHSA TCM codes (B + Z, 疾病 + 证候) into tcm_codes table.
+﻿"""Ingest NHSA TCM codes (A + B = 疾病 + 证候, per GB/T 15657) into tcm_codes table.
 
 Source: 原始数据/TCM/all.json (downloaded from NHSA API toStdTcmTreeList)
+NOTE: NHSA API returns partcode=B/Z (legacy internal labels).
+      We re-derive part_code from the first letter of tcmCode, per GB/T 15657:
+        A-codes → part_code='A' (疾病)
+        B-codes → part_code='B' (证候)
 Drops codes that no longer exist in the new version.
 """
 from __future__ import annotations
@@ -25,10 +29,18 @@ def main():
         items = data.get("B", []) + data.get("Z", [])
     else:
         items = data
+
+    # Re-derive part_code from code prefix (NHSA API uses legacy B/Z, GB/T 15657 uses A/B)
+    def derive_part(n):
+        code = (n.get("tcmCode") or "").strip()
+        if code[:1] in ("A", "B"):
+            return code[:1]
+        return n.get("partcode") or ""
+
     print(f"Source: {JSON_PATH}  ({os.path.getsize(JSON_PATH):,} bytes)")
     print(f"Total nodes: {len(items)}")
-    print(f"  B (疾病): {sum(1 for n in items if n.get('partcode') == 'B')}")
-    print(f"  Z (证候): {sum(1 for n in items if n.get('partcode') == 'Z')}")
+    print(f"  A (疾病): {sum(1 for n in items if derive_part(n) == 'A')}")
+    print(f"  B (证候): {sum(1 for n in items if derive_part(n) == 'B')}")
 
     db.init_db()
     with db.connect() as conn:
@@ -43,7 +55,7 @@ def main():
                 code,
                 item.get("tcmPid") or "",
                 item.get("tcmName") or "",
-                item.get("partcode") or "",
+                derive_part(item),
                 int(item.get("codelength") or 0),
                 int(item.get("level") or 0),
                 item.get("applyExplain") or "",
@@ -85,10 +97,10 @@ def main():
              datetime.utcnow().isoformat()),
         )
         new_total = conn.execute("SELECT COUNT(*) FROM tcm_codes").fetchone()[0]
+        a_cnt = conn.execute("SELECT COUNT(*) FROM tcm_codes WHERE part_code='A'").fetchone()[0]
         b_cnt = conn.execute("SELECT COUNT(*) FROM tcm_codes WHERE part_code='B'").fetchone()[0]
-        z_cnt = conn.execute("SELECT COUNT(*) FROM tcm_codes WHERE part_code='Z'").fetchone()[0]
     print(f"\n=== Done ===")
-    print(f"  final total: {new_total} (B={b_cnt}, Z={z_cnt})")
+    print(f"  final total: {new_total} (A=疾病 {a_cnt}, B=证候 {b_cnt})")
     print(f"  added: {len(to_add)}, dropped: {len(to_drop)}")
 
 
