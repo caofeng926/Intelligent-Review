@@ -42,7 +42,7 @@
     <div class="nhsa-tile-desc">按部位 / 功效分类树状组织</div>
     <div class="nhsa-tile-count">{{ "{:,}".format(counts.get('tcm_codes', 0)) }}</div>
   </a>
-  <a class="nhsa-tile" href="/api/nhsa/stats">
+  <a class="nhsa-tile" href="{{ url_for('nhsa_stats') }}">
     <div class="nhsa-tile-name">数据来源</div>
     <div class="nhsa-tile-desc">查看 8 类数据库批次与元数据</div>
     <div class="nhsa-tile-count" style="font-size:14px;color:var(--c-text-3);">{{ counts.get('nhsa_batches', 0) }} 批次</div>
