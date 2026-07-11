@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0284C7">
   <title>{% block title %}医保智审规则库{% endblock %}</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='mobile.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='mobile.css') }}?v=20260711">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230284C7'/%3E%3Cpath d='M22 20h6v8h12v-8h6v24h-6v-10H28v10h-6z' fill='white'/%3E%3C/svg%3E">
 </head>
 <body>
@@ -69,6 +69,6 @@
     </div>
   </div>
 
-  <script src="{{ url_for('static', filename='app.js') }}"></script>
+  <script src="{{ url_for('static', filename='app.js') }}?v=20260711"></script>
 </body>
 </html>

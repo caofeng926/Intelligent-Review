@@ -39,13 +39,26 @@ from . import rules  # noqa: E402, F401
 rules.register(app)
 nhsa_browse.register(app)
 from . import yp2025  # noqa: E402, F401
+
 yp2025.register(app)
 from . import yp2025_sx  # noqa: E402, F401
+
 yp2025_sx.register(app)
 app.register_blueprint(admin.admin_bp)
 app.config["JSON_AS_ASCII"] = False
-# 静态资源缓存: 本地开发可即时刷新, 生产可走 CDN/反向代理缓存
-app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0 if app.debug else 3600  # dev=0 / prod=1h
+# 静态资源缓存: 本地开发 0 = 立即刷新; 生产用 60s + 模板里 `?v=YYYYMMDD` 强制 bust,
+# 浏览器遇到带查询串的 URL 会跳过缓存命中。部署后把模板里的 ?v= 改成新日期即可。
+app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0 if app.debug else 60  # dev=0 / prod=1min
+
+
+# 生产模式静态资源强制 no-cache (must-revalidate),保证部署后页面立即看到新版本
+# 带查询串 (?v=...) 的 URL 浏览器通常跳过缓存命中,作为额外保险
+if not app.debug:
+    @app.after_request
+    def _static_no_cache(resp):
+        if request.path.startswith("/static/"):
+            resp.headers["Cache-Control"] = "no-cache, must-revalidate"
+        return resp
 
 
 # ---- Inject global stats into all templates ----
