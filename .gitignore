@@ -10,8 +10,15 @@ venv/
 env/
 
 # Database / 大型二进制
+# 大文件 (GitHub 单文件 100MB 上限): kp.db 本身 + 所有 .bak.* 备份 + server_check 调试副本
 webapp/data/kp.db
-webapp/data/kp.db-*
+webapp/data/kp.db.*
+webapp/data/kp.db-shm
+webapp/data/kp.db-wal
+deploy_artifacts/webapp/data/kp.db
+deploy_artifacts/webapp/data/kp.db.*
+deploy_artifacts/webapp/data/kp.db-shm
+deploy_artifacts/webapp/data/kp.db-wal
 
 # 调试 / 临时文件
 _screenshots/
