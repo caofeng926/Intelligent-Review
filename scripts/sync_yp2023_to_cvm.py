@@ -30,11 +30,14 @@ def md5_remote(ssh, p):
     return o.split()[0] if o else None
 
 def main():
-    print(f"连接 {HOST}:22 ...")
-    ssh = paramiko.SSHClient()
-    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    # Audit 2026-09-03 C3: 改用共享 ssh_lib 模块,默认端口 2222 而非 22
+    print(f"连接 {HOST}:{PORT} ...")
     try:
-        ssh.connect(HOST, port=22, username=USER, password=PASS, timeout=15)
+        ssh = _ssh_connect()
+    except paramiko.SSHException as e:
+        print(f"FAIL: {e}")
+        print("如果是被 fail2ban / 沙箱封禁 — 等待数小时或换 SSH 密钥")
+        sys.exit(1)
     except Exception as e:
         print(f"FAIL: {e}")
         print("如果是被 fail2ban / 沙箱封禁 — 等待数小时或换 SSH 密钥")

@@ -28,21 +28,21 @@ CHANGED = [
     "webapp/templates/ms.html",
 ]
 
-HOST = os.environ.get("MA_SSH_HOST", "132.232.152.250")
-PORT = int(os.environ.get("MA_SSH_PORT", "2222"))
-USER = os.environ.get("MA_SSH_USER", "ubuntu")
+# Audit 2026-09-03 C3: 改用共享 ssh_lib 模块
+import sys as _sys
+_sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "scripts"))
+from ssh_lib import _connect as _ssh_connect, _host as HOST, _port as PORT, _user as USER  # noqa: E401,E501
+
 PASS = os.environ.get("MA_SSH_PASS")
 DEPLOY_DIR = os.environ.get("MA_DEPLOY_DIR", "/opt/medical-audit/webapp")
 
 
 def main():
-    if not PASS:
-        sys.exit("需要设置环境变量 MA_SSH_PASS 才能部署")
+    if not PASS and not os.environ.get("MA_SSH_KEY"):
+        sys.exit("需要设置 MA_SSH_PASS 或 MA_SSH_KEY 环境变量")
     print(f"[deploy] target = {USER}@{HOST}:{DEPLOY_DIR}")
 
-    ssh = paramiko.SSHClient()
-    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh.connect(HOST, port=PORT, username=USER, password=PASS, timeout=15)
+    ssh = _ssh_connect()
     sftp = ssh.open_sftp()
 
     # 1) 同步文件

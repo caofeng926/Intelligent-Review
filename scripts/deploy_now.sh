@@ -18,7 +18,8 @@ if [[ -z "${MA_SSH_PASS:-}" ]]; then
 fi
 
 # SSH 选项 (无 sudoers, 用密码登后 sudo -S)
-SSH_BASE=(ssh -p "$REMOTE_PORT" -o StrictHostKeyChecking=no "$REMOTE_USER@$REMOTE_HOST")
+# Audit 2026-09-03 C3: 已移除 -o StrictHostKeyChecking=no (依赖 ~/.ssh/known_hosts 预 pin)
+SSH_BASE=(ssh -p "$REMOTE_PORT" "$REMOTE_USER@$REMOTE_HOST")
 SUDO_CMD=(sudo -S)
 SUDO_FEED="echo '$MA_SSH_PASS' | sudo -S -p ''"
 
@@ -38,7 +39,8 @@ rsync -av --delete \
   --exclude='__pycache__/' \
   --exclude='*.pyc' \
   --exclude='.DS_Store' \
-  -e "ssh -p $REMOTE_PORT -o StrictHostKeyChecking=no" \
+  # Audit C3: 不再 disable host key verification
+  -e "ssh -p $REMOTE_PORT" \
   deploy_artifacts/webapp/ \
   "$REMOTE_USER@$REMOTE_HOST:$REMOTE_DIR/webapp/"
 

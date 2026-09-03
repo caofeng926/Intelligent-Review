@@ -14,7 +14,7 @@ from typing import Optional
 from flask import Blueprint, abort, current_app, jsonify, render_template, request
 
 from . import db
-from .query_utils import fts_query, row_to_dict
+from .query_utils import fts_query, row_to_dict, _safe_int
 
 admin_bp = Blueprint(
     "admin",
@@ -169,7 +169,7 @@ def dashboard():
 @admin_bp.route("/rules")
 def rules_page():
     """规则管理列表。"""
-    page = max(1, int(request.args.get("page", 1)))
+    page = _safe_int(request.args.get("page"), default=1, min_=1, max_=10000)
     page_size = 20
     with db.connect() as conn:
         total = conn.execute("SELECT COUNT(*) FROM rules").fetchone()[0]
@@ -354,7 +354,7 @@ def codes_browse():
     col_names = [c[0] for c in columns]
 
     q = (request.args.get("q") or "").strip()
-    page = max(1, int(request.args.get("page", 1)))
+    page = _safe_int(request.args.get("page"), default=1, min_=1, max_=10000)
     page_size = 30
 
     with db.connect() as conn:
@@ -407,7 +407,7 @@ def codes_browse():
 @admin_bp.route("/knowledge")
 def knowledge_page():
     """知识点列表。"""
-    page = max(1, int(request.args.get("page", 1)))
+    page = _safe_int(request.args.get("page"), default=1, min_=1, max_=10000)
     page_size = 20
     with db.connect() as conn:
         total = conn.execute("SELECT COUNT(*) FROM knowledge_points").fetchone()[0]
@@ -454,7 +454,7 @@ def sync_page():
 @admin_bp.route("/audit")
 def audit_page():
     """审计日志（基于 SQLite + service journal）。"""
-    page = max(1, int(request.args.get("page", 1)))
+    page = _safe_int(request.args.get("page"), default=1, min_=1, max_=10000)
     page_size = 50
     return render_template(
         "admin/audit.html",
@@ -602,7 +602,7 @@ def kp_detail(kp_id: int):
 @admin_bp.route("/search")
 def admin_search():
     q = (request.args.get("q") or "").strip()
-    page = max(1, int(request.args.get("page", 1)))
+    page = _safe_int(request.args.get("page"), default=1, min_=1, max_=10000)
     page_size = 20
     rows, total = [], 0
     if q:

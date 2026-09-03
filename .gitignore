@@ -46,3 +46,8 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 package-lock.json
+
+# Audit 2026-09-03 M8 + 临时生成文件
+requirements.txt.freeze
+*.freeze
+.tmp/

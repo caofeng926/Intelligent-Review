@@ -14,13 +14,35 @@ from __future__ import annotations
 import re
 
 
+
+# ---- Safe SQL identifier validator ---------------------------------------
+# Defense-in-depth helper for callers building SQL via f-string (table/column
+# names). Currently all callers pass hardcoded constants; this guard prevents
+# accidental SQL identifier injection if a future change starts passing user
+# input (audit 2026-09-03 M1).
+
+_IDENT_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
+def safe_ident(name: str, *, kind: str = "identifier") -> str:
+    """Validate that ``name`` is a safe SQL identifier (table/column).
+
+    Returns the validated identifier unchanged. Raises ValueError if ``name``
+    contains anything other than letters, digits, and underscores, and does
+    not start with a letter or underscore.
+    """
+    if not isinstance(name, str) or not _IDENT_RE.match(name):
+        raise ValueError(f"unsafe SQL {kind}: {name!r}")
+    return name
+
+
 # ---- FTS5 query construction --------------------------------------------
 
 _ASCII_ONLY = re.compile(r"^[A-Za-z0-9]+$")
 _KEEP = re.compile(r"[^\w\u4e00-\u9fff]+")
 
 
-def fts_query(q: str, *, sanitize: bool = False) -> str:
+def fts_query(q: str, *, sanitize: bool = True) -> str:
     """Build FTS5 MATCH expression for the query.
 
     FTS5 unicode61 tokenizes Chinese as single chars, so a multi-char
@@ -32,8 +54,9 @@ def fts_query(q: str, *, sanitize: bool = False) -> str:
         - Chinese (>=2 chars): prefix match on first 2 chars.
         - Single Chinese char: prefix match that single char.
 
-    When `sanitize=True`, non-word/非 CJK characters are replaced with
-    spaces first (use when accepting arbitrary user-supplied keywords).
+    When `sanitize=True` (the default, post-audit-2026-09-03), non-word/
+    非 CJK characters are replaced with spaces first. Defense against
+    FTS5 operator injection (audit M2).
     """
     q = (q or "").strip()
     if not q:

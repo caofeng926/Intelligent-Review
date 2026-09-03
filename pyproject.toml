@@ -3,3 +3,11 @@ profile = "black"
 line_length = 120
 skip_glob = ["_*.py", "webapp/data/*"]
 known_first_party = ["webapp"]
+
+# Bandit config (audit 2026-09-03 M7)
+[tool.bandit]
+exclude_dirs = ["webapp/__pycache__", "webapp/data", "deploy_artifacts/webapp/data", ".venv-5000"]
+# B101: assert_used - 项目用 assert 做参数校验,非安全风险
+# B311: random - 项目不用 random 做安全用途
+# B603: subprocess_popen_with_shell_equals_true - 部署脚本需要
+skips = ["B101", "B311", "B603"]

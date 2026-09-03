@@ -11,7 +11,7 @@ from typing import Optional, List, Dict, Any
 from flask import render_template, request, jsonify, redirect, url_for, abort
 
 from . import db
-from .query_utils import fts_query as _fts_query
+from .query_utils import fts_query as _fts_query, _safe_int
 from .query_utils import row_to_dict
 
 
@@ -20,7 +20,7 @@ PAGE_SIZE = 50
 
 def _limit(default: int = PAGE_SIZE, max_: int = 200) -> int:
     try:
-        n = int(request.args.get("limit", default))
+        n = _safe_int(request.args.get("limit"), default=default, min_=1, max_=500)
     except (TypeError, ValueError):
         n = default
     return max(1, min(n, max_))

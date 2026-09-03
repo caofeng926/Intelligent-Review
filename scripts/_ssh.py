@@ -32,20 +32,17 @@ import shlex
 import paramiko
 
 
-HOST = os.environ.get("MA_SSH_HOST", "132.232.152.250")
-PORT = int(os.environ.get("MA_SSH_PORT", "2222"))
-USER = os.environ.get("MA_SSH_USER", "root")
-PASS = os.environ.get("MA_SSH_PASS", "")
-if not PASS:
-    raise SystemExit("MA_SSH_PASS env var required (set it in your shell before running)")
+# Audit 2026-09-03 C3 + L2 + L4: 改用共享 ssh_lib 模块
+#   - RejectPolicy + load_host_keys (instead of AutoAddPolicy)
+#   - 默认 user = ubuntu (was root)
+#   - HOST/PORT 也走 ssh_lib 默认值 (避免硬编码 8 处)
+import sys as _sys
+_sys.path.insert(0, str(Path(__file__).resolve().parent))
+from ssh_lib import _connect, _host as HOST, _port as PORT, _user as USER  # noqa: F401
 
-
-def _connect():
-    client = paramiko.SSHClient()
-    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    client.connect(HOST, port=PORT, username=USER, password=PASS,
-                   timeout=30, banner_timeout=30, auth_timeout=30)
-    return client
+PASS = os.environ.get("MA_SSH_PASS", "")  # 仅保留兼容; 实际认证走 ssh_lib._connect
+if not PASS and not os.environ.get("MA_SSH_KEY"):
+    raise SystemExit("MA_SSH_PASS or MA_SSH_KEY env var required")
 
 
 def _human_size(num_bytes):

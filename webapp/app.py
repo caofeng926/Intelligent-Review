@@ -15,22 +15,171 @@ GET  /api/code/<code>      reverse-lookup by 医保编码
 from __future__ import annotations
 
 import hashlib
+import hmac
 import html
 import json
 import math
 import os
+import secrets
 import sys
 import time
+from functools import wraps
 
-from flask import Flask, abort, jsonify, render_template, request
+from flask import Flask, Response, abort, jsonify, render_template, request
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from flask_talisman import Talisman
 
 from . import admin, db, nhsa_api, nhsa_browse, yp2025, yp2025_sx
 from .helpers import PAGE_SIZE, SOURCE_LABEL
-from .query_utils import fts_search, row_to_dict
+from .query_utils import _safe_int, fts_search, row_to_dict
 from .search_backend import _row_to_kp_dict, detect_mode, do_search
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
+
+# ---- Security configuration (audit 2026-09-03 H3 + H2 + H1) ------------
+# SECRET_KEY: required for Flask sessions, signed cookies, Flask-WTF, etc.
+# 优先级: env > 内置随机 fallback. 生产必须设 (审计 H3).
+_secret_env = os.environ.get("MA_SECRET_KEY")
+if _secret_env:
+    app.config["SECRET_KEY"] = _secret_env
+elif not app.debug:
+    # 生产模式必须有 secret,否则 fail-fast
+    raise RuntimeError(
+        "MA_SECRET_KEY environment variable is required in production. "
+        "Generate one with: python -c 'import secrets; print(secrets.token_hex(32))'"
+    )
+else:
+    # 开发模式用一次性随机 key (重启即失效,但 dev 没关系)
+    app.config["SECRET_KEY"] = secrets.token_hex(32)
+
+# JSON 配置
+app.config["JSON_AS_ASCII"] = False
+
+# ---- Flask-Talisman: 安全响应头 (审计 H2) -------------------------------
+# 默认 strict CSP / HSTS / X-Frame-Options=DENY / X-Content-Type-Options=nosniff
+# dev 模式禁用 force_https / HSTS,避免本地调试被强制 HTTPS
+Talisman(
+    app,
+    force_https=not app.debug,
+    strict_transport_security=not app.debug,
+    strict_transport_security_max_age=31536000,
+    strict_transport_security_include_subdomains=True,
+    strict_transport_security_preload=True,
+    content_security_policy={
+        "default-src": "'self'",
+        "script-src": ["'self'", "'unsafe-inline'"],  # 内联 script 已有,允许
+        "style-src": ["'self'", "'unsafe-inline'"],
+        "img-src": ["'self'", "data:"],
+        "connect-src": ["'self'"],
+        "frame-ancestors": "'none'",
+        "base-uri": "'self'",
+        "form-action": "'self'",
+    },
+    referrer_policy="strict-origin-when-cross-origin",
+    feature_policy={
+        "geolocation": "'none'",
+        "microphone": "'none'",
+        "camera": "'none'",
+    },
+)
+
+# ---- Flask-Limiter: 限速 (审计 H1) ---------------------------------------
+limiter = Limiter(
+    key_func=get_remote_address,
+    app=app,
+    default_limits=["200 per minute", "3000 per hour"],  # 全局宽松限制
+    storage_uri="memory://",  # 单进程; 多 worker 时需改 redis
+    headers_enabled=True,
+)
+
+# ---- /admin/* 鉴权 (审计 C1) ----------------------------------------------
+# 双因子: (a) HTTP Basic Auth (env) + (b) IP 白名单 (env)
+# 任一失败 → 401/403
+_ADMIN_BASIC_USER = os.environ.get("MA_ADMIN_USER")
+_ADMIN_BASIC_PASS = os.environ.get("MA_ADMIN_PASS")
+_ADMIN_IP_ALLOW = os.environ.get(
+    "MA_ADMIN_ALLOW_CIDR", "127.0.0.1/32,::1/128"
+)  # 默认仅本机
+
+
+def _parse_cidrs(s: str):
+    """Parse a comma-separated CIDR list; return list of (net, mask) tuples for IPv4."""
+    import ipaddress
+    out = []
+    for raw in s.split(","):
+        raw = raw.strip()
+        if not raw:
+            continue
+        try:
+            if "/" in raw:
+                out.append(ipaddress.ip_network(raw, strict=False))
+            else:
+                # bare IP → /32 (v4) or /128 (v6)
+                ip = ipaddress.ip_address(raw)
+                out.append(
+                    ipaddress.ip_network(
+                        f"{raw}/32" if ip.version == 4 else f"{raw}/128",
+                        strict=False,
+                    )
+                )
+        except ValueError:
+            pass
+    return out
+
+
+_ADMIN_NETS = _parse_cidrs(_ADMIN_IP_ALLOW)
+
+
+def _check_basic_auth() -> Response | None:
+    """Return a 401 Response if basic-auth fails, else None."""
+    if not _ADMIN_BASIC_USER or not _ADMIN_BASIC_PASS:
+        # 没有配 creds → 完全拒绝 (默认 deny)
+        resp = Response("Admin auth not configured", status=401)
+        resp.headers["WWW-Authenticate"] = 'Basic realm="admin"'
+        return resp
+    h = request.headers.get("Authorization", "")
+    if not h.startswith("Basic "):
+        resp = Response("Auth required", status=401)
+        resp.headers["WWW-Authenticate"] = 'Basic realm="admin"'
+        return resp
+    try:
+        import base64
+        user, _, pw = base64.b64decode(h[6:]).decode("utf-8", "replace").partition(":")
+    except Exception:
+        return Response("Bad auth header", status=401)
+    # constant-time compare 防时序攻击
+    if not (hmac.compare_digest(user, _ADMIN_BASIC_USER)
+            and hmac.compare_digest(pw, _ADMIN_BASIC_PASS)):
+        resp = Response("Invalid credentials", status=401)
+        resp.headers["WWW-Authenticate"] = 'Basic realm="admin"'
+        return resp
+    return None
+
+
+def _ip_allowed(remote: str) -> bool:
+    import ipaddress
+    try:
+        addr = ipaddress.ip_address(remote or "0.0.0.0")
+    except ValueError:
+        return False
+    return any(addr in n for n in _ADMIN_NETS)
+
+
+@app.before_request
+def _admin_gate():
+    """拦截 /admin/*: Basic Auth + IP 白名单."""
+    if not request.path.startswith("/admin"):
+        return None
+    if not _ip_allowed(request.remote_addr or ""):
+        return Response("Forbidden: IP not in admin allowlist", status=403)
+    return _check_basic_auth()
+
+
+# ---- Blueprint 注册 (在鉴权 gate 之后) -----------------------------------
 nhsa_api.register(app)
+limiter.limit("60 per minute")(nhsa_api.__dict__.get("_stats", lambda: None))  # no-op if missing
+
 from . import consumables  # noqa: E402, F401
 
 consumables.register(app)
@@ -44,7 +193,6 @@ nhsa_browse.register(app)
 yp2025.register(app)
 yp2025_sx.register(app)
 app.register_blueprint(admin.admin_bp)
-app.config["JSON_AS_ASCII"] = False
 # 静态资源缓存: 本地开发 0 = 立即刷新; 生产用 60s + 模板里 `?v=YYYYMMDD` 强制 bust,
 # 浏览器遇到带查询串的 URL 会跳过缓存命中。部署后把模板里的 ?v= 改成新日期即可。
 app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0 if app.debug else 60  # dev=0 / prod=1min
@@ -104,7 +252,7 @@ def api_stats():
 @app.get("/api/recent")
 def api_recent():
     """返回按发布时间倒序的最新 N 条知识点，供小程序首页展示。"""
-    limit = min(int(request.args.get("limit", 12)), 30)
+    limit = _safe_int(request.args.get("limit"), default=12, min_=1, max_=30)
     with db.connect() as conn:
         rows = conn.execute(
             """
@@ -183,7 +331,7 @@ def search_view():
     source = request.args.get("source") or None
     if source and source not in SOURCE_LABEL:
         source = None
-    page = max(int(request.args.get("page", 1) or 1), 1)
+    page = _safe_int(request.args.get("page"), default=1, min_=1, max_=10000)
     limit = PAGE_SIZE  # noqa: F821 (Flask closure)
     offset = (page - 1) * limit
     mode = detect_mode(q)
@@ -301,7 +449,7 @@ def code_search_ms():
 
 def _code_route(type_id):
     q = (request.args.get("q") or "").strip()
-    page = max(int(request.args.get("page", 1) or 1), 1)
+    page = _safe_int(request.args.get("page"), default=1, min_=1, max_=10000)
     limit = 20
     cfg = next((c for c in CODE_SEARCH_CONFIG if c[0] == type_id), None)
     if not cfg:

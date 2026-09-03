@@ -1,4 +1,4 @@
-# 代码审查与质量工具链
+# 代码审查与质量工具链 (audit 2026-09-03 M7)
 # 安装: pip install -r requirements-dev.txt
 # 初始化: pre-commit install
 # 全量检查: pre-commit run --all-files
@@ -7,3 +7,5 @@ flake8>=7.0
 isort>=5.13
 detect-secrets>=1.5
 pre-commit>=3.6
+bandit[toml]>=1.7   # SAST
+pip-audit>=2.6      # 依赖 CVE 扫描

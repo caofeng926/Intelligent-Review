@@ -28,7 +28,7 @@ from typing import Optional
 from flask import jsonify, request
 
 from . import db
-from .query_utils import fts_query as _fts_query, row_to_dict
+from .query_utils import fts_query as _fts_query, row_to_dict, _safe_int
 
 
 # ============================================================
@@ -42,7 +42,7 @@ def _row_to_dict(row, keys):
 
 def _limit(default: int = 50, max_: int = 500) -> int:
     try:
-        n = int(request.args.get("limit", default))
+        n = _safe_int(request.args.get("limit"), default=default, min_=1, max_=500)
     except (TypeError, ValueError):
         n = default
     return max(1, min(n, max_))

@@ -10,6 +10,7 @@ import sqlite3
 from flask import abort, jsonify, render_template, request
 
 from . import db
+from .query_utils import _safe_int
 from .helpers import PAGE_SIZE, SOURCE_LABEL, parse_kp_partner
 from .search_backend import _row_to_kp_dict, detect_mode, do_search
 
@@ -59,8 +60,8 @@ def register(app):
             mode = detect_mode(q)
         if source and source not in SOURCE_LABEL:
             source = None
-        page = max(int(request.args.get("page", 1) or 1), 1)
-        limit = min(int(request.args.get("limit", PAGE_SIZE) or PAGE_SIZE), 50)
+        page = _safe_int(request.args.get("page"), default=1, min_=1, max_=10000)
+        limit = _safe_int(request.args.get("limit"), default=PAGE_SIZE, min_=1, max_=50)
         offset = (page - 1) * limit
         with db.connect() as conn:
             rows, total = do_search(conn, q, mode, source, limit, offset)

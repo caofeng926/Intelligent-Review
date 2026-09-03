@@ -25,6 +25,7 @@ from flask import render_template, request, jsonify, abort
 
 import sqlite3
 from . import db
+from .query_utils import _safe_int
 
 
 PAGE_SIZE = 50
@@ -34,7 +35,7 @@ HERBAL_CATEGORY = "中药饮片"
 
 def _page_size(default: int = PAGE_SIZE, max_: int = 200) -> int:
     try:
-        n = int(request.args.get("limit", default))
+        n = _safe_int(request.args.get("limit"), default=default, min_=1, max_=500)
     except (TypeError, ValueError):
         n = default
     return max(1, min(n, max_))
@@ -81,7 +82,7 @@ def register(app):
         top = (request.args.get("top") or "").strip() or None
         sub = (request.args.get("sub") or "").strip() or None
         q = (request.args.get("q") or "").strip()
-        page = max(1, int(request.args.get("page", 1) or 1))
+        page = _safe_int(request.args.get("page"), default=1, min_=1, max_=10000)
         limit = _page_size()
         offset = (page - 1) * limit
 
