@@ -12,7 +12,7 @@
 </nav>
 
 <form action="{{ url_for('hc7_index') }}" method="get" class="hero-search" style="margin-bottom: var(--s-4);">
-  <span class="hero-search-icon">⌕</span>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;color:var(--c-text-3);margin-right:8px;flex-shrink:0;"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
   <input name="q" type="search" value="{{ query|default('',true) }}" placeholder="输入编码 / 通用名 / 企业" enterkeyhint="search">
   <button class="hero-search-btn" type="submit">搜索</button>
 </form>
@@ -39,17 +39,17 @@
 </div>
 {% else %}
 <div class="empty">
-  <div class="empty-ico">∅</div>
+  <div class="empty-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><path d="M8 11h6"/></svg></div>
   <div class="empty-title">无匹配</div>
   <div class="empty-tip">没有找到{% if query %}与「{{ query }}」相关的{% endif %}耗材</div>
 </div>
 {% endif %}
 
-<section class="tip">
-  <div class="tip-icon">i</div>
-  <div class="tip-body">
-    <div class="tip-title">关于 7 类医用耗材</div>
-    <div class="tip-text">国家医保局 2025-09-01 版血管介入类等 7 类医用耗材（与普通 HC 分类并列）。19 位 C-code 编码。</div>
+<section class="info-banner">
+  <div class="info-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></div>
+  <div class="info-body">
+    <div class="info-title">关于 7 类医用耗材</div>
+    <div class="info-text">国家医保局 2025-09-01 版血管介入类等 7 类医用耗材（与普通 HC 分类并列）。19 位 C-code 编码。</div>
   </div>
 </section>
 {% endblock %}

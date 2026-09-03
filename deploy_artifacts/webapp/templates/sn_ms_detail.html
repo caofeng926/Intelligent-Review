@@ -1,0 +1,104 @@
+﻿{% extends "base.html" %}
+{% block title %}{{ d.name }} · 陕西版 · 医保标准库 · 医保智审{% endblock %}
+{% block content %}
+<section class="page-head">
+  <h1 class="page-title">{{ d.name }}</h1>
+  <p class="page-sub">
+    陕西版 · L{{ d.level }} · 编码 {{ d.code }}
+    {% if d.p_code %} · 父级 {{ d.p_code }}{% endif %}
+    {% if d.unit %} · 计价单位 {{ d.unit }}{% endif %}
+  </p>
+</section>
+
+<nav class="bread">
+  <a href="{{ index_url }}">陕西版</a> <span class="bread-sep">›</span>
+  <a href="{{ url_for('sn_ms_browse', sheet=d.sheet_name) }}">{{ d.sheet_name }}</a>
+  {% for a in ancestors %}
+    <span class="bread-sep">›</span>
+    <a href="{{ url_for('sn_ms_browse', sheet=d.sheet_name, parent_code=a.code) }}">{{ a.name }}</a>
+  {% endfor %}
+  <span class="bread-sep">›</span> <span class="bread-cur">{{ d.name }}</span>
+</nav>
+
+<section class="detail-card">
+  <div class="detail-fields">
+    <div class="detail-field">
+      <div class="detail-label">编码</div>
+      <div class="detail-value mono">{{ d.code }}</div>
+    </div>
+    <div class="detail-field">
+      <div class="detail-label">级别</div>
+      <div class="detail-value">第 {{ d.level }} 级</div>
+    </div>
+    <div class="detail-field">
+      <div class="detail-label">一级分类</div>
+      <div class="detail-value">{{ d.sheet_title }}</div>
+    </div>
+    <div class="detail-field">
+      <div class="detail-label">层级路径</div>
+      <div class="detail-value mono">{{ d.level_path }}</div>
+    </div>
+    {% if d.fin_class %}
+    <div class="detail-field">
+      <div class="detail-label">财务分类</div>
+      <div class="detail-value">{{ d.fin_class }}</div>
+    </div>
+    {% endif %}
+    {% if d.unit %}
+    <div class="detail-field">
+      <div class="detail-label">计价单位</div>
+      <div class="detail-value">{{ d.unit }}</div>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="detail-prices">
+    <div class="detail-price-card detail-price-l3">
+      <div class="detail-price-label">三级医院</div>
+      <div class="detail-price-value">{{ d.price_l3 or "—" }}<span class="detail-price-unit">元</span></div>
+    </div>
+    <div class="detail-price-card detail-price-l2">
+      <div class="detail-price-label">二级医院</div>
+      <div class="detail-price-value">{{ d.price_l2 or "—" }}<span class="detail-price-unit">元</span></div>
+    </div>
+    <div class="detail-price-card detail-price-l1">
+      <div class="detail-price-label">一级医院</div>
+      <div class="detail-price-value">{{ d.price_l1 or "—" }}<span class="detail-price-unit">元</span></div>
+    </div>
+  </div>
+
+  {% if d.content %}
+  <div class="detail-block">
+    <div class="detail-block-title">项目内涵</div>
+    <div class="detail-block-body">{{ d.content }}</div>
+  </div>
+  {% endif %}
+  {% if d.exclude %}
+  <div class="detail-block">
+    <div class="detail-block-title">除外内容</div>
+    <div class="detail-block-body">{{ d.exclude }}</div>
+  </div>
+  {% endif %}
+  {% if d.remark %}
+  <div class="detail-block">
+    <div class="detail-block-title">说明</div>
+    <div class="detail-block-body">{{ d.remark }}</div>
+  </div>
+  {% endif %}
+</section>
+
+{% if siblings %}
+<section class="list-card" style="margin-top: var(--s-5);">
+  <div class="list-card-head">同级项目 ({{ siblings|length }})</div>
+  {% for s in siblings %}
+  <a class="list-row" href="{{ url_for('sn_ms_detail', code=s.code) }}">
+    <div class="list-main">
+      <div class="list-code">{{ s.code }}</div>
+      <div class="list-name">{{ s.name }}</div>
+    </div>
+    <div class="list-arrow">›</div>
+  </a>
+  {% endfor %}
+</section>
+{% endif %}
+{% endblock %}

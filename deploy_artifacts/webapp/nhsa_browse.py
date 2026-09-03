@@ -11,6 +11,8 @@ from typing import Optional, List, Dict, Any
 from flask import render_template, request, jsonify, redirect, url_for, abort
 
 from . import db
+from .query_utils import fts_query as _fts_query
+from .query_utils import row_to_dict
 
 
 PAGE_SIZE = 50
@@ -22,21 +24,6 @@ def _limit(default: int = PAGE_SIZE, max_: int = 200) -> int:
     except (TypeError, ValueError):
         n = default
     return max(1, min(n, max_))
-
-
-def _fts_query(q: str) -> Optional[str]:
-    """Build FTS5 MATCH expression (matches nhsa_api convention)."""
-    q = (q or "").strip()
-    if not q:
-        return None
-    safe = re.sub(r"[^\w\u4e00-\u9fff]+", " ", q).strip()
-    if not safe:
-        return None
-    if re.match(r"^[A-Za-z0-9]+$", safe):
-        return safe + "*"
-    if len(safe) >= 2:
-        return f'"{safe[:2]}"*'
-    return f'"{safe}"*'
 
 
 def _rules_for_codes(conn, codes):
@@ -70,6 +57,156 @@ def _nhsa_counts(conn):
             out[tbl] = 0
     return out
 
+def _kps_for_codes(conn, code):
+    """Return KPs (knowledge points) that reference the given code.
+    Used to show bidirectional link: code detail -> KPs -> rules.
+    """
+    if not code:
+        return []
+    rows = conn.execute(
+        "SELECT DISTINCT kp.id, kp.subject_name, kp.code_count, "
+        "       r.id, r.rule_subject, b.batch_label, b.pub_date "
+        "FROM knowledge_point_codes kpc "
+        "JOIN knowledge_points kp ON kp.id = kpc.kp_id "
+        "JOIN rules r ON r.id = kp.rule_id "
+        "JOIN batches b ON b.id = r.batch_id "
+        "WHERE kpc.code = ? "
+        "ORDER BY b.id DESC LIMIT 30",
+        (code,),
+    ).fetchall()
+    return [
+        {
+            "kp_id": r[0],
+            "kp_name": r[1],
+            "kp_code_count": r[2],
+            "rule_id": r[3],
+            "rule_subject": r[4],
+            "batch_label": r[5],
+            "pub_date": r[6],
+        }
+        for r in rows
+    ]
+
+
+
+
+# ============================================================
+# Shaanxi Medical Service 2021 helpers
+# ============================================================
+def _sn_ms_search(conn, q, limit):
+    """FTS5 + LIKE fallback search for SN-MS code/name/content."""
+    from .query_utils import fts_query as _q_fts
+    fts = _q_fts(q)
+    if not fts:
+        return [], 0
+    try:
+        rows = conn.execute(
+            "SELECT code, p_code, name, level, sheet_name, fin_class, unit, "
+            "       price_l1, price_l2, price_l3 "
+            "FROM sn_ms_codes "
+            "WHERE id IN (SELECT rowid FROM sn_ms_codes_fts WHERE sn_ms_codes_fts MATCH ?) "
+            "ORDER BY sheet_name, code LIMIT ?",
+            (fts, limit),
+        ).fetchall()
+        total = conn.execute(
+            "SELECT COUNT(*) FROM sn_ms_codes "
+            "WHERE id IN (SELECT rowid FROM sn_ms_codes_fts WHERE sn_ms_codes_fts MATCH ?)",
+            (fts,),
+        ).fetchone()[0]
+        keys = ["code", "p_code", "name", "level", "sheet_name", "fin_class",
+                "unit", "price_l1", "price_l2", "price_l3"]
+        return [row_to_dict(r, keys) for r in rows], total
+    except Exception:
+        like = "%" + q.strip() + "%"
+        rows = conn.execute(
+            "SELECT code, p_code, name, level, sheet_name, fin_class, unit, "
+            "       price_l1, price_l2, price_l3 "
+            "FROM sn_ms_codes "
+            "WHERE name LIKE ? OR code LIKE ? OR content LIKE ? "
+            "ORDER BY sheet_name, code LIMIT ?",
+            (like, like, like, limit),
+        ).fetchall()
+        keys = ["code", "p_code", "name", "level", "sheet_name", "fin_class",
+                "unit", "price_l1", "price_l2", "price_l3"]
+        return [row_to_dict(r, keys) for r in rows], len(rows)
+
+
+def _sn_ms_ancestors(conn, sheet, parent_digits):
+    """Build breadcrumb (sheet, ancestors at L2/L4/L6) for a given parent code."""
+    items = []
+    if not parent_digits:
+        return items
+    n = len(parent_digits)
+    cuts = [2, 4, 6]
+    for c in cuts:
+        if c > n:
+            break
+        d = parent_digits[:c]
+        row = conn.execute(
+            "SELECT code, name FROM sn_ms_codes WHERE sheet_name=? AND code=?",
+            (sheet, d),
+        ).fetchone()
+        if row:
+            items.append({"code": row[0], "name": row[1]})
+    return items
+
+
+def _has_l4(conn, sheet):
+    return conn.execute(
+        "SELECT 1 FROM sn_ms_codes WHERE sheet_name=? AND level=4 LIMIT 1",
+        (sheet,),
+    ).fetchone() is not None
+
+
+_CN_NUM = {"一": 1, "二": 2, "三": 3, "四": 4, "五": 5,
+           "六": 6, "七": 7, "八": 8, "九": 9, "十": 10}
+_CN_NUM_RE = re.compile(r"^([一二三四五六七八九十])、")
+
+
+def _sn_ms_sheet_sort_key(s):
+    """Sort key for sn_ms index cards.
+
+    按 sheet_title 开头的 "一、""二、"…中文序号升序；无序号的卡片
+    (如 "财务分类") 置于 三 (临床诊疗类) 与 四 (中医类) 之间，组内按 sheet_name 排序。
+    """
+    title = s.get("sheet_title") or ""
+    m = _CN_NUM_RE.match(title)
+    if m:
+        return (_CN_NUM[m.group(1)], s.get("sheet_name") or "")
+    # 无序号: 置于 3 与 4 之间
+    return (3.5, s.get("sheet_name") or "")
+
+
+def _ms_real_level(level_path) -> int:
+    """医疗服务项目的真实层级（顶级=0, 大类=1, 中类=2, 细类=3, 项目=4）。
+
+    level_path 形如 ``0.5.51.5101.510101.005101010010000``，其中 ``.`` 段数 -1
+    正好等于真实层级。源 JSON 的 ``level`` 字段对血制品类下属子项经常漏填/填错，
+    故路由统一从 ``level_path`` 反推。
+    """
+    if not level_path or not isinstance(level_path, str):
+        return 0
+    n = level_path.count(".")
+    return max(0, n - 1)
+
+def _ms_top_categories(conn):
+    """返回医疗服务项目真实顶级 5 条 + 每个顶级下的子节点计数。"""
+    rows = conn.execute(
+        "SELECT code, p_code, name, level_path,"
+        " (LENGTH(level_path)-LENGTH(REPLACE(level_path,'.','')))-1 AS real_level,"
+        " (SELECT COUNT(*) FROM medical_service_codes c2"
+        "  WHERE c2.level_path LIKE m.level_path || '.%') AS child_count"
+        " FROM medical_service_codes m"
+        " WHERE level_path LIKE '0.%'"
+        "   AND (LENGTH(level_path)-LENGTH(REPLACE(level_path,'.','')))=1"
+        " ORDER BY code"
+    ).fetchall()
+    return [
+        {"code": r[0], "p_code": r[1], "name": r[2],
+         "level_path": r[3], "real_level": 0, "child_count": r[5]}
+        for r in rows
+    ]
+
 
 # ============================================================
 # registration
@@ -84,6 +221,34 @@ def register(app):
             counts = _nhsa_counts(conn)
             total = sum(v for k, v in counts.items() if k != "nhsa_batches")
         return render_template("nhsa_index.html", counts=counts, total_codes=total)
+
+    # ---------------- /nhsa/stats (data provenance) ----------------
+    @app.get("/nhsa/stats")
+    @app.get("/nhsa/stats/")
+    def nhsa_stats():
+        with db.connect() as conn:
+            rows = conn.execute("""
+                SELECT source, batch_label, pub_date, record_count, sysflag,
+                       csv_path, json_path, datetime(ingested_at) AS ingested_at
+                FROM nhsa_batches
+                ORDER BY pub_date DESC, source
+            """).fetchall()
+            live = {}
+            for tbl in ["consumable_codes", "drug_detail", "yp_codes",
+                        "ivd_codes", "consumable7_codes", "icd_codes",
+                        "medical_service_codes", "tcm_codes"]:
+                try:
+                    live[tbl] = conn.execute(f"SELECT COUNT(*) FROM {tbl}").fetchone()[0]
+                except Exception:
+                    live[tbl] = 0
+        from .query_utils import row_to_dict
+        stats = {
+            "live_counts": live,
+            "batches": [row_to_dict(r, ["source", "batch_label", "pub_date", "record_count",
+                "sysflag", "csv_path", "json_path", "ingested_at"]) for r in rows],
+        }
+        total_rows = sum((b["record_count"] or 0) for b in stats["batches"])
+        return render_template("nhsa_stats.html", stats=stats, total_rows=total_rows)
 
     # ==================== IVD ====================
     @app.get("/nhsa/ivd/")
@@ -108,8 +273,7 @@ def register(app):
                     "ivd.html",
                     groups=[], total_codes=total_all,
                     testing_category=testing_category, query=q,
-                    rows=[dict(zip(
-                        ["code", "catalog_full_name", "testing_index", "testing_category", "company_name"], r))
+                    rows=[row_to_dict(r, ["code", "catalog_full_name", "testing_index", "testing_category", "company_name"])
                         for r in rows],
                     total=total)
             if q:
@@ -132,8 +296,7 @@ def register(app):
                     "ivd.html",
                     groups=[], total_codes=total_all,
                     testing_category="", query=q,
-                    rows=[dict(zip(
-                        ["code", "catalog_full_name", "testing_index", "testing_category", "company_name"], r))
+                    rows=[row_to_dict(r, ["code", "catalog_full_name", "testing_index", "testing_category", "company_name"])
                         for r in rows],
                     total=total)
             groups = conn.execute(
@@ -161,13 +324,15 @@ def register(app):
             keys = ["code", "cat_l1", "cat_l1_name", "cat_l2", "cat_l2_name", "cat_l3", "cat_l3_name",
                     "testing_category", "testing_index", "use_type", "check_type",
                     "company_name", "business_license", "spec_code", "catalog_full_name"]
-            data = dict(zip(keys, r)) if r else None
+            data = row_to_dict(r, keys) if r else None
             rules = _rules_for_codes(conn, [code]) if data else []
+            kps = _kps_for_codes(conn, code) if data else []
         return render_template(
             "nhsa_detail.html",
+            code_kind="ivd",
             code=code, data=data, name=(data or {}).get("catalog_full_name") or "体外诊断试剂",
             title="体外诊断试剂", index_url=url_for("ivd_browse"),
-            code_field="code", name_field="catalog_full_name", rules=rules,
+            code_field="code", name_field="catalog_full_name", kps=kps, rules=rules,
             labels={
                 "cat_l1": "一级分类", "cat_l1_name": "一级名称",
                 "cat_l2": "二级分类", "cat_l2_name": "二级名称",
@@ -225,7 +390,7 @@ def register(app):
                 params + [limit],
             ).fetchall()
             keys = ["code", "reg_name", "product_name", "dosage_form", "spec", "manufacturer", "list_class"]
-            rows = [dict(zip(keys, r)) for r in rows]
+            rows = [row_to_dict(r, keys) for r in rows]
         return render_template(
             "yp.html", total_codes=total_all,
             rows=rows, total=total, query=q,
@@ -244,14 +409,16 @@ def register(app):
             keys = ["code", "reg_name", "reg_dosage_form", "reg_spec", "product_name",
                     "dosage_form", "spec", "packaging", "min_pkg_qty", "min_prep_unit",
                     "min_pkg_unit", "manufacturer", "approval_no", "base_code", "list_class"]
-            data = dict(zip(keys, r)) if r else None
+            data = row_to_dict(r, keys) if r else None
             rules = _rules_for_codes(conn, [code]) if data else []
+            kps = _kps_for_codes(conn, code) if data else []
         name = (data or {}).get("reg_name") or (data or {}).get("product_name") or "医保药品"
         return render_template(
             "nhsa_detail.html",
+            code_kind="yp",
             code=code, data=data, name=name,
             title="医保药品", index_url=url_for("yp_browse"),
-            code_field="code", name_field="reg_name", rules=rules,
+            code_field="code", name_field="reg_name", kps=kps, rules=rules,
             labels={
                 "reg_name": "注册名称",
                 "reg_dosage_form": "注册剂型",
@@ -299,8 +466,7 @@ def register(app):
                     "icd.html",
                     groups=[], total_codes=total_all,
                     chapter_no=chapter_no, chapter_name=ch_name, query=q,
-                    rows=[dict(zip(
-                        ["code", "diagnosis_code", "diagnosis_name", "category_name", "section_name"], r))
+                    rows=[row_to_dict(r, ["code", "diagnosis_code", "diagnosis_name", "category_name", "section_name"])
                         for r in rows],
                     total=total)
             if q:
@@ -323,8 +489,7 @@ def register(app):
                     "icd.html",
                     groups=[], total_codes=total_all,
                     chapter_no="", chapter_name="", query=q,
-                    rows=[dict(zip(
-                        ["code", "diagnosis_code", "diagnosis_name", "category_name", "section_name"], r))
+                    rows=[row_to_dict(r, ["code", "diagnosis_code", "diagnosis_name", "category_name", "section_name"])
                         for r in rows],
                     total=total)
             groups = conn.execute(
@@ -343,24 +508,54 @@ def register(app):
     @app.get("/nhsa/icd/code/<code>")
     def icd_detail(code):
         with db.connect() as conn:
-            r = conn.execute(
+            # 按精确度分层级匹配:
+            # 1. code=?           (亚目/扩展码/类目如果直接存为 code)
+            # 2. diagnosis_code=? (扩展码)
+            # 3. category_code=?  (类目 A00)
+            # 4. subcategory_code=?  (亚目 A00.0)
+            # SELECT 末尾加一列 "_match" 标识命中层级, 让 name/diagnosis_name 字段可分级呈现
+            sql = (
+                # 1. code 直接匹配 -> name = diagnosis_name (or category_name)
                 "SELECT code, chapter_no, chapter_range, chapter_name, section_range, section_name, "
                 "category_code, category_name, subcategory_code, subcategory_name, "
-                "diagnosis_code, diagnosis_name "
-                "FROM icd_codes WHERE code=? OR diagnosis_code=? LIMIT 1",
-                (code, code),
-            ).fetchone()
+                "diagnosis_code, diagnosis_name, COALESCE(diagnosis_name, category_name) AS _name, 1 AS _match "
+                "FROM icd_codes WHERE code=? "
+                # 2. diagnosis_code 匹配 -> name = diagnosis_name
+                "UNION ALL SELECT code, chapter_no, chapter_range, chapter_name, section_range, section_name, "
+                "category_code, category_name, subcategory_code, subcategory_name, "
+                "diagnosis_code, diagnosis_name, diagnosis_name AS _name, 2 AS _match "
+                "FROM icd_codes WHERE diagnosis_code=? AND code<>? "
+                # 3. category_code 匹配 -> name = category_name
+                "UNION ALL SELECT code, chapter_no, chapter_range, chapter_name, section_range, section_name, "
+                "category_code, category_name, subcategory_code, subcategory_name, "
+                "diagnosis_code, diagnosis_name, category_name AS _name, 3 AS _match "
+                "FROM icd_codes WHERE category_code=? AND code<>? AND diagnosis_code<>? "
+                # 4. subcategory_code 匹配 -> name = subcategory_name
+                "UNION ALL SELECT code, chapter_no, chapter_range, chapter_name, section_range, section_name, "
+                "category_code, category_name, subcategory_code, subcategory_name, "
+                "diagnosis_code, diagnosis_name, subcategory_name AS _name, 4 AS _match "
+                "FROM icd_codes WHERE subcategory_code=? AND code<>? AND diagnosis_code<>? AND category_code<>? "
+                "LIMIT 1"
+            )
+            r = conn.execute(sql, (code, code, code, code, code, code, code, code, code, code)).fetchone()
             keys = ["code", "chapter_no", "chapter_range", "chapter_name",
                     "section_range", "section_name", "category_code", "category_name",
-                    "subcategory_code", "subcategory_name", "diagnosis_code", "diagnosis_name"]
-            data = dict(zip(keys, r)) if r else None
+                    "subcategory_code", "subcategory_name", "diagnosis_code", "diagnosis_name",
+                    "_name", "_match"]
+            data = row_to_dict(r, keys) if r else None
+            if data:
+                # 显示匹配的层级名 (4 个 SELECT 各自返回该层级的名字)
+                data["display_name"] = data.pop("_name")
+                data.pop("_match", None)
             rules = _rules_for_codes(conn, [code]) if data else []
-        name = (data or {}).get("diagnosis_name") or (data or {}).get("category_name") or "ICD 诊断"
+            kps = _kps_for_codes(conn, code) if data else []
+        name = (data or {}).get("display_name") or "ICD 诊断"
         return render_template(
             "nhsa_detail.html",
+            code_kind="icd",
             code=code, data=data, name=name,
             title="ICD-10 诊断编码", index_url=url_for("icd_browse"),
-            code_field="code", name_field="diagnosis_name", rules=rules,
+            code_field="code", name_field="diagnosis_name", kps=kps, rules=rules,
             labels={
                 "chapter_no": "章节号",
                 "chapter_range": "章节范围",
@@ -375,7 +570,6 @@ def register(app):
                 "diagnosis_name": "诊断名称",
             })
 
-    # ==================== MS ====================
     @app.get("/nhsa/ms/")
     @app.get("/nhsa/ms")
     def ms_browse():
@@ -384,12 +578,14 @@ def register(app):
         limit = _limit()
         with db.connect() as conn:
             total_all = conn.execute("SELECT COUNT(*) FROM medical_service_codes").fetchone()[0]
+
             if q:
                 fts = _fts_query(q)
+                rows, total = [], 0
                 if fts:
                     try:
                         rows = conn.execute(
-                            "SELECT code, p_code, level, name, charge_unit, explain "
+                            "SELECT code, p_code, level, level_path, name, charge_unit, explain "
                             "FROM medical_service_codes "
                             "WHERE id IN (SELECT rowid FROM medical_service_codes_fts "
                             "WHERE medical_service_codes_fts MATCH ?) "
@@ -399,49 +595,55 @@ def register(app):
                         total = len(rows)
                     except Exception:
                         rows, total = [], 0
-                else:
-                    rows, total = [], 0
+                rrows = []
+                for r in rows:
+                    d = row_to_dict(r, ["code", "p_code", "level", "level_path", "name", "charge_unit", "explain"])
+                    d["real_level"] = _ms_real_level(d.get("level_path"))
+                    rrows.append(d)
                 return render_template(
                     "ms.html",
-                    groups=[], total_codes=total_all,
+                    tops=[], total_codes=total_all,
                     query=q, level="",
-                    rows=[dict(zip(
-                        ["code", "p_code", "level", "name", "charge_unit", "explain"], r))
-                        for r in rows],
-                    total=total)
+                    rows=rrows, total=total)
+
             if level:
-                rows = conn.execute(
-                    "SELECT code, p_code, level, name, charge_unit, explain "
-                    "FROM medical_service_codes WHERE level=? ORDER BY code LIMIT ?",
-                    (int(level), limit),
-                ).fetchall()
-                total = conn.execute(
-                    "SELECT COUNT(*) FROM medical_service_codes WHERE level=?",
-                    (int(level),),
-                ).fetchone()[0]
+                try:
+                    lv = int(level)
+                except ValueError:
+                    lv = -1
+                if lv < 0:
+                    rows, total = [], 0
+                else:
+                    rows = conn.execute(
+                        "SELECT code, p_code, level, level_path, name, charge_unit, explain "
+                        "FROM medical_service_codes "
+                        "WHERE (LENGTH(level_path)-LENGTH(REPLACE(level_path,'.','')))=? "
+                        "ORDER BY code LIMIT ?",
+                        (lv + 1, limit),
+                    ).fetchall()
+                    total = conn.execute(
+                        "SELECT COUNT(*) FROM medical_service_codes "
+                        "WHERE (LENGTH(level_path)-LENGTH(REPLACE(level_path,'.','')))=?",
+                        (lv + 1,),
+                    ).fetchone()[0]
+                rrows = []
+                for r in rows:
+                    d = row_to_dict(r, ["code", "p_code", "level", "level_path", "name", "charge_unit", "explain"])
+                    d["real_level"] = _ms_real_level(d.get("level_path"))
+                    rrows.append(d)
                 return render_template(
                     "ms.html",
-                    groups=[], total_codes=total_all,
+                    tops=[], total_codes=total_all,
                     query="", level=level,
-                    rows=[dict(zip(
-                        ["code", "p_code", "level", "name", "charge_unit", "explain"], r))
-                        for r in rows],
-                    total=total)
-            groups = conn.execute(
-                "SELECT level, COUNT(*) AS code_count, MIN(p_code) AS p_code, "
-                "CASE WHEN level=0 THEN '顶级分类' "
-                "WHEN level=1 THEN '大类' "
-                "WHEN level=2 THEN '中类' "
-                "ELSE '项目' END AS p_name "
-                "FROM medical_service_codes GROUP BY level ORDER BY level"
-            ).fetchall()
+                    rows=rrows, total=total)
+
+            # 默认首页: 展示真实顶级 5 条分类入口
+            tops = _ms_top_categories(conn)
             return render_template(
                 "ms.html",
-                groups=[{"level": g[0], "code_count": g[1], "p_code": g[2], "p_name": g[3]}
-                        for g in groups],
-                total_codes=total_all, query="", level="",
+                tops=tops, total_codes=total_all,
+                query="", level="",
                 rows=[], total=total_all)
-
     @app.get("/nhsa/ms/code/<code>")
     def ms_detail(code):
         with db.connect() as conn:
@@ -455,13 +657,15 @@ def register(app):
             keys = ["code", "p_code", "name", "level", "level_path", "pinyin_code",
                     "contains_content", "excluded_content", "charge_unit", "explain",
                     "area", "is_using"]
-            data = dict(zip(keys, r)) if r else None
+            data = row_to_dict(r, keys) if r else None
             rules = _rules_for_codes(conn, [code]) if data else []
+            kps = _kps_for_codes(conn, code) if data else []
         return render_template(
             "nhsa_detail.html",
+            code_kind="ms",
             code=code, data=data, name=(data or {}).get("name") or "医疗服务项目",
             title="医疗服务项目", index_url=url_for("ms_browse"),
-            code_field="code", name_field="name", rules=rules,
+            code_field="code", name_field="name", kps=kps, rules=rules,
             labels={
                 "p_code": "父编码",
                 "level": "层级",
@@ -480,6 +684,8 @@ def register(app):
     @app.get("/nhsa/tcm")
     def tcm_browse():
         q = (request.args.get("q") or "").strip()
+        part = (request.args.get("part") or "").strip().upper()
+        level = request.args.get("level") or ""
         limit = _limit()
         with db.connect() as conn:
             total_all = conn.execute("SELECT COUNT(*) FROM tcm_codes").fetchone()[0]
@@ -502,13 +708,55 @@ def register(app):
                 return render_template(
                     "tcm.html",
                     total_codes=total_all, query=q,
-                    rows=[dict(zip(
-                        ["code", "p_code", "level", "name", "class_name", "apply_explain"], r))
+                    parts=[], levels=[],
+                    rows=[row_to_dict(r, ["code", "p_code", "level", "name", "class_name", "apply_explain"])
                         for r in rows],
-                    total=total)
+                    total=total, part="", level="")
+            if part in ("A", "B"):
+                rows = conn.execute(
+                    "SELECT code, p_code, level, name, class_name, apply_explain "
+                    "FROM tcm_codes WHERE part_code=? ORDER BY code LIMIT ?",
+                    (part, limit),
+                ).fetchall()
+                total = conn.execute(
+                    "SELECT COUNT(*) FROM tcm_codes WHERE part_code=?", (part,)
+                ).fetchone()[0]
+                return render_template(
+                    "tcm.html",
+                    total_codes=total_all, query="",
+                    parts=[], levels=[],
+                    rows=[row_to_dict(r, ["code", "p_code", "level", "name", "class_name", "apply_explain"])
+                        for r in rows],
+                    total=total, part=part, level="")
+            if level.isdigit():
+                lv = int(level)
+                rows = conn.execute(
+                    "SELECT code, p_code, level, name, class_name, apply_explain "
+                    "FROM tcm_codes WHERE level=? ORDER BY code LIMIT ?",
+                    (lv, limit),
+                ).fetchall()
+                total = conn.execute(
+                    "SELECT COUNT(*) FROM tcm_codes WHERE level=?", (lv,)
+                ).fetchone()[0]
+                return render_template(
+                    "tcm.html",
+                    total_codes=total_all, query="",
+                    parts=[], levels=[],
+                    rows=[row_to_dict(r, ["code", "p_code", "level", "name", "class_name", "apply_explain"])
+                        for r in rows],
+                    total=total, part="", level=str(lv))
+            parts = conn.execute(
+                "SELECT part_code, COUNT(*) AS c FROM tcm_codes "
+                "GROUP BY part_code ORDER BY part_code"
+            ).fetchall()
+            levels = conn.execute(
+                "SELECT level, COUNT(*) AS c FROM tcm_codes GROUP BY level ORDER BY level"
+            ).fetchall()
             return render_template(
                 "tcm.html", total_codes=total_all, query="",
-                rows=[], total=total_all)
+                parts=[{"part_code": p[0], "count": p[1]} for p in parts],
+                levels=[{"level": p[0], "count": p[1]} for p in levels],
+                rows=[], total=total_all, part="", level="")
 
     @app.get("/nhsa/tcm/code/<code>")
     def tcm_detail(code):
@@ -521,13 +769,15 @@ def register(app):
             ).fetchone()
             keys = ["code", "p_code", "name", "part_code", "code_length", "level",
                     "apply_explain", "remark", "class_code", "class_name"]
-            data = dict(zip(keys, r)) if r else None
+            data = row_to_dict(r, keys) if r else None
             rules = _rules_for_codes(conn, [code]) if data else []
+            kps = _kps_for_codes(conn, code) if data else []
         return render_template(
             "nhsa_detail.html",
+            code_kind="tcm",
             code=code, data=data, name=(data or {}).get("name") or "中药饮片",
             title="中药饮片", index_url=url_for("tcm_browse"),
-            code_field="code", name_field="name", rules=rules,
+            code_field="code", name_field="name", kps=kps, rules=rules,
             labels={
                 "p_code": "父编码",
                 "part_code": "部位编码",
@@ -570,7 +820,7 @@ def register(app):
             keys = ["code", "cat_l1", "cat_l1_name", "cat_l2", "cat_l2_name",
                     "cat_l3", "cat_l3_name", "generic_category", "material",
                     "spec", "generic_no", "generic_name", "manufacturer"]
-            rows = [dict(zip(keys, r)) for r in rows]
+            rows = [row_to_dict(r, keys) for r in rows]
         return render_template(
             "hc7.html",
             total_codes=total_all, query=q,
@@ -588,13 +838,15 @@ def register(app):
             keys = ["code", "cat_l1", "cat_l1_name", "cat_l2", "cat_l2_name",
                     "cat_l3", "cat_l3_name", "generic_category", "material",
                     "spec", "generic_no", "generic_name", "manufacturer"]
-            data = dict(zip(keys, r)) if r else None
+            data = row_to_dict(r, keys) if r else None
             rules = _rules_for_codes(conn, [code]) if data else []
+            kps = _kps_for_codes(conn, code) if data else []
         return render_template(
             "nhsa_detail.html",
+            code_kind="hc",
             code=code, data=data, name=(data or {}).get("generic_name") or "7 类医用耗材",
             title="7 类医用耗材", index_url=url_for("hc7_index"),
-            code_field="code", name_field="generic_name", rules=rules,
+            code_field="code", name_field="generic_name", kps=kps, rules=rules,
             labels={
                 "cat_l1": "一级分类", "cat_l1_name": "一级名称",
                 "cat_l2": "二级分类", "cat_l2_name": "二级名称",
@@ -606,6 +858,155 @@ def register(app):
                 "generic_name": "通用名",
                 "manufacturer": "生产企业",
             })
+
+
+    # ==================== Shaanxi Medical Service Pricing 2021 ====================
+    # 数据源: xlsx with 8 sheets. Levels: L1=sheet, L2=2-digit, L3=4-digit,
+    # L4=6-digit, L5=9-digit +/- alpha suffix.
+    # =============================================================================
+
+    @app.get("/nhsa/sn_ms/")
+    @app.get("/nhsa/sn_ms")
+    def sn_ms_index():
+        """入口: 列出 8 个 sheet 卡片 + 总数 + 简易搜索."""
+        q = (request.args.get("q") or "").strip()
+        limit = _limit()
+        with db.connect() as conn:
+            total = conn.execute("SELECT COUNT(*) FROM sn_ms_codes").fetchone()[0]
+            sheets_raw = conn.execute(
+                "SELECT sheet_name, sheet_title, COUNT(*) AS cnt, "
+                "       SUM(CASE WHEN level=2 THEN 1 ELSE 0 END) AS l2, "
+                "       SUM(CASE WHEN level=3 THEN 1 ELSE 0 END) AS l3, "
+                "       SUM(CASE WHEN level=4 THEN 1 ELSE 0 END) AS l4, "
+                "       SUM(CASE WHEN level=5 THEN 1 ELSE 0 END) AS l5 "
+                "FROM sn_ms_codes GROUP BY sheet_name, sheet_title ORDER BY sheet_name"
+            ).fetchall()
+            sheet_stats = [
+                {
+                    "sheet_name": s[0], "sheet_title": s[1], "total": s[2],
+                    "l2": s[3] or 0, "l3": s[4] or 0, "l4": s[5] or 0, "l5": s[6] or 0,
+                }
+                for s in sheets_raw
+            ]
+            sheet_stats.sort(key=_sn_ms_sheet_sort_key)
+            if q:
+                rows, total_q = _sn_ms_search(conn, q, limit)
+                return render_template(
+                    "sn_ms.html", mode="search",
+                    query=q, total_codes=total,
+                    sheets=sheet_stats, rows=rows, total=total_q,
+                )
+        return render_template(
+            "sn_ms.html", mode="index",
+            query="", total_codes=total,
+            sheets=sheet_stats, rows=[], total=0,
+        )
+
+    @app.get("/nhsa/sn_ms/sheet/<sheet>")
+    @app.get("/nhsa/sn_ms/sheet/<sheet>/<parent_code>")
+    def sn_ms_browse(sheet, parent_code=""):
+        """4 级下钻: 一级 → 二级(L2) → 三级(L3/L4) → 四级(L4/L5) → 五级(L5 明细)."""
+        limit = _limit()
+        import re as _re
+        m = _re.match(r"(\d+)", parent_code or "")
+        parent_digits = m.group(1) if m else ""
+        with db.connect() as conn:
+            total = conn.execute("SELECT COUNT(*) FROM sn_ms_codes").fetchone()[0]
+            ancestors = _sn_ms_ancestors(conn, sheet, parent_digits)
+            title_row = conn.execute(
+                "SELECT sheet_title FROM sn_ms_codes WHERE sheet_name=? LIMIT 1",
+                (sheet,),
+            ).fetchone()
+            sheet_title = title_row[0] if title_row else sheet
+
+            if not parent_digits:
+                current_level = 2
+                where = "sheet_name=? AND level=2"
+                params = [sheet]
+            else:
+                L = len(parent_digits)
+                if L == 2:
+                    child_level = 3
+                elif L == 4:
+                    child_level = 4 if _has_l4(conn, sheet) else 5
+                elif L == 6:
+                    child_level = 5
+                else:
+                    child_level = 5
+                current_level = child_level
+                where = "sheet_name=? AND level=? AND code LIKE ?"
+                params = [sheet, child_level, parent_digits + "%"]
+
+            rows = conn.execute(
+                "SELECT code, p_code, name, level, fin_class, unit, "
+                "       price_l1, price_l2, price_l3 "
+                f"FROM sn_ms_codes WHERE {where} ORDER BY code LIMIT ?",
+                (*params, limit),
+            ).fetchall()
+            keys = ["code", "p_code", "name", "level", "fin_class",
+                    "unit", "price_l1", "price_l2", "price_l3"]
+            items = [row_to_dict(r, keys) for r in rows]
+            count_total = conn.execute(
+                f"SELECT COUNT(*) FROM sn_ms_codes WHERE {where}",
+                params,
+            ).fetchone()[0]
+        return render_template(
+            "sn_ms.html", mode="browse",
+            sheet_name=sheet, sheet_title=sheet_title,
+            parent_code=parent_digits, parents=ancestors,
+            current_level=current_level,
+            items=items, total=count_total,
+            query="", total_codes=total,
+            sheets=[], rows=[],
+        )
+
+    @app.get("/nhsa/sn_ms/code/<code>")
+    def sn_ms_detail(code):
+        import re as _re
+        with db.connect() as conn:
+            r = conn.execute(
+                "SELECT code, p_code, name, level, sheet_name, sheet_title, "
+                "       level_path, fin_class, unit, "
+                "       price_l1, price_l2, price_l3, "
+                "       content, exclude, remark "
+                "FROM sn_ms_codes WHERE code=?",
+                (code,),
+            ).fetchone()
+            keys = ["code", "p_code", "name", "level", "sheet_name", "sheet_title",
+                    "level_path", "fin_class", "unit",
+                    "price_l1", "price_l2", "price_l3",
+                    "content", "exclude", "remark"]
+            d = row_to_dict(r, keys) if r else None
+            if not d:
+                abort(404)
+            ancestors = []
+            cur = d.get("p_code")
+            for _ in range(8):
+                if not cur:
+                    break
+                row = conn.execute(
+                    "SELECT name, p_code FROM sn_ms_codes WHERE code=? AND sheet_name=?",
+                    (cur, d["sheet_name"]),
+                ).fetchone()
+                if not row:
+                    break
+                ancestors.insert(0, {"code": cur, "name": row[0]})
+                cur = row[1]
+            siblings = []
+            if d.get("p_code"):
+                rows = conn.execute(
+                    "SELECT code, name FROM sn_ms_codes "
+                    "WHERE sheet_name=? AND p_code=? AND code<>? "
+                    "ORDER BY code LIMIT 50",
+                    (d["sheet_name"], d["p_code"], d["code"]),
+                ).fetchall()
+                siblings = [row_to_dict(x, ["code", "name"]) for x in rows]
+        return render_template(
+            "sn_ms_detail.html",
+            d=d, ancestors=ancestors, siblings=siblings,
+            title="陕西版医疗服务",
+            index_url=url_for("sn_ms_index"),
+        )
 
     # ==================== Cross-table reverse lookup ====================
     @app.get("/api/code2/<code>")
@@ -623,7 +1024,7 @@ def register(app):
                     "FROM consumable7_codes WHERE code=? LIMIT 5",
                     (c, c),
                 ).fetchall()
-                hits = [dict(zip(["src", "code", "name", "desc"], x)) for x in rs]
+                hits = [row_to_dict(x, ["src", "code", "name", "desc"]) for x in rs]
             elif c.upper().startswith("CJ"):
                 rs = conn.execute(
                     "SELECT code, catalog_full_name, testing_category, company_name "

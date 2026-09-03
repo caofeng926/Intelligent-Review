@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}{{ cur_top.name }} · {{ cur_top.code }} · 子分类{% endblock %}
+{% block content %}
+<section class="page-head">
+  <h1 class="page-title">
+    <span class="yp25-catcode-large">{{ cur_top.code }}</span>
+    {{ cur_top.name }}
+  </h1>
+  <p class="page-sub">{{ subs|length }} 个子分类</p>
+</section>
+
+<nav class="bread">
+  <a href="{{ url_for("nhsa_index") }}">标准数据库</a>
+  <span class="bread-sep">›</span>
+  <a href="{{ url_for("yp2025_sx_browse") }}">陕版药品目录 2025</a>
+  <span class="bread-sep">›</span>
+  <a href="{{ url_for("yp2025_sx_browse", cat=cur_category) }}">{{ cur_category }}</a>
+  <span class="bread-sep">›</span>
+  <span class="bread-cur">{{ cur_top.code }} · {{ cur_top.name }}</span>
+</nav>
+
+<div class="yp25-cats">
+  <a class="yp25-cat" href="{{ url_for("yp2025_sx_browse") }}">全部 <span class="yp25-count">{{ "{:,}".format(stats.get("总计", 0)) }}</span></a>
+  {% for c in categories %}
+  <a class="yp25-cat {% if cur_category == c %}is-active{% endif %}" href="{{ url_for("yp2025_sx_browse", cat=c) }}">
+    {{ c }} <span class="yp25-count">{{ "{:,}".format(stats.get(c, 0)) }}</span>
+  </a>
+  {% endfor %}
+</div>
+
+<section class="yp25-grid">
+  {% for s in subs %}
+  <a class="yp25-tile" href="{{ url_for("yp2025_sx_browse", cat=cur_category, top=cur_top.code, sub=s.code) }}">
+    <div class="yp25-tile-code">{{ s.code }}</div>
+    <div class="yp25-tile-name">{{ s.name }}</div>
+    <div class="yp25-tile-count">{{ "{:,}".format(s.drug_count) }} <span>条</span></div>
+    <div class="yp25-tile-arrow">›</div>
+  </a>
+  {% endfor %}
+</section>
+
+<div class="back-row">
+  <a class="back-link" href="{{ url_for("yp2025_sx_browse", cat=cur_category) }}">‹ 返回 {{ cur_category }}</a>
+</div>
+{% endblock %}

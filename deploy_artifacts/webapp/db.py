@@ -1,7 +1,9 @@
 """SQLite schema + idempotent upsert helpers + FTS5 sync."""
 from __future__ import annotations
+
 import os
 import sqlite3
+import sys
 from contextlib import contextmanager
 from typing import Optional
 
@@ -89,7 +91,88 @@ CREATE TRIGGER IF NOT EXISTS kp_au AFTER UPDATE ON knowledge_points BEGIN
     VALUES (new.id, COALESCE(new.subject_name,''), COALESCE(new.detection_logic,''),
             COALESCE(new.logic_basis,''), COALESCE(new.remark,''), COALESCE(new.codes,''));
 END;
+
+-- ============================================================
+-- 医用耗材代码库 (NHSA consumables PDF, May 2026 update)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS consumable_codes (
+    id                INTEGER PRIMARY KEY,
+    code              TEXT    UNIQUE NOT NULL,
+    cat_l1            TEXT,
+    cat_l1_name       TEXT,
+    cat_l2            TEXT,
+    cat_l2_name       TEXT,
+    cat_l3            TEXT,
+    cat_l3_name       TEXT,
+    generic_category  TEXT,
+    material          TEXT,
+    spec              TEXT,
+    generic_no        TEXT,
+    generic_name      TEXT,
+    manufacturer      TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_cc_l1      ON consumable_codes(cat_l1);
+CREATE INDEX IF NOT EXISTS idx_cc_l2      ON consumable_codes(cat_l1, cat_l2);
+CREATE INDEX IF NOT EXISTS idx_cc_l3      ON consumable_codes(cat_l1, cat_l2, cat_l3);
+CREATE INDEX IF NOT EXISTS idx_cc_generic ON consumable_codes(generic_no);
+CREATE INDEX IF NOT EXISTS idx_cc_mfr     ON consumable_codes(manufacturer);
+
+CREATE VIRTUAL TABLE IF NOT EXISTS consumable_codes_fts USING fts5(
+    code, generic_name, manufacturer, generic_no,
+    cat_l1_name, cat_l2_name, cat_l3_name,
+    content='consumable_codes', content_rowid='id',
+    tokenize='unicode61 remove_diacritics 2'
+);
+
+CREATE TRIGGER IF NOT EXISTS cc_ai AFTER INSERT ON consumable_codes BEGIN
+    INSERT INTO consumable_codes_fts(rowid, code, generic_name, manufacturer, generic_no,
+                                      cat_l1_name, cat_l2_name, cat_l3_name)
+    VALUES (new.id, COALESCE(new.code,''), COALESCE(new.generic_name,''),
+            COALESCE(new.manufacturer,''), COALESCE(new.generic_no,''),
+            COALESCE(new.cat_l1_name,''), COALESCE(new.cat_l2_name,''),
+            COALESCE(new.cat_l3_name,''));
+END;
+CREATE TRIGGER IF NOT EXISTS cc_ad AFTER DELETE ON consumable_codes BEGIN
+    INSERT INTO consumable_codes_fts(consumable_codes_fts, rowid, code, generic_name, manufacturer, generic_no,
+                                      cat_l1_name, cat_l2_name, cat_l3_name)
+    VALUES ('delete', old.id, COALESCE(old.code,''), COALESCE(old.generic_name,''),
+            COALESCE(old.manufacturer,''), COALESCE(old.generic_no,''),
+            COALESCE(old.cat_l1_name,''), COALESCE(old.cat_l2_name,''),
+            COALESCE(old.cat_l3_name,''));
+END;
+CREATE TRIGGER IF NOT EXISTS cc_au AFTER UPDATE ON consumable_codes BEGIN
+    INSERT INTO consumable_codes_fts(consumable_codes_fts, rowid, code, generic_name, manufacturer, generic_no,
+                                      cat_l1_name, cat_l2_name, cat_l3_name)
+    VALUES ('delete', old.id, COALESCE(old.code,''), COALESCE(old.generic_name,''),
+            COALESCE(old.manufacturer,''), COALESCE(old.generic_no,''),
+            COALESCE(old.cat_l1_name,''), COALESCE(old.cat_l2_name,''),
+            COALESCE(old.cat_l3_name,''));
+    INSERT INTO consumable_codes_fts(rowid, code, generic_name, manufacturer, generic_no,
+                                      cat_l1_name, cat_l2_name, cat_l3_name)
+    VALUES (new.id, COALESCE(new.code,''), COALESCE(new.generic_name,''),
+            COALESCE(new.manufacturer,''), COALESCE(new.generic_no,''),
+            COALESCE(new.cat_l1_name,''), COALESCE(new.cat_l2_name,''),
+            COALESCE(new.cat_l3_name,''));
+END;
+
+-- 一级→二级→三级分类聚合视图
+CREATE VIEW IF NOT EXISTS consumable_categories AS
+SELECT
+    cat_l1, cat_l1_name,
+    cat_l2, cat_l2_name,
+    cat_l3, cat_l3_name,
+    COUNT(*) AS code_count
+FROM consumable_codes
+WHERE cat_l1 IS NOT NULL
+GROUP BY cat_l1, cat_l2, cat_l3;
 """
+
+
+# drug_detail.manufacturer 字段说明
+# - manufacturer:        清洗后的值（已截断 国药准字/869/分号 等混入内容）
+# - manufacturer_raw:    原始值（PDF 解析的初始结果，备份用）
+# - manufacturer_flag:   标记列（NULL=✓干净, ⚠空, ⚠过短, ⚠过长, ⚠混入规格）
+# 重新执行清洗: python -m webapp.clean_drug_detail
 
 
 @contextmanager
@@ -111,8 +194,30 @@ def connect(path: Optional[str] = None):
 
 
 def init_db(path: Optional[str] = None) -> None:
+    import re as _re_init
     with connect(path) as conn:
         conn.executescript(SCHEMA)
+        parts = _re_init.split(r"(?=CREATE TABLE IF NOT EXISTS|CREATE VIRTUAL TABLE IF NOT EXISTS|CREATE TRIGGER IF NOT EXISTS|CREATE INDEX IF NOT EXISTS)", EXTRA_SCHEMA + NHSA_BATCH_SCHEMA)
+        for p in parts:
+            p = p.strip()
+            if not p: continue
+            try:
+                conn.executescript(p)
+            except sqlite3.OperationalError as e:
+                # 良性: 对象已存在 (CREATE TABLE IF NOT EXISTS 的解析边界)
+                # 真错误 (SyntaxError 等) 应继续冒泡
+                print(f"init_db: skipping existing object: {e}", file=sys.stderr)
+
+        # ---- 外部 SQL 文件: 陕西版医疗服务项目 schema ------------------------------
+        sn_schema_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "sn_ms_schema.sql")
+        if os.path.exists(sn_schema_path):
+            try:
+                with open(sn_schema_path, "r", encoding="utf-8") as fh:
+                    conn.executescript(fh.read())
+            except sqlite3.OperationalError as e:
+                print(f"init_db: skipping SN schema object: {e}", file=sys.stderr)
+
+
 
 
 def reset_db(path: Optional[str] = None) -> None:
@@ -234,6 +339,7 @@ def get_kp_codes(conn, kp_id: int):
 
 
 import re as _re
+
 _WS_RE = _re.compile(r"[\s\u3000]+")
 def normalize_text(v):
     """Collapse all whitespace (incl. \r\n\t, full-width space \u3000) to nothing."""
@@ -245,7 +351,7 @@ def normalize_text(v):
 
 
 def normalize_codes_join(codes):
-    """Join a list of codes with the Chinese ideographic comma \u3001 (、
+    """Join a list of codes with the Chinese ideographic comma \u3001 (銆?
     ). FTS5 unicode61 treats it as a word boundary, so per-code search still works.
     """
     parts = [normalize_text(c) for c in codes or ()]
@@ -278,3 +384,245 @@ def list_rule_subjects(conn, source=None):
     else:
         rows = conn.execute("SELECT DISTINCT rule_subject, source FROM rules ORDER BY rule_subject").fetchall()
     return [(r[0], r[1]) for r in rows]
+
+
+# ============================================================
+# 额外 Schema（各 NHSA 标准库）— 2026-06-28 更新
+# ============================================================
+EXTRA_SCHEMA = r"""
+-- 体外诊断试剂代码库（IVD）
+CREATE TABLE IF NOT EXISTS ivd_codes (
+    id                    INTEGER PRIMARY KEY,
+    code                  TEXT    UNIQUE NOT NULL,
+    cat_l1                TEXT,
+    cat_l1_name           TEXT,
+    cat_l2                TEXT,
+    cat_l2_name           TEXT,
+    cat_l3                TEXT,
+    cat_l3_name           TEXT,
+    testing_category      TEXT,
+    testing_index         TEXT,
+    use_type              TEXT,
+    check_type            TEXT,
+    company_name          TEXT,
+    business_license      TEXT,
+    spec_code             TEXT,
+    catalog_full_name     TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_ivd_l1 ON ivd_codes(cat_l1);
+CREATE INDEX IF NOT EXISTS idx_ivd_l2 ON ivd_codes(cat_l1, cat_l2);
+CREATE INDEX IF NOT EXISTS idx_ivd_l3 ON ivd_codes(cat_l1, cat_l2, cat_l3);
+CREATE INDEX IF NOT EXISTS idx_ivd_test ON ivd_codes(testing_category);
+CREATE INDEX IF NOT EXISTS idx_ivd_company ON ivd_codes(company_name);
+
+CREATE VIRTUAL TABLE IF NOT EXISTS ivd_codes_fts USING fts5(
+    code, cat_l1_name, cat_l2_name, cat_l3_name, testing_category,
+    testing_index, company_name,
+    content='ivd_codes', content_rowid='id',
+    tokenize='unicode61 remove_diacritics 2'
+);
+
+CREATE TRIGGER IF NOT EXISTS ivd_ai AFTER INSERT ON ivd_codes BEGIN
+    INSERT INTO ivd_codes_fts(rowid, code, cat_l1_name, cat_l2_name, cat_l3_name,
+        testing_category, testing_index, company_name)
+    VALUES (new.id, new.code, COALESCE(new.cat_l1_name,''), COALESCE(new.cat_l2_name,''),
+        COALESCE(new.cat_l3_name,''), COALESCE(new.testing_category,''),
+        COALESCE(new.testing_index,''), COALESCE(new.company_name,''));
+END;
+CREATE TRIGGER IF NOT EXISTS ivd_ad AFTER DELETE ON ivd_codes BEGIN
+    INSERT INTO ivd_codes_fts(ivd_codes_fts, rowid, code, cat_l1_name, cat_l2_name, cat_l3_name,
+        testing_category, testing_index, company_name)
+    VALUES ('delete', old.id, old.code, COALESCE(old.cat_l1_name,''), COALESCE(old.cat_l2_name,''),
+        COALESCE(old.cat_l3_name,''), COALESCE(old.testing_category,''),
+        COALESCE(old.testing_index,''), COALESCE(old.company_name,''));
+END;
+CREATE TRIGGER IF NOT EXISTS ivd_au AFTER UPDATE ON ivd_codes BEGIN
+    INSERT INTO ivd_codes_fts(ivd_codes_fts, rowid, code, cat_l1_name, cat_l2_name, cat_l3_name,
+        testing_category, testing_index, company_name)
+    VALUES ('delete', old.id, old.code, COALESCE(old.cat_l1_name,''), COALESCE(old.cat_l2_name,''),
+        COALESCE(old.cat_l3_name,''), COALESCE(old.testing_category,''),
+        COALESCE(old.testing_index,''), COALESCE(old.company_name,''));
+    INSERT INTO ivd_codes_fts(rowid, code, cat_l1_name, cat_l2_name, cat_l3_name,
+        testing_category, testing_index, company_name)
+    VALUES (new.id, new.code, COALESCE(new.cat_l1_name,''), COALESCE(new.cat_l2_name,''),
+        COALESCE(new.cat_l3_name,''), COALESCE(new.testing_category,''),
+        COALESCE(new.testing_index,''), COALESCE(new.company_name,''));
+END;
+
+-- 第 7 类重点高值耗材（HC7）
+CREATE TABLE IF NOT EXISTS consumable7_codes (
+    id                INTEGER PRIMARY KEY,
+    code              TEXT    UNIQUE NOT NULL,
+    cat_l1            TEXT,    cat_l1_name       TEXT,
+    cat_l2            TEXT,    cat_l2_name       TEXT,
+    cat_l3            TEXT,    cat_l3_name       TEXT,
+    generic_category  TEXT,
+    material          TEXT,
+    spec              TEXT,
+    generic_no        TEXT,
+    generic_name      TEXT,
+    manufacturer      TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_cc7_l1 ON consumable7_codes(cat_l1);
+CREATE INDEX IF NOT EXISTS idx_cc7_l2 ON consumable7_codes(cat_l1, cat_l2);
+CREATE INDEX IF NOT EXISTS idx_cc7_l3 ON consumable7_codes(cat_l1, cat_l2, cat_l3);
+
+-- ICD-10 2.0 版疾病诊断编码
+CREATE TABLE IF NOT EXISTS icd_codes (
+    id               INTEGER PRIMARY KEY,
+    code             TEXT    UNIQUE NOT NULL,
+    chapter_no       TEXT,
+    chapter_range    TEXT,
+    chapter_name     TEXT,
+    section_range    TEXT,
+    section_name     TEXT,
+    category_code    TEXT,
+    category_name    TEXT,
+    subcategory_code TEXT,
+    subcategory_name TEXT,
+    diagnosis_code   TEXT,
+    diagnosis_name   TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_icd_chap ON icd_codes(chapter_no);
+CREATE INDEX IF NOT EXISTS idx_icd_cat ON icd_codes(category_code);
+CREATE INDEX IF NOT EXISTS idx_icd_sub ON icd_codes(subcategory_code);
+CREATE INDEX IF NOT EXISTS idx_icd_diag ON icd_codes(diagnosis_code);
+
+CREATE VIRTUAL TABLE IF NOT EXISTS icd_codes_fts USING fts5(
+    code, chapter_name, section_name, category_name, subcategory_name, diagnosis_name,
+    content='icd_codes', content_rowid='id',
+    tokenize='unicode61 remove_diacritics 2'
+);
+
+CREATE TRIGGER IF NOT EXISTS icd_ai AFTER INSERT ON icd_codes BEGIN
+    INSERT INTO icd_codes_fts(rowid, code, chapter_name, section_name, category_name,
+        subcategory_name, diagnosis_name)
+    VALUES (new.id, new.code, COALESCE(new.chapter_name,''), COALESCE(new.section_name,''),
+        COALESCE(new.category_name,''), COALESCE(new.subcategory_name,''),
+        COALESCE(new.diagnosis_name,''));
+END;
+CREATE TRIGGER IF NOT EXISTS icd_ad AFTER DELETE ON icd_codes BEGIN
+    INSERT INTO icd_codes_fts(icd_codes_fts, rowid, code, chapter_name, section_name, category_name,
+        subcategory_name, diagnosis_name)
+    VALUES ('delete', old.id, old.code, COALESCE(old.chapter_name,''), COALESCE(old.section_name,''),
+        COALESCE(old.category_name,''), COALESCE(old.subcategory_name,''),
+        COALESCE(old.diagnosis_name,''));
+END;
+CREATE TRIGGER IF NOT EXISTS icd_au AFTER UPDATE ON icd_codes BEGIN
+    INSERT INTO icd_codes_fts(icd_codes_fts, rowid, code, chapter_name, section_name, category_name,
+        subcategory_name, diagnosis_name)
+    VALUES ('delete', old.id, old.code, COALESCE(old.chapter_name,''), COALESCE(old.section_name,''),
+        COALESCE(old.category_name,''), COALESCE(old.subcategory_name,''),
+        COALESCE(old.diagnosis_name,''));
+    INSERT INTO icd_codes_fts(rowid, code, chapter_name, section_name, category_name,
+        subcategory_name, diagnosis_name)
+    VALUES (new.id, new.code, COALESCE(new.chapter_name,''), COALESCE(new.section_name,''),
+        COALESCE(new.category_name,''), COALESCE(new.subcategory_name,''),
+        COALESCE(new.diagnosis_name,''));
+END;
+
+-- 全国医疗服务项目代码库 (Medical Service Codes, NHSA MS)
+CREATE TABLE IF NOT EXISTS medical_service_codes (
+    id              INTEGER PRIMARY KEY,
+    code            TEXT    UNIQUE NOT NULL,
+    p_code          TEXT,
+    name            TEXT,
+    level           INTEGER,
+    level_path      TEXT,
+    pinyin_code     TEXT,
+    contains_content TEXT,
+    excluded_content TEXT,
+    charge_unit     TEXT,
+    explain         TEXT,
+    area            TEXT,
+    is_using        INTEGER
+);
+CREATE INDEX IF NOT EXISTS idx_ms_code ON medical_service_codes(code);
+CREATE INDEX IF NOT EXISTS idx_ms_pcode ON medical_service_codes(p_code);
+CREATE INDEX IF NOT EXISTS idx_ms_level ON medical_service_codes(level);
+
+CREATE VIRTUAL TABLE IF NOT EXISTS medical_service_codes_fts USING fts5(
+    code, name, explain, contains_content, excluded_content,
+    content='medical_service_codes', content_rowid='id',
+    tokenize='unicode61 remove_diacritics 2'
+);
+
+CREATE TRIGGER IF NOT EXISTS ms_ai AFTER INSERT ON medical_service_codes BEGIN
+    INSERT INTO medical_service_codes_fts(rowid, code, name, explain, contains_content, excluded_content)
+    VALUES (new.id, new.code, COALESCE(new.name,''), COALESCE(new.explain,''),
+        COALESCE(new.contains_content,''), COALESCE(new.excluded_content,''));
+END;
+CREATE TRIGGER IF NOT EXISTS ms_ad AFTER DELETE ON medical_service_codes BEGIN
+    INSERT INTO medical_service_codes_fts(medical_service_codes_fts, rowid, code, name, explain, contains_content, excluded_content)
+    VALUES ('delete', old.id, old.code, COALESCE(old.name,''), COALESCE(old.explain,''),
+        COALESCE(old.contains_content,''), COALESCE(old.excluded_content,''));
+END;
+CREATE TRIGGER IF NOT EXISTS ms_au AFTER UPDATE ON medical_service_codes BEGIN
+    INSERT INTO medical_service_codes_fts(medical_service_codes_fts, rowid, code, name, explain, contains_content, excluded_content)
+    VALUES ('delete', old.id, old.code, COALESCE(old.name,''), COALESCE(old.explain,''),
+        COALESCE(old.contains_content,''), COALESCE(old.excluded_content,''));
+    INSERT INTO medical_service_codes_fts(rowid, code, name, explain, contains_content, excluded_content)
+    VALUES (new.id, new.code, COALESCE(new.name,''), COALESCE(new.explain,''),
+        COALESCE(new.contains_content,''), COALESCE(new.excluded_content,''));
+END;
+
+-- 中医疾病/证候医保代码库 (TCM v2.0, 2022-01-01)
+CREATE TABLE IF NOT EXISTS tcm_codes (
+    id              INTEGER PRIMARY KEY,
+    code            TEXT    UNIQUE NOT NULL,
+    p_code          TEXT,
+    name            TEXT,
+    part_code       TEXT,
+    code_length     INTEGER,
+    level           INTEGER,
+    apply_explain   TEXT,
+    remark          TEXT,
+    class_code      TEXT,
+    class_name      TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_tcm_code ON tcm_codes(code);
+CREATE INDEX IF NOT EXISTS idx_tcm_pcode ON tcm_codes(p_code);
+
+CREATE VIRTUAL TABLE IF NOT EXISTS tcm_codes_fts USING fts5(
+    code, name, class_name, apply_explain, remark,
+    content='tcm_codes', content_rowid='id',
+    tokenize='unicode61 remove_diacritics 2'
+);
+
+CREATE TRIGGER IF NOT EXISTS tcm_ai AFTER INSERT ON tcm_codes BEGIN
+    INSERT INTO tcm_codes_fts(rowid, code, name, class_name, apply_explain, remark)
+    VALUES (new.id, new.code, COALESCE(new.name,''), COALESCE(new.class_name,''),
+        COALESCE(new.apply_explain,''), COALESCE(new.remark,''));
+END;
+CREATE TRIGGER IF NOT EXISTS tcm_ad AFTER DELETE ON tcm_codes BEGIN
+    INSERT INTO tcm_codes_fts(tcm_codes_fts, rowid, code, name, class_name, apply_explain, remark)
+    VALUES ('delete', old.id, old.code, COALESCE(old.name,''), COALESCE(old.class_name,''),
+        COALESCE(old.apply_explain,''), COALESCE(old.remark,''));
+END;
+CREATE TRIGGER IF NOT EXISTS tcm_au AFTER UPDATE ON tcm_codes BEGIN
+    INSERT INTO tcm_codes_fts(tcm_codes_fts, rowid, code, name, class_name, apply_explain, remark)
+    VALUES ('delete', old.id, old.code, COALESCE(old.name,''), COALESCE(old.class_name,''),
+        COALESCE(old.apply_explain,''), COALESCE(old.remark,''));
+    INSERT INTO tcm_codes_fts(rowid, code, name, class_name, apply_explain, remark)
+    VALUES (new.id, new.code, COALESCE(new.name,''), COALESCE(new.class_name,''),
+        COALESCE(new.apply_explain,''), COALESCE(new.remark,''));
+END;
+"""
+
+# batch metadata table for reference data (NHSA standard databases)
+NHSA_BATCH_SCHEMA = r"""
+CREATE TABLE IF NOT EXISTS nhsa_batches (
+    source        TEXT PRIMARY KEY,
+    batch_label   TEXT NOT NULL,
+    pub_date      TEXT,
+    ann_url       TEXT,
+    pdf_path      TEXT,
+    csv_path      TEXT,
+    json_path     TEXT,
+    record_count  INTEGER,
+    sysflag       TEXT,
+    ingested_at   TEXT
+);
+"""
+
+SCHEMA_FULL = SCHEMA + EXTRA_SCHEMA + NHSA_BATCH_SCHEMA

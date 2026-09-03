@@ -28,34 +28,16 @@ from typing import Optional
 from flask import jsonify, request
 
 from . import db
+from .query_utils import fts_query as _fts_query, row_to_dict
 
 
 # ============================================================
 # helpers
 # ============================================================
-def _fts_query(q: str) -> Optional[str]:
-    """Build a safe FTS5 MATCH expression for free-text queries.
-
-    Strategy mirrors jieba_query in app.py: FTS5 unicode61 tokenizes
-    Chinese as single chars, so phrase matching fails. We use prefix
-    match on first 1-2 chars for Chinese, plain prefix for ASCII.
-    """
-    q = (q or "").strip()
-    if not q:
-        return None
-    # strip special chars that have FTS5 meaning
-    safe = re.sub(r"[^\w\u4e00-\u9fff]+", " ", q).strip()
-    if not safe:
-        return None
-    if re.match(r"^[A-Za-z0-9]+$", safe):
-        return safe + "*"
-    if len(safe) >= 2:
-        return f'"{safe[:2]}"*'
-    return f'"{safe}"*'
 
 
 def _row_to_dict(row, keys):
-    return dict(zip(keys, row)) if row else None
+    return row_to_dict(row, keys) if row else None
 
 
 def _limit(default: int = 50, max_: int = 500) -> int:
@@ -89,9 +71,8 @@ def register(app):
                     live[tbl] = 0
         return jsonify({
             "live_counts": live,
-            "batches": [dict(zip(
-                ["source", "batch_label", "pub_date", "record_count", "sysflag",
-                 "csv_path", "json_path", "ingested_at"], r)) for r in rows],
+            "batches": [row_to_dict(r, ["source", "batch_label", "pub_date", "record_count", "sysflag",
+                 "csv_path", "json_path", "ingested_at"]) for r in rows],
         })
 
     @app.get("/api/nhsa/batches")
@@ -103,9 +84,8 @@ def register(app):
                 FROM nhsa_batches ORDER BY pub_date DESC, source
             """).fetchall()
         return jsonify({
-            "batches": [dict(zip(
-                ["source", "batch_label", "pub_date", "record_count",
-                 "sysflag", "ingested_at"], r)) for r in rows],
+            "batches": [row_to_dict(r, ["source", "batch_label", "pub_date", "record_count",
+                 "sysflag", "ingested_at"]) for r in rows],
         })
 
     # ============== IVD ==============
@@ -135,7 +115,7 @@ def register(app):
                 "company_name"]
         return jsonify({
             "q": q, "count": len(rows),
-            "results": [dict(zip(keys, r)) for r in rows],
+            "results": [row_to_dict(r, keys) for r in rows],
         })
 
     @app.get("/api/nhsa/ivd/code/<code>")
@@ -180,7 +160,7 @@ def register(app):
                 "manufacturer", "approval_no"]
         return jsonify({
             "q": q, "count": len(rows),
-            "results": [dict(zip(keys, r)) for r in rows],
+            "results": [row_to_dict(r, keys) for r in rows],
         })
 
     @app.get("/api/nhsa/yp/code/<code>")
@@ -214,7 +194,7 @@ def register(app):
             return jsonify({"approval_no": no, "count": 0, "results": []})
         return jsonify({
             "approval_no": no, "count": len(rows),
-            "results": [dict(zip(keys, r)) for r in rows],
+            "results": [row_to_dict(r, keys) for r in rows],
         })
 
     # ============== ICD ==============
@@ -244,7 +224,7 @@ def register(app):
                 "subcategory_name", "diagnosis_name"]
         return jsonify({
             "q": q, "count": len(rows),
-            "results": [dict(zip(keys, r)) for r in rows],
+            "results": [row_to_dict(r, keys) for r in rows],
         })
 
     @app.get("/api/nhsa/icd/code/<code>")
@@ -289,7 +269,7 @@ def register(app):
         keys = ["code", "name", "level", "is_using", "explain"]
         return jsonify({
             "q": q, "count": len(rows),
-            "results": [dict(zip(keys, r)) for r in rows],
+            "results": [row_to_dict(r, keys) for r in rows],
         })
 
     @app.get("/api/nhsa/ms/code/<code>")
@@ -333,7 +313,7 @@ def register(app):
         keys = ["code", "name", "level", "class_name", "apply_explain"]
         return jsonify({
             "q": q, "count": len(rows),
-            "results": [dict(zip(keys, r)) for r in rows],
+            "results": [row_to_dict(r, keys) for r in rows],
         })
 
     @app.get("/api/nhsa/tcm/code/<code>")
@@ -350,6 +330,55 @@ def register(app):
         if not d:
             return jsonify({"code": code, "found": False}), 404
         return jsonify({"code": code, "found": True, "data": d})
+
+    # ============== HC ==============
+    @app.get("/api/nhsa/hc/search")
+    def _hc_search():
+        """医用耗材 FTS5 搜索; 前端 search.js hc tab 使用.
+
+        Schema (db.py EXTRA_SCHEMA consumable_codes):
+            code, cat_l1, cat_l1_name, cat_l2, cat_l2_name,
+            cat_l3, cat_l3_name, generic_category, material,
+            spec, generic_no, generic_name, manufacturer
+        FTS5: consumable_codes_fts(code, generic_name, manufacturer,
+                                    generic_no, cat_l1_name, cat_l2_name, cat_l3_name)
+        """
+        q = (request.args.get("q") or "").strip()
+        limit = _limit(50, 500)
+        if not q:
+            return jsonify({"q": q, "count": 0, "results": []})
+        fts = _fts_query(q)
+        with db.connect() as conn:
+            rows = []
+            if fts:
+                try:
+                    rows = conn.execute("""
+                        SELECT code, cat_l1_name, cat_l2_name, cat_l3_name,
+                               generic_name, generic_no, material, manufacturer, spec
+                        FROM consumable_codes
+                        WHERE id IN (SELECT rowid FROM consumable_codes_fts
+                                     WHERE consumable_codes_fts MATCH ?)
+                        LIMIT ?
+                    """, (fts, limit)).fetchall()
+                except Exception:
+                    rows = []
+            # FTS 失败时 LIKE 兜底 (拼音/简码也可命中)
+            if not rows and len(q) >= 2:
+                like = f"%{q}%"
+                rows = conn.execute("""
+                    SELECT code, cat_l1_name, cat_l2_name, cat_l3_name,
+                           generic_name, generic_no, material, manufacturer, spec
+                    FROM consumable_codes
+                    WHERE generic_name LIKE ? OR manufacturer LIKE ?
+                       OR code LIKE ? OR cat_l1_name LIKE ?
+                    LIMIT ?
+                """, (like, like, like, like, limit)).fetchall()
+        keys = ["code", "cat_l1_name", "cat_l2_name", "cat_l3_name",
+                "generic_name", "generic_no", "material", "manufacturer", "spec"]
+        return jsonify({
+            "q": q, "count": len(rows),
+            "results": [_row_to_dict(r, keys) for r in rows],
+        })
 
     # ============== HC7 ==============
     @app.get("/api/nhsa/hc7/code/<code>")

@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}{% if q %}搜 "{{ q }}" 涉及的规则 · 医保智审{% else %}全部审核规则 · 医保智审{% endif %}{% endblock %}
+{% block content %}
+<nav class="crumb">
+  <a href="{{ url_for('home') }}">首页</a>
+  <span class="crumb-sep">›</span>
+  <span class="crumb-cur">规则查询</span>
+</nav>
+
+<section class="page-head">
+  <h1 class="page-title">规则查询</h1>
+  <p class="page-sub">共 {{ rules|length }} 条独立规则 · 按规则名称搜索 / 浏览</p>
+</section>
+
+<section class="searchbar">
+  <form class="searchbar-form" action="{{ url_for('rules_list') }}" method="get" role="search">
+    <span class="searchbar-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></span>
+    <input name="q" type="search" inputmode="search" autocomplete="off" autofocus
+           value="{{ q|h }}" placeholder="输入规则名称关键字(如 限适应症 / 限二线)" enterkeyhint="search">
+  </form>
+  <div class="searchbar-meta">
+    {% if q %}
+      <span class="meta-total">匹配 <b>{{ rules|length }}</b> 条规则</span>
+      <a class="meta-clear" href="{{ url_for('rules_list') }}">清空</a>
+    {% else %}
+      <span class="meta-tip">支持 规则名称 / 分类 关键字模糊匹配</span>
+    {% endif %}
+  </div>
+</section>
+
+{% if rules %}
+<ul class="result-list">
+  {% for r in rules %}
+  <li class="result-card">
+    <a class="result-link" href="{{ url_for('rule_detail', rid=r[6]) }}">
+      <div class="result-head">
+        <span class="result-name">{{ r[0]|h }}</span>
+        {% if r[1] and r[1] > 1 %}<span class="result-cnt">{{ r[1] }}x</span>{% endif %}
+        {% if r[7] %}<span class="result-cnt">{{ r[7] }} 知识点</span>{% endif %}
+      </div>
+      <div class="result-rule">
+        {% if r[4] %}<span class="meta-k">分类</span> {{ r[4]|h }}{% endif %}
+        {% if r[5] %}<span class="meta-k">对象</span> {{ r[5]|h }}{% endif %}
+        {% if r[1] and r[1] > 1 %}<span class="meta-k">批次</span> {{ r[3]|h }}{% endif %}
+      </div>
+    </a>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<section class="empty">
+  <div class="empty-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><path d="M8 11h6"/></svg></div>
+  <div class="empty-title">{% if q %}没找到匹配 "{{ q }}" 的规则{% else %}暂无规则数据{% endif %}</div>
+  <div class="empty-tip">试试更短关键字,或直接浏览下方列表</div>
+  {% if q %}<a class="empty-link" href="{{ url_for('rules_list') }}">查看全部规则</a>{% endif %}
+</section>
+{% endif %}
+{% endblock %}
