@@ -103,7 +103,7 @@ def register(app):
                 WHERE kp.id = ?
             """, (kp_id,)).fetchone()
             if not kp:
-                abort(404)
+                return jsonify({"errcode": 404, "message": f"KP {kp_id} not found"}), 404
             codes = db.get_kp_codes(conn, kp_id)
         return jsonify({
             "id": kp[0], "seq": kp[1], "subject_name": kp[2], "pinyin_initials": kp[3],

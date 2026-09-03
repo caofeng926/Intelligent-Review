@@ -331,7 +331,7 @@ def _code_route(type_id):
 def api_code(code: str):
     code = code.upper()
     with db.connect() as conn:
-        # 1. Check if it's a consumable code (C + 18-19 digits, length >= 17)
+        # 1. 检查耗材代码 (C 开头 + >=17 位数字)
         if code.startswith("C") and len(code) >= 17 and code[1:].isdigit():
             row = conn.execute("""
                 SELECT code, generic_name FROM consumable7_codes WHERE code=?
@@ -350,9 +350,22 @@ def api_code(code: str):
                         "cat_l3", "cat_l3_name", "generic_category", "material",
                         "spec", "generic_no", "generic_name", "manufacturer"]
                 return jsonify({"code": code, "kind": "consumable", "data": row_to_dict(row, keys)})
-            # not found in consumable_codes, fall through to KP search
 
-        # 2. Look up in KP codes (drugs / services / TCM)
+        # 2. NHSA 6 类代码表 (yp 药品 / tcm 中药 / icd 诊断 / ivd 体外诊断 / ms 医疗服务)
+        # 这些是 NHSA 官方代码表, 在 knowledge_point_codes 里没有, 但 search 接口能命中
+        nhsa_tables = [
+            ("yp_codes",   "nhsa_yp",   ["code", "reg_name", "product_name", "spec", "dosage_form", "manufacturer", "approval_no"]),
+            ("tcm_codes",  "nhsa_tcm",  ["code", "name", "p_code", "part_code", "code_length", "level", "apply_explain", "remark", "class_code", "class_name"]),
+            ("icd_codes",  "nhsa_icd",  ["code", "chapter_no", "chapter_range", "chapter_name", "section_range", "section_name", "category_code", "category_name", "subcategory_code", "subcategory_name", "diagnosis_code", "diagnosis_name"]),
+            ("ivd_codes",  "nhsa_ivd",  ["code", "cat_l1_name", "cat_l2_name", "cat_l3_name", "testing_category", "testing_index", "use_type", "check_type", "company_name"]),
+            ("medical_service_codes", "nhsa_ms", ["code", "name", "p_code", "level", "pinyin_code", "contains_content", "excluded_content", "charge_unit", "explain", "area", "is_using"]),
+        ]
+        for tbl, kind, keys in nhsa_tables:
+            row = conn.execute(f"SELECT {', '.join(keys)} FROM {tbl} WHERE code = ?", (code,)).fetchone()
+            if row:
+                return jsonify({"code": code, "kind": kind, "data": row_to_dict(row, keys)})
+
+        # 3. KP 关联代码 (审核规则关联的医保编码)
         rows = conn.execute("""
             SELECT kp.id, kp.subject_name, kp.code_count,
                    r.rule_subject, r.source, b.batch_label, b.pub_date,
