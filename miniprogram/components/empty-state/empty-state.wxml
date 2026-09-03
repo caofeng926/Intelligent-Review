@@ -1,8 +1,0 @@
-<view class="empty">
-  <view class="empty-icon">
-    <rich-text nodes="{{iconSvg}}" />
-  </view>
-  <view class="empty-title">{{title}}</view>
-  <view class="empty-desc" wx:if="{{desc}}">{{desc}}</view>
-  <view class="empty-action" wx:if="{{actionText}}" bindtap="onAction">{{actionText}}</view>
-</view>

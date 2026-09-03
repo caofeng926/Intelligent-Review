@@ -34,7 +34,7 @@
 - **NHSA 批次分组浏览**(yp 药品 / hc7 耗材 / tcm 中药饮片 / icd 诊断 / ms 手术 / ivd 体外诊断)
 - **审核规则详情**(限适应症、配对项目、配对手术等结构化展开)
 - **首页统计** + 最近更新 + 编码示例
-- **JSON API** 供外部小程序 / 数据脚本消费
+- **JSON API** 供外部脚本消费（`/api/stats` `/api/recent` `/api/code/<code>` `/search/<table>`）
 
 ## 技术栈
 

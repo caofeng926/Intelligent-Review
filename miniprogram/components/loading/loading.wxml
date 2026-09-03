@@ -1,9 +1,0 @@
-<view class="loading">
-  <view class="loading-skeleton" wx:if="{{type === 'skeleton'}}">
-    <view class="skel-row" wx:for="{{rows}}" wx:key="*this"></view>
-  </view>
-  <view class="loading-spinner" wx:else>
-    <view class="spinner"></view>
-    <view class="loading-tip">{{tip}}</view>
-  </view>
-</view>

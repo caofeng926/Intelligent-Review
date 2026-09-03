@@ -197,7 +197,7 @@ def init_db(path: Optional[str] = None) -> None:
     import re as _re_init
     with connect(path) as conn:
         conn.executescript(SCHEMA)
-        parts = _re_init.split(r"(?=CREATE TABLE IF NOT EXISTS|CREATE VIRTUAL TABLE IF NOT EXISTS|CREATE TRIGGER IF NOT EXISTS|CREATE INDEX IF NOT EXISTS)", EXTRA_SCHEMA + NHSA_BATCH_SCHEMA + MINIAPP_SCHEMA)
+        parts = _re_init.split(r"(?=CREATE TABLE IF NOT EXISTS|CREATE VIRTUAL TABLE IF NOT EXISTS|CREATE TRIGGER IF NOT EXISTS|CREATE INDEX IF NOT EXISTS)", EXTRA_SCHEMA + NHSA_BATCH_SCHEMA)
         for p in parts:
             p = p.strip()
             if not p: continue
@@ -625,71 +625,4 @@ CREATE TABLE IF NOT EXISTS nhsa_batches (
 );
 """
 
-# 微信小程序留存功能 schema (V1.1, 2026-09-03 补齐: 此前 app.py 引用 mini_app_*
-# 但 db.py 未声明, 重建库会丢失收藏/热搜/订阅/埋点/事件/用户表)
-MINIAPP_SCHEMA = r"""
-CREATE TABLE IF NOT EXISTS mini_app_users (
-    openid       TEXT PRIMARY KEY,
-    unionid      TEXT,
-    last_seen_at TEXT,
-    login_count  INTEGER DEFAULT 0,
-    created_at   TEXT DEFAULT (datetime('now'))
-);
-CREATE INDEX IF NOT EXISTS idx_mau_last_seen ON mini_app_users(last_seen_at);
-
-CREATE TABLE IF NOT EXISTS mini_app_events (
-    id           INTEGER PRIMARY KEY AUTOINCREMENT,
-    event        TEXT NOT NULL,
-    params_json  TEXT,
-    openid       TEXT,
-    ua           TEXT,
-    t            REAL,
-    created_at   TEXT DEFAULT (datetime('now'))
-);
-CREATE INDEX IF NOT EXISTS idx_mae_event  ON mini_app_events(event);
-CREATE INDEX IF NOT EXISTS idx_mae_openid ON mini_app_events(openid);
-CREATE INDEX IF NOT EXISTS idx_mae_t      ON mini_app_events(t);
-
-CREATE TABLE IF NOT EXISTS mini_app_favs (
-    openid       TEXT NOT NULL,
-    kp_id        INTEGER NOT NULL,
-    kp_name      TEXT,
-    batch_label  TEXT,
-    created_at   TEXT DEFAULT (datetime('now')),
-    PRIMARY KEY (openid, kp_id)
-);
-CREATE INDEX IF NOT EXISTS idx_maf_openid  ON mini_app_favs(openid);
-CREATE INDEX IF NOT EXISTS idx_maf_created ON mini_app_favs(created_at);
-
-CREATE TABLE IF NOT EXISTS mini_app_subs (
-    openid       TEXT PRIMARY KEY,
-    tmpl_id      TEXT NOT NULL,
-    rule_subject TEXT,
-    accepted_at  TEXT DEFAULT (datetime('now'))
-);
-
-CREATE TABLE IF NOT EXISTS mini_app_query_logs (
-    id           INTEGER PRIMARY KEY AUTOINCREMENT,
-    openid       TEXT,
-    q            TEXT NOT NULL,
-    cat          TEXT,
-    hit_count    INTEGER DEFAULT 0,
-    t            REAL,
-    created_at   TEXT DEFAULT (datetime('now'))
-);
-CREATE INDEX IF NOT EXISTS idx_maql_q      ON mini_app_query_logs(q);
-CREATE INDEX IF NOT EXISTS idx_maql_t      ON mini_app_query_logs(t);
-CREATE INDEX IF NOT EXISTS idx_maql_openid ON mini_app_query_logs(openid);
-
--- token ↔ openid 反查表 (2026-09-03 新增, 用于 /api/fav 等接口服务端鉴权取代客户端 openid 直传)
-CREATE TABLE IF NOT EXISTS mini_app_tokens (
-    token        TEXT PRIMARY KEY,
-    openid       TEXT NOT NULL,
-    expires_at   REAL NOT NULL,
-    created_at   TEXT DEFAULT (datetime('now'))
-);
-CREATE INDEX IF NOT EXISTS idx_mat_openid ON mini_app_tokens(openid);
-CREATE INDEX IF NOT EXISTS idx_mat_expires ON mini_app_tokens(expires_at);
-"""
-
-SCHEMA_FULL = SCHEMA + EXTRA_SCHEMA + NHSA_BATCH_SCHEMA + MINIAPP_SCHEMA
+SCHEMA_FULL = SCHEMA + EXTRA_SCHEMA + NHSA_BATCH_SCHEMA

@@ -1,8 +1,0 @@
-{
-  "navigationBarTitleText": "编码反查",
-  "enablePullDownRefresh": false,
-  "usingComponents": {
-    "loading": "/components/loading/loading",
-    "empty-state": "/components/empty-state/empty-state"
-  }
-}

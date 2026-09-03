@@ -23,9 +23,6 @@ webapp/_server.log
 webapp/app.py.bak.*
 webapp/*.bak
 
-# 微信开发者工具本地配置 (私密)
-miniprogram/project.private.config.json
-
 # 编辑器
 .vscode/
 .idea/
