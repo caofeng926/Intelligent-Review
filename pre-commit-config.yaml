@@ -1,0 +1,80 @@
+# Pre-commit hooks (本地 git commit 时自动跑)
+# 安装: pip install pre-commit && pre-commit install
+# 全部跑一次: pre-commit run --all-files
+#
+# CI 镜像请看 .github/workflows/ci.yml 的 precommit-custom job
+
+repos:
+  # ---- 通用文件格式 ----
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: '\.pdf$'
+      - id: end-of-file-fixer
+        exclude: '\.pdf$'
+      - id: check-yaml
+      - id: check-json
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ['--maxkb=1024']   # kp.db 已经在 .gitignore,但兜底防止大文件入库
+      - id: detect-private-key
+        # 阻止 SSH 私钥 / API key 等被意外提交
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+
+  # ---- Python isort ----
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        args: ['--profile', 'black', '--line-length', '120']
+        exclude: '_*.py|webapp/data/.*'
+
+  # ---- Python flake8 ----
+  - repo: https://github.com/pycqa/flake8
+    rev: 7.1.1
+    hooks:
+      - id: flake8
+        args:
+          - '--max-line-length=120'
+          - '--extend-ignore=E203,W503'
+          - '--exclude=webapp/__pycache__,webapp/data,_*.py'
+        additional_dependencies: []
+
+  # ---- bandit (SAST) ----
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.10
+    hooks:
+      - id: bandit
+        args:
+          - '--skip=B101'   # assert 用于参数校验,非安全风险
+          - '--exclude=webapp/__pycache__,webapp/data,_*.py'
+        additional_dependencies: ['bandit[toml]']
+
+  # ---- detect-secrets (凭据扫描) ----
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
+        exclude: 'webapp/data/.*|\.git/.*|webapp/__pycache__/.*'
+
+  # ---- 项目自带的 Python 钩子 ----
+  # 用 local repo 把 scripts/precommit_hooks.py 的两个函数接进来
+  - repo: local
+    hooks:
+      - id: no-bak-files
+        name: Block .bak files
+        entry: python scripts/precommit_hooks.py no_bak_files
+        language: system
+        stages: [pre-commit]
+        pass_filenames: false
+
+      - id: no-hardcoded-password
+        name: Block hardcoded passwords
+        entry: python scripts/precommit_hooks.py no_hardcoded_password
+        language: system
+        stages: [pre-commit]
+        pass_filenames: false
