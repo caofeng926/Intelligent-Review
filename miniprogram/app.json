@@ -1,0 +1,85 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/search/search",
+    "pages/code-lookup/code-lookup",
+    "pages/category/category",
+    "pages/me/me",
+    "pages/kp-detail/kp-detail"
+  ],
+  "subPackages": [
+    {
+      "root": "packageLegal",
+      "name": "legal",
+      "pages": [
+        "pages/privacy/privacy",
+        "pages/about/about"
+      ]
+    }
+  ],
+  "preloadRule": {
+    "pages/index/index": {
+      "network": "all",
+      "packages": ["legal"]
+    }
+  },
+  "window": {
+    "backgroundTextStyle": "light",
+    "navigationBarBackgroundColor": "#0284C7",
+    "navigationBarTitleText": "医保智审",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#F8FAFC",
+    "enablePullDownRefresh": false
+  },
+  "tabBar": {
+    "color": "#64748B",
+    "selectedColor": "#0284C7",
+    "backgroundColor": "#FFFFFF",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页",
+        "iconPath": "assets/tab/home.png",
+        "selectedIconPath": "assets/tab/home-active.png"
+      },
+      {
+        "pagePath": "pages/search/search",
+        "text": "搜索",
+        "iconPath": "assets/tab/search.png",
+        "selectedIconPath": "assets/tab/search-active.png"
+      },
+      {
+        "pagePath": "pages/code-lookup/code-lookup",
+        "text": "编码反查",
+        "iconPath": "assets/tab/scan.png",
+        "selectedIconPath": "assets/tab/scan-active.png"
+      },
+      {
+        "pagePath": "pages/category/category",
+        "text": "分类",
+        "iconPath": "assets/tab/category.png",
+        "selectedIconPath": "assets/tab/category-active.png"
+      },
+      {
+        "pagePath": "pages/me/me",
+        "text": "我的",
+        "iconPath": "assets/tab/me.png",
+        "selectedIconPath": "assets/tab/me-active.png"
+      }
+    ]
+  },
+  "style": "v2",
+  "renderer": "skyline",
+  "rendererOptions": {
+    "skyline": {
+      "defaultDisplayBlock": true,
+      "disableABTest": true,
+      "componentFramework": "glass-easel"
+    }
+  },
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents",
+  "requiredPrivateInfos": [],
+  "permission": {}
+}

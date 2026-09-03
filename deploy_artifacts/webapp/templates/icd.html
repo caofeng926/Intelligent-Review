@@ -1,0 +1,64 @@
+﻿{% extends "base.html" %}
+{% block title %}ICD-10 诊断编码 · 医保标准库 · 医保智审{% endblock %}
+{% block content %}
+<section class="page-head">
+  <h1 class="page-title">ICD-10 医保版 · 2.0</h1>
+  <p class="page-sub">国家医保版 ICD-10 诊断编码 · 2021-01-14 版 · {{ total_codes }} 条</p>
+</section>
+
+<nav class="bread">
+  <a href="{{ url_for('nhsa_index') }}">标准数据库</a> <span class="bread-sep">›</span>
+  <span class="bread-cur">ICD 诊断</span>
+  {% if chapter_no %}<span class="bread-sep">›</span> <span class="bread-cur">第 {{ chapter_no }} 章 {{ chapter_name }}</span>{% endif %}
+</nav>
+
+{% if not chapter_no %}
+<section class="cat-list">
+  {% for g in groups %}
+  <a class="cat-card" href="{{ url_for('icd_browse', chapter_no=g.chapter_no) }}">
+    <div class="cat-main">
+      <div class="cat-code">第 {{ g.chapter_no }} 章</div>
+      <div class="cat-name">{{ g.chapter_name }}</div>
+    </div>
+    <div class="cat-count">{{ "{:,}".format(g.code_count) }} 条</div>
+    <div class="cat-arrow">›</div>
+  </a>
+  {% else %}
+  <div class="empty">没有章节</div>
+  {% endfor %}
+</section>
+{% else %}
+<section class="list-card">
+  {% for r in rows %}
+  <a class="list-row" href="{{ url_for('icd_detail', code=r.code) }}">
+    <div class="list-main">
+      <div class="list-code">{{ r.code }}{% if r.diagnosis_code and r.diagnosis_code != r.code %} · 诊断码 {{ r.diagnosis_code }}{% endif %}</div>
+      <div class="list-name">{{ r.diagnosis_name or r.subcategory_name or r.category_name }}</div>
+      <div class="list-meta">
+        {% if r.category_name %}{{ r.category_name }}{% endif %}
+        {% if r.section_name %} · {{ r.section_name }}{% endif %}
+      </div>
+    </div>
+    <div class="list-arrow">›</div>
+  </a>
+  {% else %}
+  <div class="empty">
+    <div class="empty-ico">∅</div>
+    <div class="empty-title">无匹配</div>
+    <div class="empty-tip">此章节下暂无诊断</div>
+  </div>
+  {% endfor %}
+</section>
+<div class="pager">
+  <span class="pager-info">共 {{ total }} 条 · 显示 {{ rows|length }}</span>
+</div>
+{% endif %}
+
+<section class="tip">
+  <div class="tip-icon">i</div>
+  <div class="tip-body">
+    <div class="tip-title">关于 ICD-10 医保版</div>
+    <div class="tip-text">国家医保局 2021 年发布的 ICD-10 医保版 2.0，包含 22 章 / 264 节 / 4 位类目 / 6 位亚目 / 诊断扩展码（A00.xx）。</div>
+  </div>
+</section>
+{% endblock %}

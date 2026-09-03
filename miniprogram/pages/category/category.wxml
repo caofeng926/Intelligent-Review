@@ -1,0 +1,28 @@
+<!-- pages/category/category.wxml -->
+<view class="cat-page">
+  <view class="cat-header">
+    <view class="cat-title">分类浏览</view>
+    <view class="cat-sub">按七大代码表分门别类查找</view>
+  </view>
+
+  <view class="cat-grid">
+    <view wx:for="{{cats}}" wx:key="key"
+          class="cat-card cat-card-{{item.cls}}"
+          data-key="{{item.key}}"
+          data-cat="{{item}}"
+          bindtap="onTapCat">
+      <view class="cat-card-icon">
+        <rich-text nodes="{{item.iconSvg}}" />
+      </view>
+      <view class="cat-card-body">
+        <view class="cat-card-name">{{item.name}}</view>
+        <view class="cat-card-sub">{{item.sub}}</view>
+      </view>
+      <view class="cat-card-count">{{item.count}}</view>
+    </view>
+  </view>
+
+  <view class="cat-footer safe-bottom-pad">
+    数据按季度同步，欢迎反馈错误
+  </view>
+</view>

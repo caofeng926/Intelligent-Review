@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}{% if q %}搜 “{{ q }}” 涉及的规则 · 医保智审{% else %}按知识点查询 · 医保智审{% endif %}{% endblock %}
+{% block content %}
+<nav class="crumb">
+  <a href="{{ url_for('home') }}">首页</a>
+  <span class="crumb-sep">›</span>
+  <a href="{{ url_for('rules_index') }}">规则</a>
+  <span class="crumb-sep">›</span>
+  <span class="crumb-cur">按知识点查询</span>
+</nav>
+
+<section class="page-head">
+  <h1 class="page-title">按知识点查询</h1>
+  <p class="page-sub">录入具体药品 / 项目 / 服务名称，列出所有涉及的审核规则</p>
+</section>
+
+<section class="searchbar">
+  <form class="searchbar-form" action="{{ url_for('rules_find') }}" method="get" role="search">
+    <span class="searchbar-icon" aria-hidden="true">⌕</span>
+    <input name="q" type="search" inputmode="search" autocomplete="off" autofocus
+           value="{{ q|h }}" placeholder="如 阿莫西林 / 艾附暖宫丸 / afngw / ZD01..." enterkeyhint="search">
+    {% if source %}<input type="hidden" name="source" value="{{ source }}">{% endif %}
+  </form>
+  <div class="searchbar-meta">
+    {% if q %}
+      <span class="mode-pill mode-{{ mode }}">
+        {% if mode=='code' %}#️⃣ 编码搜索
+        {% elif mode=='initials' %}🔠 首字母搜索
+        {% else %}🔤 名字搜索
+        {% endif %}
+      </span>
+      <span class="meta-total">共 <b>{{ total_kp }}</b> 个知识点 · 涉及 <b>{{ total_rule }}</b> 条规则</span>
+      <a class="meta-clear" href="{{ url_for('rules_find') }}">清空</a>
+    {% else %}
+      <span class="meta-tip">支持 药品 / 项目 名称 · 拼音首字母 · 医保编码</span>
+    {% endif %}
+  </div>
+</section>
+
+<nav class="rules-subnav" role="tablist" aria-label="规则浏览方式">
+  <a class="rules-subnav-item" href="{{ url_for('rules_index') }}" role="tab">
+    <span class="subnav-ico">≡</span>
+    <span class="subnav-label">按批次浏览</span>
+  </a>
+  <a class="rules-subnav-item is-active" href="{{ url_for('rules_find') }}" role="tab" aria-selected="true">
+    <span class="subnav-ico">⌕</span>
+    <span class="subnav-label">按知识点查询</span>
+  </a>
+</nav>
+
+{% if q and groups %}
+<ul class="rule-group-list">
+  {% for g in groups %}
+  <li class="rule-group">
+    <a class="rule-group-head" href="{{ url_for('rule_detail', rid=g.rule_id) }}">
+      <div class="rule-group-main">
+        <div class="rule-group-title">
+          <span class="tag tag-source">{{ source_label[g.source] }}</span>
+          {% if g.category %}<span class="tag tag-cat">{{ g.category|h }}</span>{% endif %}
+          <span class="rule-group-name">{{ g.rule_subject|h }}</span>
+        </div>
+        <div class="rule-group-meta">
+          <span class="rule-group-batch">{{ g.batch_label|h }}</span>
+          {% if g.pub_date %}<span class="rule-group-date">发布 {{ g.pub_date }}</span>{% endif %}
+        </div>
+      </div>
+      <div class="rule-group-count">
+        <span class="count-num">{{ g.kps|length }}</span>
+        <span class="count-label">匹配项</span>
+      </div>
+      <div class="rule-group-arrow">›</div>
+    </a>
+    <ul class="rule-group-kps">
+      {% for k in g.kps %}
+      <li>
+        <a class="rule-group-kp" href="{{ url_for('kp_detail', kp_id=k.id) }}">
+          <div class="kp-seq">{{ k.seq or '·' }}</div>
+          <div class="kp-info">
+            <div class="kp-name">{{ k.subject_name|h }}</div>
+            {% if k.detection_logic %}
+            <div class="kp-logic">检出：{{ k.detection_logic|truncate2(80) }}</div>
+            {% endif %}
+            <div class="kp-tags">
+              {% if k.pinyin_initials %}<span class="kp-mini">{{ k.pinyin_initials }}</span>{% endif %}
+              {% if k.code_count %}<span class="kp-mini">{{ k.code_count }} 编码</span>{% endif %}
+              {% if k.object_type %}<span class="kp-mini">{{ k.object_type }}</span>{% endif %}
+            </div>
+          </div>
+          <div class="kp-arrow">›</div>
+        </a>
+      </li>
+      {% endfor %}
+      {% if g.kps|length > 5 %}
+      <li class="rule-group-more">
+        <a href="{{ url_for('rule_detail', rid=g.rule_id) }}">查看该规则全部知识点 →</a>
+      </li>
+      {% endif %}
+    </ul>
+  </li>
+  {% endfor %}
+</ul>
+
+{% elif q and total_kp == 0 %}
+<section class="empty">
+  <div class="empty-ico">∅</div>
+  <div class="empty-title">没找到 “{{ q|h }}” 相关的知识点</div>
+  <div class="empty-tip">
+    {% if mode == 'initials' %}试试更短的首字母 · 或切换到名字搜索
+    {% elif mode == 'code' %}确认编码完整且大写 · 或尝试部分编码
+    {% else %}试试更短关键词 · 检查拼写
+    {% endif %}
+  </div>
+  <a class="empty-link" href="{{ url_for('search_view') }}?q={{ q|urlencode }}">到全局搜索试试 →</a>
+</section>
+
+{% else %}
+<section class="empty">
+  <div class="empty-ico">⌕</div>
+  <div class="empty-title">输入药品或项目名称开始查询</div>
+  <div class="empty-tip">将显示该品种涉及的所有审核规则与限制条件</div>
+  <div class="empty-hints">
+    <div class="empty-hints-label">试试这些示例：</div>
+    <div class="empty-hints-list">
+      <a class="chip chip-ghost" href="{{ url_for('rules_find') }}?q=阿莫西林">阿莫西林</a>
+      <a class="chip chip-ghost" href="{{ url_for('rules_find') }}?q=阿泰特韦">阿泰特韦</a>
+      <a class="chip chip-ghost" href="{{ url_for('rules_find') }}?q=艾附暖宫丸">艾附暖宫丸</a>
+      <a class="chip chip-ghost" href="{{ url_for('rules_find') }}?q=afngw">afngw (首字母)</a>
+    </div>
+  </div>
+</section>
+{% endif %}
+{% endblock %}

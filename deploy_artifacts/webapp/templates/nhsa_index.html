@@ -1,0 +1,59 @@
+﻿{% extends "base.html" %}
+{% block title %}标准数据库 · 医保智审{% endblock %}
+{% block content %}
+<section class="page-head">
+  <h1 class="page-title">国家医保标准数据库</h1>
+  <p class="page-sub">国家医保局发布的 8 类编码标准数据库 · 共 {{ total_codes }} 条</p>
+</section>
+
+<section class="nhsa-grid">
+  <a class="nhsa-tile" href="{{ url_for('consumables_index') }}">
+    <div class="nhsa-tile-name">医保医用耗材 (HC)</div>
+    <div class="nhsa-tile-desc">19 位 C-code · 一级 / 二级 / 三级分类</div>
+    <div class="nhsa-tile-count">{{ "{:,}".format(counts.get('consumable_codes', 0)) }}</div>
+  </a>
+  <a class="nhsa-tile" href="{{ url_for('ivd_browse') }}">
+    <div class="nhsa-tile-name">体外诊断试剂 (IVD)</div>
+    <div class="nhsa-tile-desc">CJ 开头的 19 位编码 · 按检测类别组织</div>
+    <div class="nhsa-tile-count">{{ "{:,}".format(counts.get('ivd_codes', 0)) }}</div>
+  </a>
+  <a class="nhsa-tile" href="{{ url_for('yp_browse') }}">
+    <div class="nhsa-tile-name">医保药品 (YP)</div>
+    <div class="nhsa-tile-desc">XA/XB/XC... 编码 · 含甲乙类 / 商保 / 厂家</div>
+    <div class="nhsa-tile-count">{{ "{:,}".format(counts.get('yp_codes', 0)) }}</div>
+  </a>
+  <a class="nhsa-tile" href="{{ url_for('hc7_index') }}">
+    <div class="nhsa-tile-name">7 类医用耗材 (HC7)</div>
+    <div class="nhsa-tile-desc">血管介入类 · 2025-09-01 版</div>
+    <div class="nhsa-tile-count">{{ "{:,}".format(counts.get('consumable7_codes', 0)) }}</div>
+  </a>
+  <a class="nhsa-tile" href="{{ url_for('icd_browse') }}">
+    <div class="nhsa-tile-name">ICD-10 医保版 2.0</div>
+    <div class="nhsa-tile-desc">22 章 / 4-6 位诊断扩展码</div>
+    <div class="nhsa-tile-count">{{ "{:,}".format(counts.get('icd_codes', 0)) }}</div>
+  </a>
+  <a class="nhsa-tile" href="{{ url_for('ms_browse') }}">
+    <div class="nhsa-tile-name">医疗服务项目 (MS)</div>
+    <div class="nhsa-tile-desc">4 级树状 · 项目名称 / 拼音首字母搜索</div>
+    <div class="nhsa-tile-count">{{ "{:,}".format(counts.get('medical_service_codes', 0)) }}</div>
+  </a>
+  <a class="nhsa-tile" href="{{ url_for('tcm_browse') }}">
+    <div class="nhsa-tile-name">中药饮片 (TCM)</div>
+    <div class="nhsa-tile-desc">按部位 / 功效分类树状组织</div>
+    <div class="nhsa-tile-count">{{ "{:,}".format(counts.get('tcm_codes', 0)) }}</div>
+  </a>
+  <a class="nhsa-tile" href="/api/nhsa/stats">
+    <div class="nhsa-tile-name">数据来源</div>
+    <div class="nhsa-tile-desc">查看 8 类数据库批次与元数据</div>
+    <div class="nhsa-tile-count" style="font-size:14px;color:var(--text-3);">{{ counts.get('nhsa_batches', 0) }} 批次</div>
+  </a>
+</section>
+
+<section class="tip">
+  <div class="tip-icon">i</div>
+  <div class="tip-body">
+    <div class="tip-title">使用说明</div>
+    <div class="tip-text">点击任一卡片进入浏览页；或使用顶部搜索框（按编码 / 名称 / 拼音首字母），系统会自动识别并路由到对应表。所有数据来源于国家医保局官方发布。</div>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,60 @@
+{% extends "admin/base_admin.html" %}
+{% from "admin/_macros.html" import page_title, alert, tag, pager %}
+{% block content %}
+  {{ page_title(rule.rule_subject or "(无主题)", "规则 #" + rule.id|string + " · " + rule.batch_label + (rule.pub_date and " · " + rule.pub_date or "")) }}
+
+  <div class="admin-card">
+    <div class="admin-card-head">
+      <h3>规则信息</h3>
+      <div class="actions">
+        <a class="btn btn-sm" href="{{ url_for('admin.rules_page') }}">‹ 返回规则列表</a>
+        {% if rule.ann_url %}<a class="btn btn-sm" href="{{ rule.ann_url }}" target="_blank" rel="noopener">查看公告</a>{% endif %}
+      </div>
+    </div>
+    <dl class="kv-list">
+      <div><dt>规则 ID</dt><dd>#{{ rule.id }}</dd></div>
+      <div><dt>所属批次</dt><dd>{{ rule.batch_label }} ({{ rule.pub_date or "—" }})</dd></div>
+      <div><dt>主题</dt><dd>{{ rule.rule_subject or "—" }}</dd></div>
+      <div><dt>分类</dt><dd>{{ rule.category or "—" }}</dd></div>
+      <div><dt>对象类型</dt><dd>{{ rule.object_type or "—" }}</dd></div>
+      <div><dt>PDF 页码</dt><dd>{% if rule.page_start %}{{ rule.page_start }} - {{ rule.page_end or rule.page_start }}{% else %}—{% endif %}</dd></div>
+      <div><dt>行数</dt><dd>{{ rule.row_count or "—" }}</dd></div>
+      <div><dt>知识点数</dt><dd><strong>{{ kps|length }}</strong></dd></div>
+    </dl>
+  </div>
+
+  <div class="admin-card">
+    <div class="admin-card-head">
+      <h3>知识点列表（{{ kps|length }} 条）</h3>
+      <span class="text-3" style="font-size:12px;">点击查看每个知识点的编码列表</span>
+    </div>
+    <div class="adm-table-wrap">
+      <table class="adm-table">
+        <thead>
+          <tr>
+            <th style="width:60px">序号</th>
+            <th>药品 / 项目名称</th>
+            <th style="width:80px">拼音</th>
+            <th class="num" style="width:80px">编码数</th>
+            <th>编码预览</th>
+            <th style="width:80px">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for k in kps %}
+          <tr>
+            <td class="num text-3">{{ k.seq or loop.index }}</td>
+            <td><strong>{{ k.subject_name or "—" }}</strong></td>
+            <td class="mono text-2">{{ k.pinyin_initials or "—" }}</td>
+            <td class="num"><strong>{{ k.code_count or 0 }}</strong></td>
+            <td class="mono text-2" style="font-size:11px;">{{ k.codes_preview or "—" }}</td>
+            <td><a class="btn btn-sm" href="{{ url_for('admin.kp_detail', kp_id=k.id) }}">查看</a></td>
+          </tr>
+          {% else %}
+          <tr class="empty-row"><td colspan="6">该规则暂无知识点</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endblock %}

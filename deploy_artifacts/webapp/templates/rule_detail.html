@@ -1,0 +1,56 @@
+﻿{% extends "base.html" %}
+{% block title %}{{ rule[1]|h }} · 医保智审{% endblock %}
+{% block content %}
+<nav class="crumb">
+  <a href="{{ url_for('home') }}">首页</a>
+  <span class="crumb-sep">›</span>
+  <a href="{{ url_for('rules_index') }}">批次</a>
+  <span class="crumb-sep">›</span>
+  <span class="crumb-cur">{{ rule[1]|h }}</span>
+</nav>
+
+<header class="rule-head">
+  <div class="kp-tag">
+    <span class="tag tag-source">{{ source_label[rule[2]] }}</span>
+    <span class="tag tag-batch">{{ rule[8]|h }}</span>
+    {% if rule[4] %}<span class="tag tag-cat">{{ rule[4]|h }}</span>{% endif %}
+    {% if rule[3] %}<span class="tag tag-ot">{{ rule[3]|h }}</span>{% endif %}
+  </div>
+  <h1 class="rule-title">{{ rule[1]|h }}</h1>
+  <div class="rule-meta">
+    {% if rule[5] %}页码 p{{ rule[5] }}{% if rule[6] and rule[6]!=rule[5] %}-{{ rule[6] }}{% endif %}{% endif %}
+    · {{ rule[7] or total }} 条知识点
+    {% if rule[9] %}· 发布 {{ rule[9] }}{% endif %}
+  </div>
+</header>
+
+{% if items %}
+<ul class="rule-kp-list">
+  {% for it in items %}
+  <li class="rule-kp-item">
+    <a class="rule-kp-link" href="{{ url_for('kp_detail', kp_id=it[0]) }}">
+      <div class="rule-kp-seq">{{ it[1] or '·' }}</div>
+      <div class="rule-kp-main">
+        <div class="rule-kp-name">{{ it[2]|h }}</div>
+        <div class="rule-kp-sub">
+          {% if it[4] %}<span>{{ it[4] }} 编码</span>{% endif %}
+          {% if it[3] %}<span class="rule-kp-py">{{ it[3] }}</span>{% endif %}
+        </div>
+      </div>
+      <div class="rule-kp-arrow">›</div>
+    </a>
+  </li>
+  {% endfor %}
+</ul>
+
+{% if pages > 1 %}
+<nav class="pager" aria-label="分页">
+  {% if page > 1 %}<a class="pg-btn" href="?page={{ page-1 }}">‹ 上一页</a>{% endif %}
+  <span class="pg-info">{{ page }} / {{ pages }}</span>
+  {% if page < pages %}<a class="pg-btn" href="?page={{ page+1 }}">下一页 ›</a>{% endif %}
+</nav>
+{% endif %}
+{% else %}
+<div class="empty">该规则暂无知识点</div>
+{% endif %}
+{% endblock %}

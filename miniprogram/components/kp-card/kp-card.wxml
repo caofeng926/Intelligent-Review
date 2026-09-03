@@ -1,0 +1,22 @@
+<view class="kp-card press" bindtap="onTap">
+  <view class="kp-head">
+    <view class="kp-tag {{catClass}}">{{catLabel}}</view>
+    <view class="kp-title">
+      <block wx:for="{{titleParts}}" wx:key="*this">
+        <text class="kp-title-text {{item.highlight ? 'kp-title-hl' : ''}}">{{item.text}}</text>
+      </block>
+    </view>
+  </view>
+
+  <view class="kp-desc line-clamp-2" wx:if="{{desc}}">{{desc}}</view>
+
+  <view class="kp-meta" wx:if="{{!compact}}">
+    <text class="kp-meta-item" wx:if="{{codeCount}}">{{codeCount}} 个编码</text>
+    <text class="kp-meta-item kp-meta-batch" wx:if="{{item.batch_label}}">{{item.batch_label}}</text>
+    <text class="kp-meta-item" wx:if="{{item.pub_date}}">· {{item.pub_date}}</text>
+  </view>
+
+  <view class="kp-mfgs" wx:if="{{item.manufacturers && item.manufacturers.length}}">
+    <text class="kp-mfg" wx:for="{{item.manufacturers}}" wx:key="*this" wx:for-item="m">{{m[0]}}</text>
+  </view>
+</view>

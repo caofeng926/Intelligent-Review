@@ -1,0 +1,149 @@
+﻿{% extends "base.html" %}
+{% block title %}{% if q %}搜 “{{ q }}” · 医保智审{% else %}搜索 · 医保智审{% endif %}{% endblock %}
+{% block content %}
+<section class="searchbar">
+  <form class="searchbar-form" action="{% if active_tab and active_tab != 'kp' %}{{ url_for('code_search_' + active_tab) }}{% else %}{{ url_for('search_view') }}{% endif %}" method="get" role="search">
+    <span class="searchbar-icon" aria-hidden="true">⌕</span>
+    <input name="q" type="search" inputmode="search" autocomplete="off" autofocus
+           value="{{ q|h }}" placeholder="搜药品 / 耗材 / 项目 / 编码 / 首字母" enterkeyhint="search">
+    {% if source %}<input type="hidden" name="source" value="{{ source }}">{% endif %}
+  </form>
+  <div class="searchbar-meta">
+    {% if q %}
+      <span class="mode-pill mode-{{ mode }}">
+        {% if mode=='code' %}#️⃣ 编码搜索
+        {% elif mode=='initials' %}🔠 首字母搜索
+        {% else %}🔤 名字搜索
+        {% endif %}
+      </span>
+      <span class="meta-total">共 <b>{{ total }}</b> 条结果</span>
+      <a class="meta-clear" href="{% if active_tab and active_tab != 'kp' %}{{ url_for('code_search_' + active_tab) }}{% else %}{{ url_for('search_view') }}{% endif %}">清空</a>
+    {% else %}
+      <span class="meta-tip">试试：艾附暖宫丸 / afngw / ZD03AAA0043010100166</span>
+    {% endif %}
+  </div>
+</section>
+
+<nav class="search-tabs" role="tablist" aria-label="搜索类型">
+  {% for tid, tlabel, turl, _endpoint in tabs %}
+  {% set is_active = (tid == active_tab) %}
+  {% set cnt = code_counts.get(tid, 0) if code_counts else 0 %}
+  <a class="search-tab{% if is_active %} is-active{% endif %}" href="{{ turl }}{% if q %}?q={{ q|urlencode }}{% endif %}" role="tab" aria-selected="{{ 'true' if is_active else 'false' }}">
+    <span class="search-tab-label">{{ tlabel }}</span>
+    <span class="search-tab-count">{{ "{:,}".format(cnt) }}</span>
+  </a>
+  {% endfor %}
+</nav>
+
+{% if q and items %}
+<ul class="result-list">
+  {% for it in items %}
+  <li class="result-card">
+    <a class="result-link" href="{{ url_for('kp_detail', kp_id=it['id']) }}">
+      <div class="result-head">
+        <span class="result-name">{{ it['subject_name']|h }}</span>
+        {% if it.get('pinyin_initials') %}<span class="result-py">{{ it['pinyin_initials'] }}</span>{% endif %}
+        {% if it.get('code_count') %}<span class="result-cnt">{{ it['code_count'] }} 编码</span>{% endif %}
+      </div>
+      {% if it.get('partner') %}
+      <div class="result-pair">
+        <span class="result-pair-arrow">↔</span>
+        <span class="result-pair-label">{{ it['partner']['label']|h }}：</span>
+        {% if it['partner']['code'] %}<span class="result-pair-code">{{ it['partner']['code']|h }}</span>{% endif %}
+        {% if it['partner']['name'] %}<span class="result-pair-name">{{ it['partner']['name']|h }}</span>{% endif %}
+      </div>
+      {% endif %}
+      <div class="result-rule">{{ it['rule_subject']|h }} · {{ it['batch_label']|h }}{% if it.get('pub_date') %} · {{ it['pub_date'] }}{% endif %}</div>
+      {% if it.get('detection_logic') %}
+      <div class="result-snippet">检出：{{ it['detection_logic']|truncate2(80) }}</div>
+      {% endif %}
+      {% if it.get('codes_preview') %}
+      <div class="result-codes">{{ it['codes_preview']|truncate2(140) }}</div>
+      {% endif %}
+      {% if it.get('manufacturers') %}
+      <div class="result-mfgs">
+        <span class="result-mfgs-label">厂家：</span>
+        {% for m, f in it['manufacturers'][:2] %}
+        <span class="result-mfg-chip{% if f %} warn{% endif %}">
+          {{ m|h }}{% if f %} <span class="result-mfg-flag">{{ f|h }}</span>{% endif %}
+        </span>
+        {% endfor %}
+        {% if it['manufacturers']|length > 2 %}
+        <span class="result-mfg-more">等 {{ it['manufacturers']|length }} 家</span>
+        {% endif %}
+      </div>
+      {% endif %}
+    </a>
+  </li>
+  {% endfor %}
+</ul>
+
+{% if pages > 1 %}
+<nav class="pager" aria-label="分页">
+  {% if page > 1 %}<a class="pg-btn" href="?q={{ q|urlencode }}&source={{ source or '' }}&page={{ page-1 }}">‹ 上一页</a>{% endif %}
+  <span class="pg-info">{{ page }} / {{ pages }}</span>
+  {% if page < pages %}<a class="pg-btn" href="?q={{ q|urlencode }}&source={{ source or '' }}&page={{ page+1 }}">下一页 ›</a>{% endif %}
+</nav>
+{% endif %}
+
+{% elif q and code_result and code_result['items'] %}
+<ul class="result-list code-result-list">
+  {% for it in code_result['items'] %}
+  <li class="result-card code-result-card">
+    <a class="result-link" href="{{ code_result.index_url }}?q={{ it[code_result.code_field]|urlencode }}">
+      <div class="result-head">
+        <span class="result-code">{{ it[code_result.code_field]|h }}</span>
+        <span class="result-name">{{ (it[code_result.name_field] or '')|h }}</span>
+        <span class="result-type-badge">{{ code_result.label }}</span>
+      </div>
+      <div class="result-meta-grid">
+        {% if it.get('manufacturer') %}<div class="result-meta-item"><span class="meta-k">厂家</span><span class="meta-v">{{ it['manufacturer']|h }}</span></div>{% endif %}
+        {% if it.get('product_name') and it['product_name'] != it[code_result.name_field] %}<div class="result-meta-item"><span class="meta-k">商品名</span><span class="meta-v">{{ it['product_name']|h }}</span></div>{% endif %}
+        {% if it.get('approval_no') %}<div class="result-meta-item"><span class="meta-k">批准文号</span><span class="meta-v">{{ it['approval_no']|h }}</span></div>{% endif %}
+        {% if it.get('spec') and code_result.type_id in ('yp','hc') %}<div class="result-meta-item"><span class="meta-k">规格</span><span class="meta-v">{{ it['spec']|h }}</span></div>{% endif %}
+        {% if it.get('list_class') %}<div class="result-meta-item"><span class="meta-k">目录</span><span class="meta-v">{{ it['list_class']|h }}</span></div>{% endif %}
+        {% if it.get('cat_l1_name') and code_result.type_id in ('hc','ivd') %}<div class="result-meta-item"><span class="meta-k">一级</span><span class="meta-v">{{ it['cat_l1_name']|h }}</span></div>{% endif %}
+        {% if it.get('cat_l2_name') and code_result.type_id in ('hc','ivd') %}<div class="result-meta-item"><span class="meta-k">二级</span><span class="meta-v">{{ it['cat_l2_name']|h }}</span></div>{% endif %}
+        {% if it.get('cat_l3_name') and code_result.type_id in ('hc','ivd') %}<div class="result-meta-item"><span class="meta-k">三级</span><span class="meta-v">{{ it['cat_l3_name']|h }}</span></div>{% endif %}
+        {% if it.get('testing_index') and code_result.type_id == 'ivd' %}<div class="result-meta-item"><span class="meta-k">检测指标</span><span class="meta-v">{{ it['testing_index']|h }}</span></div>{% endif %}
+        {% if it.get('testing_category') and code_result.type_id == 'ivd' %}<div class="result-meta-item"><span class="meta-k">检测类别</span><span class="meta-v">{{ it['testing_category']|h }}</span></div>{% endif %}
+        {% if it.get('company_name') and code_result.type_id == 'ivd' %}<div class="result-meta-item"><span class="meta-k">企业</span><span class="meta-v">{{ it['company_name']|h }}</span></div>{% endif %}
+        {% if it.get('explain') and code_result.type_id == 'ms' %}<div class="result-meta-item result-meta-wide"><span class="meta-k">说明</span><span class="meta-v">{{ it['explain'][:120]|h }}</span></div>{% endif %}
+        {% if it.get('contains_content') and code_result.type_id == 'ms' %}<div class="result-meta-item result-meta-wide"><span class="meta-k">包含</span><span class="meta-v">{{ it['contains_content'][:120]|h }}</span></div>{% endif %}
+        {% if it.get('class_name') and code_result.type_id == 'tcm' %}<div class="result-meta-item"><span class="meta-k">分类</span><span class="meta-v">{{ it['class_name']|h }}</span></div>{% endif %}
+        {% if it.get('part_code') and code_result.type_id == 'tcm' %}<div class="result-meta-item"><span class="meta-k">部位</span><span class="meta-v">{{ it['part_code']|h }}</span></div>{% endif %}
+        {% if it.get('chapter_name') and code_result.type_id == 'icd' %}<div class="result-meta-item"><span class="meta-k">章</span><span class="meta-v">{{ it['chapter_name']|h }}</span></div>{% endif %}
+        {% if it.get('category_name') and code_result.type_id == 'icd' %}<div class="result-meta-item"><span class="meta-k">类目</span><span class="meta-v">{{ it['category_name']|h }}</span></div>{% endif %}
+        {% if it.get('subcategory_name') and code_result.type_id == 'icd' %}<div class="result-meta-item"><span class="meta-k">亚目</span><span class="meta-v">{{ it['subcategory_name']|h }}</span></div>{% endif %}
+      </div>
+    </a>
+  </li>
+  {% endfor %}
+</ul>
+{% if pages > 1 %}
+<nav class="pager" aria-label="分页">
+  {% if page > 1 %}<a class="pg-btn" href="?q={{ q|urlencode }}&page={{ page-1 }}">‹ 上一页</a>{% endif %}
+  <span class="pg-info">{{ page }} / {{ pages }}</span>
+  {% if page < pages %}<a class="pg-btn" href="?q={{ q|urlencode }}&page={{ page+1 }}">下一页 ›</a>{% endif %}
+</nav>
+{% endif %}
+
+{% elif q %}
+<section class="empty">
+  <div class="empty-ico">∅</div>
+  <div class="empty-title">没找到结果</div>
+  <div class="empty-tip">
+    {% if active_tab == 'kp' %}试试首字母 <b>{{ q[:1] }}</b> 开头 · 或检查编码是否大写
+    {% else %}试试更短关键词（<b>{{ q[:2] }}</b>）或切换其他 tab
+    {% endif %}
+  </div>
+  <a class="empty-link" href="{% if active_tab and active_tab != 'kp' %}{{ url_for('code_search_' + active_tab) }}{% else %}{{ url_for('search_view') }}{% endif %}">返回搜索</a>
+</section>
+{% else %}
+<section class="empty">
+  <div class="empty-ico">⌕</div>
+  <div class="empty-title">输入关键词开始搜索</div>
+  <div class="empty-tip">支持 名字 / 拼音首字母 / 医保编码</div>
+</section>
+{% endif %}
+{% endblock %}

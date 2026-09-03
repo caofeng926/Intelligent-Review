@@ -1,0 +1,39 @@
+<!-- pages/about/about.wxml -->
+<view class="about-page">
+  <view class="about-hero">
+    <view class="about-logo">医保</view>
+    <view class="about-name">医保智审规则库</view>
+    <view class="about-tag">审核员 / 编码员的随身检索工具</view>
+  </view>
+
+  <view class="about-section">
+    <view class="row">
+      <text class="row-key">当前版本</text>
+      <text class="row-val">v{{version}}</text>
+    </view>
+    <view class="row">
+      <text class="row-key">构建日期</text>
+      <text class="row-val">{{buildAt}}</text>
+    </view>
+    <view class="row">
+      <text class="row-key">数据来源</text>
+      <text class="row-val">国家医保局 NHSA / 各省政策</text>
+    </view>
+    <view class="row">
+      <text class="row-key">开源地址</text>
+      <text class="row-val">D:\Workspace\医保智审规则库</text>
+    </view>
+  </view>
+
+  <view class="about-actions">
+    <button class="action-btn" bindtap="copyOpenid">联系客服</button>
+    <button class="action-btn action-btn-ghost" open-type="feedback">意见反馈</button>
+  </view>
+
+  <view class="about-footer">
+    <view class="about-link" bindtap="goPrivacy">用户协议 & 隐私政策</view>
+    <view>© 2026 医保智审 · 保留所有权利</view>
+    <!-- TODO: 提交审核前必须替换为工信部 ICP 备案号 (如 京ICP备12345678号-1) -->
+    <view style="margin-top:8rpx;">ICP 备案号：{{icpFiling}}</view>
+  </view>
+</view>

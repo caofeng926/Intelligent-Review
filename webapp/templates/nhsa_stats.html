@@ -1,0 +1,96 @@
+﻿{% extends "base.html" %}
+{% block title %}数据来源 · 医保标准库 · 医保智审{% endblock %}
+{% block content %}
+<section class="page-head">
+  <h1 class="page-title">数据来源</h1>
+  <p class="page-sub">国家医保局 8 类编码标准数据库 · {{ stats.batches|length }} 个批次 · {{ '{:,}'.format(total_rows) }} 条记录</p>
+</section>
+
+<nav class="bread">
+  <a href="{{ url_for('nhsa_index') }}">标准数据库</a> <span class="bread-sep">›</span>
+  <span class="bread-cur">数据来源</span>
+</nav>
+
+<section class="nhsa-grid">
+  <a class="nhsa-tile" href="{{ url_for('consumables_index') }}">
+    <div class="nhsa-tile-name">医保医用耗材 (HC)</div>
+    <div class="nhsa-tile-desc">consumable_codes · 19 套 C-code</div>
+    <div class="nhsa-tile-count">{{ '{:,}'.format(stats.live_counts.get('consumable_codes', 0)) }}</div>
+  </a>
+  <a class="nhsa-tile" href="{{ url_for('ivd_browse') }}">
+    <div class="nhsa-tile-name">体外诊断试剂 (IVD)</div>
+    <div class="nhsa-tile-desc">ivd_codes · CJ 开头 19 位</div>
+    <div class="nhsa-tile-count">{{ '{:,}'.format(stats.live_counts.get('ivd_codes', 0)) }}</div>
+  </a>
+  <a class="nhsa-tile" href="{{ url_for('yp_browse') }}">
+    <div class="nhsa-tile-name">医保药品 (YP)</div>
+    <div class="nhsa-tile-desc">yp_codes · drug_detail</div>
+    <div class="nhsa-tile-count">{{ '{:,}'.format(stats.live_counts.get('yp_codes', 0)) }}</div>
+  </a>
+  <a class="nhsa-tile" href="{{ url_for('hc7_index') }}">
+    <div class="nhsa-tile-name">7 类医用耗材 (HC7)</div>
+    <div class="nhsa-tile-desc">consumable7_codes</div>
+    <div class="nhsa-tile-count">{{ '{:,}'.format(stats.live_counts.get('consumable7_codes', 0)) }}</div>
+  </a>
+  <a class="nhsa-tile" href="{{ url_for('icd_browse') }}">
+    <div class="nhsa-tile-name">ICD-10 医保版 2.0</div>
+    <div class="nhsa-tile-desc">icd_codes</div>
+    <div class="nhsa-tile-count">{{ '{:,}'.format(stats.live_counts.get('icd_codes', 0)) }}</div>
+  </a>
+  <a class="nhsa-tile" href="{{ url_for('ms_browse') }}">
+    <div class="nhsa-tile-name">医疗服务项目 (MS)</div>
+    <div class="nhsa-tile-desc">medical_service_codes</div>
+    <div class="nhsa-tile-count">{{ '{:,}'.format(stats.live_counts.get('medical_service_codes', 0)) }}</div>
+  </a>
+  <a class="nhsa-tile" href="{{ url_for('tcm_browse') }}">
+    <div class="nhsa-tile-name">中医疾病 (TCM)</div>
+    <div class="nhsa-tile-desc">tcm_codes</div>
+    <div class="nhsa-tile-count">{{ '{:,}'.format(stats.live_counts.get('tcm_codes', 0)) }}</div>
+  </a>
+  <div class="nhsa-tile" style="cursor:default;background:transparent;border-style:dashed;">
+    <div class="nhsa-tile-name">drug_detail</div>
+    <div class="nhsa-tile-desc">医保药品详情表</div>
+    <div class="nhsa-tile-count">{{ '{:,}'.format(stats.live_counts.get('drug_detail', 0)) }}</div>
+  </div>
+</section>
+
+<h2 style="margin-top:var(--sp-5);margin-bottom:var(--sp-3);font-size:var(--fs-lg);font-weight:var(--fw-semi);color:var(--c-text);">入库批次 · {{ stats.batches|length }}</h2>
+
+<section class="list-card" style="padding:0;">
+  {% for b in stats.batches %}
+  <div class="list-row" style="display:block;">
+    <div class="list-main">
+      <div style="display:flex;align-items:center;gap:var(--sp-2);margin-bottom:var(--sp-1);flex-wrap:wrap;">
+        <span class="chip">{{ b.source }}</span>
+        <span class="list-code">{{ b.batch_label }}</span>
+      </div>
+      <div class="list-meta">
+        发布 {{ b.pub_date or '—' }} · 入库 {{ b.ingested_at or '—' }} · {{ '{:,}'.format(b.record_count or 0) }} 条
+        {% if b.sysflag %} · sysflag {{ b.sysflag }}{% endif %}
+      </div>
+      {% if b.csv_path or b.json_path %}
+      <div class="list-meta" style="opacity:.75;font-family:var(--font-mono);font-size:var(--fs-xs);word-break:break-all;margin-top:2px;">
+        {% if b.csv_path %}CSV: {{ b.csv_path }}{% endif %}
+        {% if b.csv_path and b.json_path %} · {% endif %}
+        {% if b.json_path %}JSON: {{ b.json_path }}{% endif %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% else %}
+  <div class="empty">
+    <div class="empty-title">暂无批次</div>
+  </div>
+  {% endfor %}
+</section>
+
+<div class="info-banner" style="margin-top:var(--sp-5);">
+  <div class="info-icon">📡</div>
+  <div class="info-body">
+    <div class="info-title">原始 JSON 接口</div>
+    <div class="info-text">
+      <a href="/api/nhsa/stats" target="_blank" rel="noopener">/api/nhsa/stats</a> · <a href="/api/nhsa/batches" target="_blank" rel="noopener">/api/nhsa/batches</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

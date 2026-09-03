@@ -1,0 +1,54 @@
+<!-- pages/privacy/privacy.wxml -->
+<view class="privacy-page">
+  <view class="privacy-header">
+    <view class="privacy-icon"><rich-text nodes='<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="#0284C7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>' /></view>
+    <view class="privacy-title">用户隐私协议</view>
+    <view class="privacy-sub">最近更新：2026 年 7 月 14 日</view>
+  </view>
+
+  <view class="privacy-section">
+    <view class="section-title">我们收集的信息</view>
+    <view class="section-body">
+      <view class="info-item">• 微信返回的 openid（用于保存您的搜索偏好与收藏，不会上传至第三方）</view>
+      <view class="info-item">• 您的搜索关键词、点击行为（仅用于改善数据准确度，不会用于广告定向）</view>
+    </view>
+  </view>
+
+  <view class="privacy-section">
+    <view class="section-title">我们如何保护信息</view>
+    <view class="section-body">
+      <view class="info-item">• 全部接口使用 HTTPS 加密传输</view>
+      <view class="info-item">• 仅在您同意"收藏 / 历史"功能时本地保存您的偏好</view>
+      <view class="info-item">• 不向任何第三方共享您的个人信息</view>
+    </view>
+  </view>
+
+  <view class="privacy-section">
+    <view class="section-title">您的权利</view>
+    <view class="section-body">
+      <view class="info-item">• 您可以随时在小程序内"我的-清理缓存"删除您的本地数据</view>
+      <view class="info-item">• 如需彻底删除账号与关联数据，可联系客服</view>
+    </view>
+  </view>
+
+  <view class="privacy-section">
+    <view class="section-title">免责声明</view>
+    <view class="section-body">
+      <view class="info-item">本工具整理自国家医保局及各省医保政策文件，仅供医保审核人员参考学习使用，不作为最终报销判定依据；如有歧义以官方文件为准。</view>
+    </view>
+  </view>
+
+  <view class="privacy-footer">
+    <button class="link-btn" bindtap="openPrivacyContract">查看完整版本 ›</button>
+  </view>
+
+  <view class="privacy-cta">
+    <button
+      class="agree-btn"
+      open-type="agreePrivacyAuthorization"
+      bindagreeprivacyauthorization="handleAgree"
+      disabled="{{agreed}}">
+      {{ agreed ? '已同意' : '同意并继续' }}
+    </button>
+  </view>
+</view>

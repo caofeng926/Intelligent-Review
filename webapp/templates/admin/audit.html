@@ -1,0 +1,18 @@
+{% extends "admin/base_admin.html" %}
+{% from "admin/_macros.html" import page_title, alert, empty, tag %}
+{% block content %}
+  {{ page_title("审计日志", "记录系统关键操作与变更") }}
+
+  {{ alert("审计日志为占位实现 · 真实日志存储在 SQLite 的 syslog 表（待启用）或远程 syslog（待集成）", "warn", "⚠") }}
+
+  <div class="admin-card">
+    <div class="admin-card-head">
+      <h3>最近活动</h3>
+      <div class="actions">
+        <a class="btn btn-sm" href="javascript:location.reload()">↻ 刷新</a>
+        <a class="btn btn-sm" href="javascript:alert('导出 · 待开发')">导出 CSV</a>
+      </div>
+    </div>
+    {{ empty("暂无审计日志", "审计日志将在 v2.0 中启用，所有 admin 路由的 POST/PUT/DELETE 都会被记录。", "⎙") }}
+  </div>
+{% endblock %}

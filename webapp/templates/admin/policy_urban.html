@@ -1,0 +1,31 @@
+{% extends "admin/base_admin.html" %}
+{% from "admin/_macros.html" import page_title, alert %}
+{% block content %}
+  {{ page_title("城乡居民医保政策", "三级菜单待定 · 当前为占位页面") }}
+
+  {{ alert("城乡居民医保政策查询正在建设中。三级菜单确认后将上线政策文件、政策解读、报销比例、定点机构、报销流程等模块。", "info", "i") }}
+
+  <div class="admin-card">
+    <div class="admin-card-head">
+      <h3>拟定目录（待您确认）</h3>
+    </div>
+    <ul style="line-height:2; padding-left:20px; color:var(--text-2); font-size:13px;">
+      <li>参保对象与缴费标准</li>
+      <li>待遇标准与报销比例</li>
+      <li>门诊统筹与门诊慢特病</li>
+      <li>住院报销与起付线</li>
+      <li>大病保险与医疗救助</li>
+      <li>异地就医备案</li>
+      <li>政策文件与解读</li>
+    </ul>
+  </div>
+
+  <div class="admin-card">
+    <div class="admin-card-head">
+      <h3>数据来源规划</h3>
+    </div>
+    <p class="text-3" style="font-size:12px;">
+      本模块将整合国家医保局、省医保局、各市医保局公开政策文件，支持按发布时间、生效时间、行政区划检索。
+    </p>
+  </div>
+{% endblock %}

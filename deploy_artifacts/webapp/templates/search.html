@@ -1,0 +1,71 @@
+﻿{% extends "base.html" %}
+{% block title %}{% if q %}搜 “{{ q }}” · 医保智审{% else %}搜索 · 医保智审{% endif %}{% endblock %}
+{% block content %}
+<section class="searchbar">
+  <form class="searchbar-form" action="{{ url_for('search_view') }}" method="get" role="search">
+    <span class="searchbar-icon" aria-hidden="true">⌕</span>
+    <input name="q" type="search" inputmode="search" autocomplete="off" autofocus
+           value="{{ q|h }}" placeholder="搜药品 / 项目 / 编码 / 首字母" enterkeyhint="search">
+    {% if source %}<input type="hidden" name="source" value="{{ source }}">{% endif %}
+  </form>
+  <div class="searchbar-meta">
+    {% if q %}
+      <span class="mode-pill mode-{{ mode }}">
+        {% if mode=='code' %}#️⃣ 编码搜索
+        {% elif mode=='initials' %}🔠 首字母搜索
+        {% else %}🔤 名字搜索
+        {% endif %}
+      </span>
+      <span class="meta-total">共 <b>{{ total }}</b> 条结果</span>
+      <a class="meta-clear" href="{{ url_for('search_view') }}">清空</a>
+    {% else %}
+      <span class="meta-tip">试试：艾附暖宫丸 / afngw / ZD03AAA0043010100166</span>
+    {% endif %}
+  </div>
+</section>
+
+{% if q and items %}
+<ul class="result-list">
+  {% for it in items %}
+  <li class="result-card">
+    <a class="result-link" href="{{ url_for('kp_detail', kp_id=it['id']) }}">
+      <div class="result-head">
+        <span class="result-name">{{ it['subject_name']|h }}</span>
+        {% if it.get('pinyin_initials') %}<span class="result-py">{{ it['pinyin_initials'] }}</span>{% endif %}
+        {% if it.get('code_count') %}<span class="result-cnt">{{ it['code_count'] }} 编码</span>{% endif %}
+      </div>
+      <div class="result-rule">{{ it['rule_subject']|h }} · {{ it['batch_label']|h }}{% if it.get('pub_date') %} · {{ it['pub_date'] }}{% endif %}</div>
+      {% if it.get('detection_logic') %}
+      <div class="result-snippet">检出：{{ it['detection_logic']|truncate2(80) }}</div>
+      {% endif %}
+      {% if it.get('codes_preview') %}
+      <div class="result-codes">{{ it['codes_preview']|truncate2(140) }}</div>
+      {% endif %}
+    </a>
+  </li>
+  {% endfor %}
+</ul>
+
+{% if pages > 1 %}
+<nav class="pager" aria-label="分页">
+  {% if page > 1 %}<a class="pg-btn" href="?q={{ q|urlencode }}&source={{ source or '' }}&page={{ page-1 }}">‹ 上一页</a>{% endif %}
+  <span class="pg-info">{{ page }} / {{ pages }}</span>
+  {% if page < pages %}<a class="pg-btn" href="?q={{ q|urlencode }}&source={{ source or '' }}&page={{ page+1 }}">下一页 ›</a>{% endif %}
+</nav>
+{% endif %}
+
+{% elif q %}
+<section class="empty">
+  <div class="empty-ico">∅</div>
+  <div class="empty-title">没找到结果</div>
+  <div class="empty-tip">试试首字母 <b>{{ q[:1] }}</b> 开头 · 或检查编码是否大写</div>
+  <a class="empty-link" href="{{ url_for('search_view') }}">返回搜索</a>
+</section>
+{% else %}
+<section class="empty">
+  <div class="empty-ico">⌕</div>
+  <div class="empty-title">输入关键词开始搜索</div>
+  <div class="empty-tip">支持 名字 / 拼音首字母 / 医保编码</div>
+</section>
+{% endif %}
+{% endblock %}

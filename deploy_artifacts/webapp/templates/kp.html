@@ -1,0 +1,73 @@
+﻿{% extends "base.html" %}
+{% block title %}{{ kp.subject_name|h }} · 医保智审{% endblock %}
+{% block content %}
+<nav class="crumb">
+  <a href="{{ url_for('home') }}">首页</a>
+  <span class="crumb-sep">›</span>
+  <a href="{{ url_for('rule_detail', rid=kp.rule_id) }}">{{ kp.rule_subject|h }}</a>
+  <span class="crumb-sep">›</span>
+  <span class="crumb-cur">{{ kp.subject_name|h }}</span>
+</nav>
+
+<article class="kp">
+  <header class="kp-head">
+    <div class="kp-tag">
+      <span class="tag tag-source">{{ source_label[kp.source] }}</span>
+      <span class="tag tag-batch">{{ kp.batch_label|h }}</span>
+      {% if kp.category %}<span class="tag tag-cat">{{ kp.category|h }}</span>{% endif %}
+    </div>
+    <h1 class="kp-title">{{ kp.subject_name|h }}</h1>
+    {% if kp.pinyin_initials %}<div class="kp-py">拼音 · {{ kp.pinyin_initials }}</div>{% endif %}
+    {% if kp.pub_date %}<div class="kp-meta">发布 · {{ kp.pub_date }}</div>{% endif %}
+  </header>
+
+  <section class="kp-section">
+    <h2 class="sec-title">所属规则</h2>
+    <a class="rule-card" href="{{ url_for('rule_detail', rid=kp.rule_id) }}">
+      <div class="rule-name">{{ kp.rule_subject|h }}</div>
+      {% if kp.category or kp.object_type %}<div class="rule-cat">{{ kp.category or '' }}{% if kp.object_type %} · {{ kp.object_type }}{% endif %}</div>{% endif %}
+      <div class="rule-arrow">›</div>
+    </a>
+  </section>
+
+  {% if kp.detection_logic %}
+  <section class="kp-section">
+    <h2 class="sec-title">检出逻辑</h2>
+    <p class="kp-text">{{ kp.detection_logic|h }}</p>
+  </section>
+  {% endif %}
+
+  {% if kp.logic_basis %}
+  <section class="kp-section">
+    <h2 class="sec-title">逻辑依据</h2>
+    <p class="kp-text">{{ kp.logic_basis|h }}</p>
+  </section>
+  {% endif %}
+
+  {% if kp.remark %}
+  <section class="kp-section">
+    <h2 class="sec-title">备注</h2>
+    <p class="kp-text">{{ kp.remark|h }}</p>
+  </section>
+  {% endif %}
+
+  <section class="kp-section">
+    <h2 class="sec-title">
+      医保编码
+      {% if kp.code_count %}<span class="sec-aux">{{ codes|length }} / {{ kp.code_count }}</span>{% endif %}
+    </h2>
+    {% if codes %}
+    <ul class="code-list" id="codeList">
+      {% for c in codes %}
+      <li class="code-item">
+        <span class="code-text">{{ c|h }}</span>
+        <button class="code-copy" data-code="{{ c|h }}" type="button" aria-label="复制编码">复制</button>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <div class="empty">该知识点在源文件中未提供具体编码（仅声明 code_count）。</div>
+    {% endif %}
+  </section>
+</article>
+{% endblock %}

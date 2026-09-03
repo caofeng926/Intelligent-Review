@@ -1,0 +1,79 @@
+<!-- pages/index/index.wxml -->
+<scroll-view scroll-y class="home-page" enhanced enable-back-to-top refresher-enabled refresher-triggered="{{refreshing}}" bindrefresherrefresh="onPullDownRefresh">
+  <!-- 数据未到时显示 skeleton，避免空白闪烁 -->
+  <index-skeleton wx:if="{{!loaded && !refreshing}}" />
+
+  <!-- 顶部搜索区 -->
+  <block wx:if="{{loaded || refreshing}}">
+  <view class="hero">
+    <view class="hero-title">医保智审规则库</view>
+    <view class="hero-sub">审核员 / 编码员 / 临床路径设计师的检索工具</view>
+    <view class="search-bar">
+      <view class="search-icon">
+        <rich-text nodes="{{searchIcon}}" />
+      </view>
+      <input class="search-input" placeholder="搜索药品/规则/适应症" confirm-type="search" value="{{searchInput}}" bindinput="onSearchInput" bindconfirm="onSearchConfirm" />
+    </view>
+  </view>
+
+  <!-- 数据卡 -->
+  <view class="stats">
+    <view class="stats-card">
+      <view class="stats-num">{{stats.knowledge_points}}</view>
+      <view class="stats-label">知识点</view>
+    </view>
+    <view class="stats-card">
+      <view class="stats-num">{{stats.rules}}</view>
+      <view class="stats-label">审核规则</view>
+    </view>
+    <view class="stats-card">
+      <view class="stats-num stats-num-accent">{{stats.consumables}}</view>
+      <view class="stats-label">医用耗材</view>
+    </view>
+  </view>
+
+  <!-- 入口宫格 -->
+  <view class="grid">
+    <view wx:for="{{grid}}" wx:key="key" class="grid-item grid-{{item.color}} {{item.disabled ? 'grid-disabled' : ''}}" data-url="{{item.url}}" data-key="{{item.key}}" data-disabled="{{item.disabled}}" bindtap="onGridTap">
+      <view class="grid-name">{{item.name}}</view>
+      <view class="grid-sub">{{item.sub}}</view>
+    </view>
+  </view>
+
+  <!-- 分类快查 -->
+  <view class="section">
+    <view class="section-title">七大代码表</view>
+    <view class="cat-list">
+      <view class="cat cat-hc">医用耗材 <text class="cat-count">{{stats.consumables}}</text></view>
+      <view class="cat cat-yp">医保药品 <text class="cat-count">{{stats.yp_2025}}</text></view>
+      <view class="cat cat-tcm">中医病证 <text class="cat-count">{{stats.tcm}}</text></view>
+      <view class="cat cat-icd">ICD-10 <text class="cat-count">{{stats.icd}}</text></view>
+      <view class="cat cat-ivd">诊断试剂 <text class="cat-count">{{stats.ivd}}</text></view>
+      <view class="cat cat-ms">医疗服务 <text class="cat-count">{{stats.ms}}</text></view>
+    </view>
+  </view>
+
+  <!-- 最近更新 -->
+  <view class="section" wx:if="{{loaded}}">
+    <view class="section-title">最新政策</view>
+    <view class="empty-state-wrap" wx:if="{{!recent.length}}">
+      <empty-state icon="info" title="暂无最新规则" desc="政策有更新时会自动展示" />
+    </view>
+    <view class="recent-list">
+      <view class="recent-item" wx:for="{{recent}}" wx:key="id" data-id="{{item.id}}" bindtap="onTapRecent">
+        <view class="recent-subject">{{item.subject_name}}</view>
+        <view class="recent-meta">
+          <text class="recent-batch">{{item.batch_label}}</text>
+          <text wx:if="{{item.pub_date}}" class="recent-date">· {{item.pub_date}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="footer-tip">
+    数据来源：国家医保局（NHSA）/ 各省医保政策 PDF · {{updatedAt ? '更新于 ' + updatedAt : ''}}
+  </view>
+
+  <view class="safe-bottom-pad"></view>
+  </block>
+</scroll-view>

@@ -1,0 +1,70 @@
+<!-- pages/kp-detail/kp-detail.wxml -->
+<scroll-view scroll-y class="kp-page" enhanced enable-back-to-top>
+  <loading wx:if="{{loading}}" tip="加载中…" />
+
+  <view wx:if="{{empty && !loading}}" class="empty-wrap">
+    <empty-state icon="info" title="未找到该知识点" desc="可能已被删除或链接失效" action-text="返回首页" />
+  </view>
+
+  <block wx:if="{{!loading && detail}}">
+    <!-- 标题区 -->
+    <view class="kp-header">
+      <view class="kp-title">{{detail.name}}</view>
+      <view class="kp-meta">
+        <view class="kp-tag" wx:if="{{detail.source_label}}">{{detail.source_label}}</view>
+        <text class="kp-meta-text" wx:if="{{detail.batch_label}}">{{detail.batch_label}}</text>
+        <text class="kp-meta-text" wx:if="{{detail.pub_date}}">· {{detail.pub_date}}</text>
+      </view>
+    </view>
+
+    <!-- 规则 -->
+    <view class="kp-card" wx:if="{{detail.rule_subject}}">
+      <view class="kp-card-title">所属规则</view>
+      <view class="kp-card-body">{{detail.rule_subject}}</view>
+      <button class="kp-subscribe-btn" bindtap="onSubscribe">
+        <rich-text nodes='<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>' />
+        <text>新政策订阅我</text>
+      </button>
+    </view>
+
+    <!-- 编码列表 -->
+    <view class="kp-card">
+      <view class="kp-card-title">
+        <text>包含编码</text>
+        <text class="kp-card-count">{{detail.code_count}} 个</text>
+      </view>
+      <view class="kp-codes" wx:if="{{detail.codes.length}}">
+        <view wx:for="{{detail.codes}}" wx:key="*this" class="kp-code" data-code="{{item}}" bindtap="onCodeTap">
+          {{item}}
+        </view>
+      </view>
+      <view class="kp-empty-list" wx:else>暂无编码</view>
+    </view>
+
+    <!-- 关联规则 -->
+    <view class="kp-card" wx:if="{{detail.related && detail.related.length}}">
+      <view class="kp-card-title">相关规则</view>
+      <view class="kp-related">
+        <view wx:for="{{detail.related}}" wx:key="id" class="kp-related-item" data-id="{{item.id}}" bindtap="onCodeTap">
+          <view class="kp-related-name">{{item.subject_name || item.name}}</view>
+          <view class="kp-related-sub" wx:if="{{item.rule_subject}}">{{item.rule_subject}}</view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 底部占位 -->
+    <view class="kp-spacer"></view>
+  </block>
+
+  <!-- 操作栏 -->
+  <view wx:if="{{detail && !loading}}" class="kp-actions safe-bottom-pad">
+    <view class="kp-action" bindtap="onToggleFav">
+      <rich-text nodes="{{isFav ? starFilledIcon : starIcon}}" />
+      <text class="kp-action-text {{isFav ? 'kp-action-active' : ''}}">{{isFav ? '已收藏' : '收藏'}}</text>
+    </view>
+    <button class="kp-action" open-type="share">
+      <rich-text nodes="{{shareIcon}}" />
+      <text>分享</text>
+    </button>
+  </view>
+</scroll-view>

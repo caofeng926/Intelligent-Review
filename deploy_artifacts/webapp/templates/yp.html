@@ -1,0 +1,71 @@
+﻿{% extends "base.html" %}
+{% block title %}医保药品 · 医保标准库 · 医保智审{% endblock %}
+{% block content %}
+<section class="page-head">
+  <h1 class="page-title">医保药品</h1>
+  <p class="page-sub">国家医保药品分类与代码 · 截至 2026-06-25 · {{ total_codes }} 条</p>
+</section>
+
+<nav class="bread">
+  <a href="{{ url_for('nhsa_index') }}">标准数据库</a> <span class="bread-sep">›</span>
+  <span class="bread-cur">医保药品</span>
+  {% if list_class and list_class != '全部' %}<span class="bread-sep">›</span> <span class="bread-cur">{{ list_class }}类</span>{% endif %}
+  {% if query %}<span class="bread-sep">›</span> <span class="bread-cur">搜索：{{ query }}</span>{% endif %}
+</nav>
+
+<form action="{{ url_for('yp_browse') }}" method="get" class="hero-search" style="margin-bottom: var(--s-3);">
+  <span class="hero-search-icon">⌕</span>
+  <input name="q" type="search" value="{{ query|default('',true) }}" placeholder="输入药品名 / 注册名 / 批准文号 / 编码" enterkeyhint="search">
+  {% if list_class and list_class != '全部' %}<input type="hidden" name="list_class" value="{{ list_class }}">{% endif %}
+  <button class="hero-search-btn" type="submit">搜索</button>
+</form>
+
+<div class="mode-bar">
+  <a class="mode-pill {% if list_class == '全部' or not list_class %}is-active{% endif %}" href="{{ url_for('yp_browse', q=query) }}">全部 ({{ counts.get('',0) + counts.get('甲',0) + counts.get('乙',0) + counts.get('商保',0) }})</a>
+  <a class="mode-pill {% if list_class == '甲' %}is-active{% endif %}" href="{{ url_for('yp_browse', list_class='甲', q=query) }}">甲类 ({{ counts.get('甲',0) }})</a>
+  <a class="mode-pill {% if list_class == '乙' %}is-active{% endif %}" href="{{ url_for('yp_browse', list_class='乙', q=query) }}">乙类 ({{ counts.get('乙',0) }})</a>
+  <a class="mode-pill {% if list_class == '商保' %}is-active{% endif %}" href="{{ url_for('yp_browse', list_class='商保', q=query) }}">商保 ({{ counts.get('商保',0) }})</a>
+  <a class="mode-pill {% if list_class == '未分类' %}is-active{% endif %}" href="{{ url_for('yp_browse', list_class='未分类', q=query) }}">未分类 ({{ counts.get('',0) }})</a>
+</div>
+
+{% if rows %}
+<section class="list-card">
+  {% for r in rows %}
+  <a class="list-row" href="{{ url_for('yp_detail', code=r.code) }}">
+    <div class="list-main">
+      <div class="list-code">{{ r.code }}</div>
+      <div class="list-name">{{ r.reg_name }}{% if r.product_name and r.product_name != r.reg_name %} / {{ r.product_name }}{% endif %}</div>
+      <div class="list-meta">
+        {{ r.dosage_form or '' }}{% if r.spec %} · {{ r.spec }}{% endif %}
+        {% if r.manufacturer %} · {{ r.manufacturer }}{% endif %}
+        {% if r.list_class %} · <span style="color:var(--brand);">{{ r.list_class }}类</span>{% endif %}
+      </div>
+    </div>
+    <div class="list-arrow">›</div>
+  </a>
+  {% endfor %}
+</section>
+<div class="pager">
+  <span class="pager-info">共 {{ total }} 条 · 显示 {{ rows|length }}</span>
+  {% if total > rows|length %}
+  <a class="pager-link" href="?{% if query %}q={{ query }}&{% endif %}{% if list_class %}list_class={{ list_class }}&{% endif %}limit={{ rows|length + 50 }}">显示更多</a>
+  {% endif %}
+</div>
+{% else %}
+<div class="empty">
+  <div class="empty-ico">∅</div>
+  <div class="empty-title">无匹配</div>
+  <div class="empty-tip">没有找到药品{% if query %}（搜索词：{{ query }}）{% endif %}</div>
+</div>
+{% endif %}
+
+{% if not query and not list_class %}
+<section class="tip">
+  <div class="tip-icon">i</div>
+  <div class="tip-body">
+    <div class="tip-title">关于医保药品</div>
+    <div class="tip-text">来源：国家医保局 2026-06-25 版医保药品。共 {{ total_codes }} 条，按目录分类（甲类 / 乙类 / 商保 / 未分类）。点击药品可查看规格、生产企业、批准文号等详情。</div>
+  </div>
+</section>
+{% endif %}
+{% endblock %}

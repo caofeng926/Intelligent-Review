@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}{{ l3_name }} - {{ l2_name }} - {{ l1_name }} - 耗材代码库 - 医保智审{% endblock %}
+{% block content %}
+<section class="page-head">
+  <h1 class="page-title">耗材代码库</h1>
+  <p class="page-sub">{{ l3 }} - {{ l3_name }} · 共 {{ total }} 条 C-code · 显示前 {{ sample|length }} 条</p>
+</section>
+
+<nav class="bread">
+  <a href="{{ url_for('consumables_index') }}">耗材代码库</a>
+  <span class="bread-sep"> › </span>
+  <a class="bread-cur" href="{{ url_for('consumables_browse', l1=l1) }}">{{ l1 }}-{{ l1_name }}</a>
+  <span class="bread-sep"> › </span>
+  <a class="bread-cur" href="{{ url_for('consumables_browse', l1=l1, l2=l2) }}">{{ l2 }}-{{ l2_name }}</a>
+  <span class="bread-sep"> › </span>
+  <span class="bread-cur">{{ l3 }}-{{ l3_name }}</span>
+</nav>
+
+<section class="code-list">
+  {% if sample %}
+  <table class="code-table">
+    <thead>
+      <tr>
+        <th>C-code</th>
+        <th>通用名</th>
+        <th>规格</th>
+        <th>材质</th>
+        <th>生产企业</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in sample %}
+      <tr>
+        <td><a href="{{ url_for('consumable_detail', code=c.code) }}">{{ c.code }}</a></td>
+        <td>{{ c.generic_name|truncate2(60) }}</td>
+        <td>{{ c.spec|truncate2(40) }}</td>
+        <td>{{ c.material|truncate2(40) }}</td>
+        <td>{{ c.manufacturer|truncate2(60) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty">该三级分类下没有 C-code</div>
+  {% endif %}
+</section>
+{% endblock %}

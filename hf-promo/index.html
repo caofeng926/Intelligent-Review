@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>医保智审规则库 · 产品宣传片</title>
+<style>
+:root {
+--brand: #1677ff;
+--brand-600: #0e5fd6;
+--brand-50: #e8f3ff;
+--bg: #f5f7fa;
+--card: #ffffff;
+--text: #1d2129;
+--text-2: #4e5969;
+--text-3: #86909c;
+--border: #e5e6eb;
+--success: #00b42a;
+--warn: #ff7d00;
+--purple: #722ed1;
+--shadow-3: 0 6px 24px rgba(0,0,0,.08);
+}
+html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; font-family: sans-serif; color: var(--text); }
+.composition { position: relative; width: 1920px; height: 1080px; overflow: hidden; background: var(--bg); }
+.deco { position: absolute; border-radius: 999px; pointer-events: none; }
+.deco.d1 { top: 120px; right: 180px; width: 220px; height: 60px; background: rgba(22,119,255,0.06); }
+.deco.d2 { bottom: 140px; left: 200px; width: 280px; height: 70px; background: rgba(255,125,0,0.05); }
+.deco.d3 { top: 60%; right: 80px; width: 160px; height: 50px; background: rgba(0,180,42,0.05); }
+.hero { position: absolute; inset: 0; opacity: 0; background: linear-gradient(180deg, #1d2129 0%, #2a3140 100%); display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 28px; }
+.hero-top { position: absolute; top: 0; left: 0; right: 0; height: 76px; background: rgba(0,0,0,0.32); display: flex; align-items: center; padding: 0 56px; transform: translateY(-120px); opacity: 0; }
+.hero-logo { display: inline-flex; align-items: center; gap: 8px; background: var(--brand); color: #fff; font-weight: 600; font-size: 22px; padding: 10px 22px; border-radius: 6px; }
+.hero-logo-dot { width: 10px; height: 10px; border-radius: 50%; background: #fff; display: inline-block; }
+.hero-spacer { flex: 1; }
+.hero-time { color: rgba(255,255,255,0.45); font-size: 18px; letter-spacing: 0.5px; }
+.hero-pill { display: inline-flex; align-items: center; gap: 10px; background: rgba(22,119,255,0.12); border: 1px solid rgba(22,119,255,0.32); color: #69b1ff; font-weight: 500; font-size: 22px; padding: 10px 24px; border-radius: 999px; transform: scale(0.8); opacity: 0; }
+.hero-pill-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--brand); box-shadow: 0 0 8px var(--brand); }
+.hero-h1 { color: #fff; font-size: 84px; font-weight: 700; letter-spacing: 1px; margin: 0; opacity: 0; transform: translateY(16px); text-shadow: 0 4px 24px rgba(22,119,255,0.18); }
+.hero-h1 .accent { background: linear-gradient(90deg, #69b1ff 0%, #1677ff 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.hero-sub { color: rgba(255,255,255,0.55); font-size: 24px; font-weight: 400; margin: 0; opacity: 0; transform: translateY(12px); }
+.card-scene { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; opacity: 0; }
+.card { width: 1280px; background: var(--card); border-radius: 14px; box-shadow: var(--shadow-3); border: 1px solid var(--border); overflow: hidden; }
+.card-header { height: 64px; background: #fff; border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 32px; gap: 16px; }
+.card-header .logo { display: inline-flex; align-items: center; gap: 8px; background: var(--brand); color: #fff; font-weight: 600; font-size: 16px; padding: 6px 14px; border-radius: 6px; }
+.card-header .logo-dot { width: 8px; height: 8px; border-radius: 50%; background: #fff; }
+.card-header .nav { color: var(--text-2); font-size: 15px; font-weight: 500; }
+.search-row { padding: 28px 32px 18px; }
+.search-bar { width: 100%; height: 52px; border-radius: 26px; background: #fff; border: 1.5px solid var(--border); display: flex; align-items: center; padding: 0 24px; gap: 14px; position: relative; }
+.search-icon { width: 20px; height: 20px; color: var(--text-3); flex-shrink: 0; }
+.search-text { flex: 1; font-size: 18px; color: var(--text); font-weight: 500; white-space: nowrap; overflow: hidden; }
+.search-text.placeholder { color: var(--text-3); font-weight: 400; }
+.search-caret { position: absolute; width: 2px; height: 22px; background: var(--brand); left: 58px; top: 15px; opacity: 0; }
+.stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; padding: 8px 32px 24px; }
+.stat-card { background: var(--brand-50); border-radius: 10px; padding: 18px 18px 20px; border: 1px solid rgba(22,119,255,0.10); opacity: 0; transform: translateY(14px); }
+.stat-card.s-warn { background: #fff1e8; border-color: rgba(255,125,0,0.10); }
+.stat-card.s-green { background: #e8ffe8; border-color: rgba(0,180,42,0.10); }
+.stat-card.s-purple { background: #f3e8ff; border-color: rgba(114,46,209,0.10); }
+.stat-num { font-size: 44px; font-weight: 700; color: var(--text); line-height: 1; letter-spacing: -0.5px; }
+.stat-num .unit { font-size: 22px; font-weight: 500; color: var(--text-2); margin-left: 2px; }
+.stat-label { margin-top: 8px; font-size: 15px; color: var(--text-2); font-weight: 500; }
+.tags-row { display: flex; gap: 12px; padding: 4px 32px 22px; justify-content: flex-start; }
+.tag { display: inline-flex; align-items: center; padding: 8px 18px; border-radius: 6px; font-size: 16px; font-weight: 500; opacity: 0; transform: translateY(12px); }
+.tag-blue { background: var(--brand-50); color: var(--brand); }
+.tag-warn { background: #fff1e8; color: var(--warn); }
+.tag-green { background: #e8ffe8; color: var(--success); }
+.tag-purple { background: #f3e8ff; color: var(--purple); }
+.recent-row { padding: 6px 32px 30px; opacity: 0; transform: translateY(8px); }
+.recent-title { font-size: 15px; color: var(--text-2); font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+.recent-title::before { content: ""; display: inline-block; width: 4px; height: 16px; background: var(--brand); border-radius: 2px; }
+.recent-list { display: flex; flex-direction: column; gap: 8px; }
+.recent-item { display: flex; align-items: center; gap: 14px; padding: 12px 16px; background: #fafbfc; border-radius: 8px; border: 1px solid var(--border); opacity: 0; transform: translateY(8px); }
+.recent-pill { display: inline-block; background: var(--brand-50); color: var(--brand); padding: 3px 10px; border-radius: 4px; font-size: 13px; font-weight: 500; flex-shrink: 0; }
+.recent-name { flex: 1; font-size: 15px; color: var(--text); font-weight: 500; }
+.recent-meta { font-size: 13px; color: var(--text-3); flex-shrink: 0; }
+.mode-chip { display: inline-flex; align-items: center; gap: 6px; background: #fff; border: 1px solid var(--border); color: var(--text-2); padding: 4px 12px; border-radius: 4px; font-size: 13px; margin-left: auto; opacity: 0; }
+.mode-chip .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); }
+.mode-chip.m-warn .dot { background: var(--warn); }
+.mode-chip.m-purple .dot { background: var(--purple); }
+.cta-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; pointer-events: none; opacity: 0; }
+.cta-card { background: #fff; border-radius: 999px; padding: 28px 64px; box-shadow: 0 16px 48px rgba(22,119,255,0.20), 0 0 0 1px rgba(22,119,255,0.12); display: inline-flex; align-items: center; gap: 18px; transform: translateY(24px); opacity: 0; }
+.cta-icon { width: 56px; height: 56px; background: var(--brand); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0; }
+.cta-text { display: flex; flex-direction: column; }
+.cta-title { font-size: 36px; font-weight: 700; color: var(--text); letter-spacing: 0.5px; }
+.cta-sub { font-size: 16px; color: var(--text-2); margin-top: 2px; font-weight: 400; }
+.caption-bar { position: absolute; bottom: 56px; left: 50%; transform: translateX(-50%); background: rgba(29,33,41,0.78); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); color: #fff; font-size: 26px; font-weight: 500; padding: 14px 32px; border-radius: 12px; letter-spacing: 1px; opacity: 0; z-index: 10; }
+
+@font-face {
+  font-family: "-apple-system";
+  src: local("-apple-system"), local("system-ui");
+  font-weight: 400;
+}
+@font-face {
+  font-family: "-apple-system";
+  src: local("-apple-system"), local("system-ui");
+  font-weight: 500;
+}</style>
+</head>
+<body>
+<div class="composition" id="composition" data-composition-id="root" data-width="1920" data-height="1080" data-start="0" data-duration="20">
+<div class="deco d1" data-layout-ignore></div>
+<div class="deco d2" data-layout-ignore></div>
+<div class="deco d3" data-layout-ignore></div>
+
+<div class="hero" id="beat-1">
+<div class="hero-top" id="hero-top">
+<div class="hero-logo"><span class="hero-logo-dot"></span>医保监管</div>
+<div class="hero-spacer"></div>
+<div class="hero-time" id="hero-time">2025</div>
+</div>
+<div class="hero-pill" id="hero-pill"><span class="hero-pill-dot"></span>医疗保障基金智能监管</div>
+<h1 class="hero-h1" id="hero-h1"><span class="accent">医保监管</span>规则与知识库</h1>
+<p class="hero-sub" id="hero-sub">2025年版 · 国家医保局</p>
+</div>
+
+<div class="card-scene" id="beat-234">
+<div class="card" id="main-card">
+<div class="card-header">
+<div class="logo"><span class="logo-dot"></span>医保监管</div>
+<div class="nav">首页 · 知识库 · 医保编码 · 规则</div>
+</div>
+<div class="search-row">
+<div class="search-bar">
+<svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+<span class="search-text placeholder" id="search-text">搜索... 麝香保心丸, afngw, ZD03AAA004301010166, 阿莫西林</span>
+<span class="search-caret" id="search-caret"></span>
+</div>
+</div>
+<div class="stats-row" id="stats-row">
+<div class="stat-card" id="stat-1"><div class="stat-num"><span class="counter" data-target="21576">0</span><span class="unit">条</span></div><div class="stat-label">知识库</div></div>
+<div class="stat-card s-warn" id="stat-2"><div class="stat-num"><span class="counter" data-target="28214">0</span><span class="unit">条</span></div><div class="stat-label">医保编码</div></div>
+<div class="stat-card s-green" id="stat-3"><div class="stat-num"><span class="counter" data-target="76">0</span><span class="unit">条</span></div><div class="stat-label">规则 · 31+45</div></div>
+<div class="stat-card s-purple" id="stat-4"><div class="stat-num"><span class="counter" data-target="16">0</span><span class="unit">批</span></div><div class="stat-label">15个NHSA + 2025</div></div>
+</div>
+<div class="tags-row" id="tags-row">
+<div class="tag tag-blue" id="tag-1">药品</div>
+<div class="tag tag-warn" id="tag-2">耗材</div>
+<div class="tag tag-green" id="tag-3">服务项目</div>
+<div class="tag tag-purple" id="tag-4">中药饮片</div>
+</div>
+<div class="recent-row" id="recent-row">
+<div class="recent-title">最近更新</div>
+<div class="recent-list">
+<div class="recent-item" id="r1"><span class="recent-pill">规则</span><span class="recent-name">注射用重组人生长激素注射液 · 药品限适应症</span><span class="mode-chip" id="mode-chip"><span class="dot"></span>中文全文</span><span class="recent-meta">第十五批 · 2026-06-16</span></div>
+<div class="recent-item" id="r2"><span class="recent-pill">规则</span><span class="recent-name">注射用人生长激素注射液 · 药品限适应症</span><span class="mode-chip m-warn" id="mode-chip-2"><span class="dot"></span>拼音首字母</span><span class="recent-meta">第十五批 · 2026-06-16</span></div>
+<div class="recent-item" id="r3"><span class="recent-pill">规则</span><span class="recent-name">麝香保心丸 · 药品限适应症</span><span class="mode-chip m-purple" id="mode-chip-3"><span class="dot"></span>医保编码</span><span class="recent-meta">第十五批 · 2026-06-16</span></div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="cta-overlay" id="cta-overlay">
+<div class="cta-card" id="cta-card">
+<div class="cta-icon">
+<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L4 6v6c0 5 3.4 9.6 8 10 4.6-.4 8-5 8-10V6l-8-4z" /></svg>
+</div>
+<div class="cta-text">
+<div class="cta-title">医保智审</div>
+<div class="cta-sub">监管就在指尖</div>
+</div>
+</div>
+</div>
+
+<div class="caption-bar" id="caption">医保监管规则与知识库</div>
+</div>
+
+<audio id="narration" data-start="0" data-duration="20" data-track-index="2" src="narration.wav" data-volume="1"></audio>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+<script>
+(function() {
+
+// Fixed timestamp for deterministic rendering
+document.getElementById("hero-time").textContent = "2025-12-01";
+
+const caption = document.getElementById("caption");
+const captionLines = [
+  { t: 0.0, s: "医保监管规则与知识库" },
+  { t: 3.8, s: "收录两万多个医保编码, 一万五千余条临床规则" },
+  { t: 7.6, s: "药品、耗材、服务项目、中药饮片, 一站式检索" },
+  { t: 12.4, s: "支持中文、拼音首字母、医保编码三种方式" },
+  { t: 16.5, s: "医保智审, 监管就在指尖" },
+];
+
+const searchEl = document.getElementById("search-text");
+const caretEl = document.getElementById("search-caret");
+
+const tl = gsap.timeline({ paused: true, defaults: { ease: "power2.out", overwrite: "auto" } });
+
+// BEAT 1: 0.0 - 3.8s
+
+tl.to("#hero-top",   { y: 0, autoAlpha: 1, duration: 0.6 }, 0.05);
+tl.to("#hero-pill",  { scale: 1, autoAlpha: 1, duration: 0.4 }, 0.6);
+tl.to("#hero-h1",    { y: 0, autoAlpha: 1, duration: 0.7 }, 1.0);
+tl.to("#hero-sub",   { y: 0, autoAlpha: 1, duration: 0.6 }, 1.65);
+tl.to("#caption",    { autoAlpha: 1, duration: 0.4 }, 0.4);
+tl.call(function() { caption.textContent = captionLines[1].s; }, null, 3.7);
+tl.to("#beat-1", { autoAlpha: 0, duration: 0.5 }, 3.8);
+
+// BEAT 2: 3.8 - 7.6s
+tl.set("#beat-234", { autoAlpha: 1 });
+
+tl.to("#main-card", { scale: 1, autoAlpha: 1, duration: 0.5 }, 3.8);
+const statTimes = [4.2, 4.4, 4.6, 4.8];
+["#stat-1", "#stat-2", "#stat-3", "#stat-4"].forEach(function(sel, i) {
+  tl.to(sel, { y: 0, autoAlpha: 1, duration: 0.5 }, statTimes[i]);
+});
+
+["#stat-1", "#stat-2", "#stat-3", "#stat-4"].forEach(function(sel, i) {
+  var el = document.querySelector(sel + " .counter");
+  var target = parseInt(el.dataset.target, 10);
+  var proxy = { v: 0 };
+  tl.to(proxy, {
+    v: target,
+    duration: 0.9,
+    ease: "power3.out",
+    onUpdate: function() { el.textContent = Math.round(proxy.v).toLocaleString("zh-CN"); },
+  }, statTimes[i] + 0.1);
+});
+
+tl.call(function() { caption.textContent = captionLines[2].s; }, null, 7.5);
+
+// BEAT 3: 7.6 - 12.4s
+["#tag-1", "#tag-2", "#tag-3", "#tag-4"].forEach(function(sel, i) {
+  tl.to(sel, { y: 0, autoAlpha: 1, duration: 0.4 }, 7.8 + i * 0.09);
+});
+
+tl.to("#recent-row", { y: 0, autoAlpha: 1, duration: 0.5 }, 8.6);
+
+
+
+tl.call(function() { caption.textContent = captionLines[3].s; }, null, 12.3);
+
+// BEAT 4: 12.4 - 16.5s
+tl.set("#search-caret", { autoAlpha: 0 });
+tl.to("#recent-row", { autoAlpha: 0, duration: 0.4 }, 12.4);
+tl.to("#tags-row", { autoAlpha: 0, duration: 0.4 }, 12.4);
+tl.to("#stats-row", { autoAlpha: 0, duration: 0.4 }, 12.4);
+
+tl.set("#search-caret", { left: 60, autoAlpha: 1 });
+tl.to("#search-caret", { autoAlpha: 1, duration: 0.3 }, 12.6);
+
+tl.call(function() {
+  searchEl.classList.remove("placeholder");
+  searchEl.textContent = "afngw";
+}, null, 12.6);
+tl.to("#search-caret", { autoAlpha: 0, duration: 0.4 }, 13.4);
+tl.to("#search-caret", { autoAlpha: 1, duration: 0.4 }, 13.8);
+
+tl.call(function() {
+  searchEl.textContent = "ZD03AAA0043010100166";
+}, null, 14.4);
+tl.to("#search-caret", { autoAlpha: 0, duration: 0.4 }, 15.0);
+tl.to("#search-caret", { autoAlpha: 1, duration: 0.4 }, 15.4);
+
+tl.call(function() {
+  searchEl.classList.add("placeholder");
+  searchEl.textContent = "搜索... 麝香保心丸, afngw, ZD03AAA004301010166, 阿莫西林";
+  caretEl.style.left = "60px";
+}, null, 16.0);
+tl.to("#search-caret", { autoAlpha: 0, duration: 0.3 }, 16.2);
+
+tl.call(function() { caption.textContent = captionLines[4].s; }, null, 16.4);
+
+// BEAT 5: 16.5 - 20.0s
+tl.to("#stats-row", { autoAlpha: 1, duration: 0.4 }, 16.5);
+tl.to("#tags-row", { autoAlpha: 1, duration: 0.4 }, 16.5);
+
+tl.to("#main-card", { scale: 1.02, autoAlpha: 0.6, duration: 0.6 }, 17.2);
+
+tl.set("#cta-overlay", { autoAlpha: 1 });
+tl.set("#cta-card", { y: 24, autoAlpha: 0 });
+tl.to("#cta-card", { y: 0, autoAlpha: 1, duration: 0.7, ease: "power2.out" }, 17.4);
+
+tl.to("#cta-card", { scale: 1.04, duration: 0.6, yoyo: true, repeat: 2, ease: "sine.inOut" }, 18.6);
+
+tl.to("#composition", { autoAlpha: 0, duration: 0.6 }, 19.4);
+
+window.__timelines = window.__timelines || {};
+window.__timelines["root"] = tl;
+window.__tl = tl;
+})();
+</script>
+</body>
+</html>

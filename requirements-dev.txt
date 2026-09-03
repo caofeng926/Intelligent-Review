@@ -1,0 +1,9 @@
+# 代码审查与质量工具链
+# 安装: pip install -r requirements-dev.txt
+# 初始化: pre-commit install
+# 全量检查: pre-commit run --all-files
+
+flake8>=7.0
+isort>=5.13
+detect-secrets>=1.5
+pre-commit>=3.6

@@ -1,0 +1,67 @@
+﻿{% extends "base.html" %}
+{% block title %}医疗服务项目 · 医保标准库 · 医保智审{% endblock %}
+{% block content %}
+<section class="page-head">
+  <h1 class="page-title">医疗服务项目</h1>
+  <p class="page-sub">国家医保医疗服务项目分类与代码 · {{ total_codes }} 条</p>
+</section>
+
+<nav class="bread">
+  <a href="{{ url_for('nhsa_index') }}">标准数据库</a> <span class="bread-sep">›</span>
+  <span class="bread-cur">医疗服务项目</span>
+  {% if query %}<span class="bread-sep">›</span> <span class="bread-cur">搜索：{{ query }}</span>{% endif %}
+</nav>
+
+<form action="{{ url_for('ms_browse') }}" method="get" class="hero-search" style="margin-bottom: var(--s-4);">
+  <span class="hero-search-icon">⌕</span>
+  <input name="q" type="search" value="{{ query|default('',true) }}" placeholder="输入项目名称 / 拼音首字母 / 项目编码" enterkeyhint="search">
+  <button class="hero-search-btn" type="submit">搜索</button>
+</form>
+
+{% if query %}
+<section class="list-card">
+  {% for r in rows %}
+  <a class="list-row" href="{{ url_for('ms_detail', code=r.code) }}">
+    <div class="list-main">
+      <div class="list-code">{{ r.code }}{% if r.p_code %} · 父 {{ r.p_code }}{% endif %}{% if r.level %} · L{{ r.level }}{% endif %}</div>
+      <div class="list-name">{{ r.name }}</div>
+      <div class="list-meta">
+        {% if r.charge_unit %}计价单位: {{ r.charge_unit }}{% endif %}
+        {% if r.explain %} · {{ r.explain|truncate2(80) }}{% endif %}
+      </div>
+    </div>
+    <div class="list-arrow">›</div>
+  </a>
+  {% else %}
+  <div class="empty">
+    <div class="empty-ico">∅</div>
+    <div class="empty-title">无匹配</div>
+    <div class="empty-tip">没有找到与「{{ query }}」相关的医疗服务项目</div>
+  </div>
+  {% endfor %}
+</section>
+<div class="pager">
+  <span class="pager-info">共 {{ total }} 条 · 显示 {{ rows|length }}</span>
+</div>
+{% else %}
+<section class="cat-list">
+  {% for g in groups %}
+  <a class="cat-card" href="{{ url_for('ms_browse', level=g.level) }}">
+    <div class="cat-main">
+      <div class="cat-code">第 {{ g.level }} 级</div>
+      <div class="cat-name">{{ g.p_code }} · {{ g.p_name or '顶级' }}</div>
+    </div>
+    <div class="cat-count">{{ "{:,}".format(g.code_count) }} 条</div>
+    <div class="cat-arrow">›</div>
+  </a>
+  {% endfor %}
+</section>
+<section class="tip">
+  <div class="tip-icon">i</div>
+  <div class="tip-body">
+    <div class="tip-title">关于医疗服务项目</div>
+    <div class="tip-text">国家医保局发布的医疗服务项目分类与代码，按 4 级树状组织（顶级 → 大类 → 中类 → 项目）。支持按名称 / 拼音首字母 / 项目编码搜索。</div>
+  </div>
+</section>
+{% endif %}
+{% endblock %}
