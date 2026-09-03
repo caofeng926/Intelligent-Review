@@ -1,0 +1,62 @@
+# Dependabot: 依赖每周自动 PR
+# 文档: https://docs.github.com/en/code-security/dependabot
+
+version: 2
+
+# ---- Python (pip) ----
+updates:
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:00"
+      timezone: "Asia/Shanghai"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "python"
+    # 不自动合并,留给人工 review
+    # 提交 commit 时的前缀
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    # 哪些文件触发更新
+    files:
+      - "requirements-deploy.txt"
+      - "requirements-dev.txt"
+      - "pyproject.toml"
+    # 忽略 major 版本升级(避免破坏性变更)
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    # 自动分组: 把同一包的所有 patch/minor 合并到一个 PR
+    groups:
+      patch-and-minor:
+        applies-to: version-updates
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # ---- GitHub Actions ----
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:00"
+      timezone: "Asia/Shanghai"
+    open-pull-requests-limit: 3
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    groups:
+      actions:
+        applies-to: version-updates
+        patterns:
+          - "*"
