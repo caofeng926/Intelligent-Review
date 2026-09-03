@@ -1,0 +1,177 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  # 每周一 UTC 02:00 跑一次完整扫描
+  schedule:
+    - cron: "0 2 * * 1"
+  workflow_dispatch:
+
+# 防止主分支并发
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: false  # 安全扫描不取消,跑完留档
+
+permissions:
+  contents: read
+  # detect-secrets / bandit 不需要写权限
+
+env:
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  # ------------------------------------------------------------
+  # bandit: Python 静态代码安全扫描
+  # ------------------------------------------------------------
+  bandit:
+    name: bandit (SAST)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install bandit
+        run: |
+          python -m pip install --upgrade pip
+          pip install "bandit[toml]>=1.7"
+
+      - name: Run bandit
+        # 默认跳过 B101 (assert) - 项目用 assert 做参数校验,不算安全风险
+        run: |
+          bandit -r webapp scripts \
+            --skip B101 \
+            --exclude webapp/__pycache__,webapp/data,_*.py \
+            -f json -o bandit-report.json || true
+          bandit -r webapp scripts \
+            --skip B101 \
+            --exclude webapp/__pycache__,webapp/data,_*.py \
+            -f txt
+
+      - name: Upload bandit JSON
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bandit-report
+          path: bandit-report.json
+          retention-days: 30
+
+  # ------------------------------------------------------------
+  # detect-secrets: 密钥 / 凭据扫描
+  # ------------------------------------------------------------
+  detect-secrets:
+    name: detect-secrets (credentials)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install detect-secrets
+        run: |
+          python -m pip install --upgrade pip
+          pip install "detect-secrets>=1.5"
+
+      - name: Check baseline exists
+        id: baseline
+        run: |
+          if [ -f .secrets.baseline ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Scan (with baseline)
+        if: steps.baseline.outputs.exists == 'true'
+        run: |
+          detect-secrets scan \
+            --baseline .secrets.baseline \
+            --exclude-files 'webapp/data/.*' \
+            --exclude-files 'webapp/__pycache__/.*' \
+            --exclude-files '\.git/.*'
+
+      - name: Scan (no baseline - warn)
+        if: steps.baseline.outputs.exists != 'true'
+        # baseline 不存在时只生成报告,不阻断 CI
+        run: |
+          echo "::warning::.secrets.baseline 不存在,生成参考 baseline 但不阻断"
+          detect-secrets scan \
+            --exclude-files 'webapp/data/.*' \
+            --exclude-files 'webapp/__pycache__/.*' \
+            --exclude-files '\.git/.*' \
+            > .secrets.baseline || true
+
+      - name: Upload detect-secrets baseline
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: detect-secrets-baseline
+          path: .secrets.baseline
+          retention-days: 30
+
+  # ------------------------------------------------------------
+  # pip-audit: 依赖 CVE 扫描
+  # ------------------------------------------------------------
+  pip-audit:
+    name: pip-audit (deps CVE)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-audit-${{ runner.os }}-${{ hashFiles('requirements-deploy.txt', 'requirements-dev.txt') }}
+          restore-keys: pip-audit-${{ runner.os }}-
+
+      - name: Install pip-audit
+        run: |
+          python -m pip install --upgrade pip
+          pip install pip-audit
+
+      - name: Build dependency list
+        # 项目没 requirements.txt - 用 deploy + dev 两份 + pyproject
+        run: |
+          pip install -r requirements-deploy.txt
+          pip install -r requirements-dev.txt
+
+      - name: Run pip-audit
+        # 严格模式: 高危及以上 (>=7.0) 阻断
+        # 低危 (<7.0) 仅警告
+        continue-on-error: false
+        run: |
+          pip-audit \
+            --strict \
+            --vulnerability-service osv \
+            --requirement requirements-deploy.txt \
+            --requirement requirements-dev.txt \
+            --format json --output pip-audit-report.json || true
+          # 文本格式打印
+          pip-audit \
+            --strict \
+            --vulnerability-service osv \
+            --requirement requirements-deploy.txt \
+            --requirement requirements-dev.txt || true
+
+      - name: Upload pip-audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pip-audit-report
+          path: pip-audit-report.json
+          retention-days: 30
