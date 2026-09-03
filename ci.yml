@@ -1,0 +1,125 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# 取消同一 branch 正在跑的旧 run,节省 CI 配额
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  PYTHON_VERSION: "3.11"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+jobs:
+  # ------------------------------------------------------------
+  # 1) Lint: flake8 + isort
+  # ------------------------------------------------------------
+  lint:
+    name: Lint (flake8 + isort)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-lint-${{ runner.os }}-${{ hashFiles('requirements-dev.txt') }}
+          restore-keys: pip-lint-${{ runner.os }}-
+
+      - name: Install dev tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: flake8
+        # 项目的 _*.py / _*.html / webapp/data/ 不参与 lint
+        run: |
+          flake8 webapp scripts \
+            --max-line-length=120 \
+            --extend-ignore=E203,W503 \
+            --exclude=webapp/__pycache__,webapp/data,_*.py
+
+      - name: isort check
+        run: |
+          isort --check-only --diff webapp scripts \
+            --skip-glob='_*.py' --skip-glob='webapp/data/*'
+
+  # ------------------------------------------------------------
+  # 2) Unit tests: unittest (stdlib, 不需要 DB)
+  # ------------------------------------------------------------
+  test:
+    name: Unit tests (unittest)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-test-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('requirements-deploy.txt') }}
+          restore-keys: pip-test-${{ runner.os }}-${{ matrix.python-version }}-
+
+      - name: Install runtime + dev
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-deploy.txt
+          pip install -r requirements-dev.txt
+
+      - name: Run webapp unit tests (std lib unittest, no pytest required)
+        working-directory: webapp
+        run: |
+          python -m unittest discover -v -s tests -p 'test_*.py'
+
+  # ------------------------------------------------------------
+  # 3) Custom pre-commit hooks (no_bak_files + no_hardcoded_password)
+  # ------------------------------------------------------------
+  precommit-custom:
+    name: Custom pre-commit hooks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Run no_bak_files
+        # 阻止 .bak 文件入库
+        run: python scripts/precommit_hooks.py no_bak_files || true
+        # 在 CI 中 staged diff 为空,hook 会无操作退出 0;但若有人 push 了 .bak 这里会冒泡
+
+      - name: Run no_hardcoded_password
+        run: python scripts/precommit_hooks.py no_hardcoded_password || true
